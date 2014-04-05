@@ -1,0 +1,4 @@
+MACHINE       = arm
+ARCH          = arm
+CROSS_COMPILE = arm-linux-
+CROSS         = $(CROSS_COMPILE)

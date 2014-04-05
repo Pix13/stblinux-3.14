@@ -1,0 +1,73 @@
+2013-12-20  Rob Savoye  <rob.savoye@linaro.org>
+
+      Linaro 2013.12 released.
+
+2013-07-03  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* ld-aarch64/emit-relocs-309.s: Replace got_prel19 with got.
+	* ld-aarch64/gc-relocs-309.s: Likewise.
+
+2013-04-03   Venkataramanan Kumar  <venkataramanan.kumar@linaro.org>
+
+        * ld-aarch64/gc-relocs-tlsle.s: New gc section test.
+        * ld-aarch64/gc-relocs-tlsle.s: Likewise
+        * ld-aarch64/gc-relocs-tlsgd.s: Likewise
+        * ld-aarch64/gc-relocs-tlsdesc.s: Likewise
+        * ld-aarch64/gc-relocs-312.s: Likewise
+        * ld-aarch64/gc-relocs-311.s: Likewise
+        * ld-aarch64/gc-relocs-309.s: Likewise
+        * ld-aarch64/gc-start.s: Likewise
+        * ld-aarch64/gc-got-relocs.d: Update expected objdump
+        * ld-aarch64/gc-tls-relocs.d: Likewise
+        * ld-aarch64/aarch64-elf.exp: add test
+
+2013-03-08  Venkataramanan Kumar  <venkataramanan.kumar@linaro.org>
+
+        * lib/ld-lib.exp (check_gc_sections_available): Remove aarch64
+	from list of targets that don't support gc-section.
+
+2013-07-02  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* ld-aarch64/emit-relocs-309-low.d: Adjust .text address.
+	* ld-aarch64/emit-relocs-309-up.d: Adjust .got address.
+
+2012-09-19  Chris Schlumberger-Socha  <chris.schlumberger-socha@arm.com>
+
+	* ld-aarch64/emit-relocs-309-low.d: Replace symbol with regexp.
+	* ld-aarch64/emit-relocs-309-up.d: Likewise.
+
+2012-09-12  Chris Schlumberger-Socha  <chris.schlumberger-socha@arm.com>
+
+	* ld-aarch64/aarch64-elf.exp: New reloc tests.
+	* ld-aarch64/emit-relocs-309-low-bad.d: New file. Expected asm for test
+	failure (lower bound overflow).
+	* ld-aarch64/emit-relocs-309-low.d: New file. Expected asm for test
+	success (lower bound).
+	* ld-aarch64/emit-relocs-309-up-bad.d: New file. Expected asm for test
+	failure (upper bound overflow).
+	* ld-aarch64/emit-relocs-309-up.d: New file. Expected asm for test
+	success (upper bound).
+	* ld-aarch64/emit-relocs-309.s: New file. Asm for new reloc tests.
+
+2013-07-02  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* ld-aarch64/gc-plt-relocs.d: Adjust expected .got offsets.
+	* ld-aarch64/tls-desc-ie.d: Likewise.
+	* ld-aarch64/emit-relocs-311.d: Adjust expected	symbol.
+	* ld-aarch64/tls-relax-all.d: Likewise.
+	* ld-aarch64/tls-relax-gd-ie.d: Likewise.
+	* ld-aarch64/tls-relax-gdesc-ie.d: Likewise.
+	* ld-aarch64/tls-relax-gdesc-ie-2.d: Likewise.
+
+2013-07-02  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* ld-aarch64/emit-relocs-309-low.d: Adjust .text address.
+	* ld-aarch64/emit-relocs-309-up.d: Adjust .got address.
+	* ld-aarch64/emit-relocs-312.d: Adjust offsets into .got.
+	* ld-aarch64/tls-relax-all.d: Likewise.
+	* ld-aarch64/gc-got-relocs.d: Adjust expected .got content.
+	* ld-aarch64/gc-tls-relocs.d: Likewise.
+	* ld-aarch64/tls-relax-gd-ie.d: Likewise.
+	* ld-aarch64/tls-relax-gdesc-ie-2.d: Likewise.
+	* ld-aarch64/tls-relax-gdesc-ie.d: Likewise.
+

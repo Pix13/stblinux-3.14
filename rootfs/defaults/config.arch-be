@@ -1,0 +1,4 @@
+MACHINE       = mips
+ARCH          = mips
+CROSS_COMPILE = mips-linux-
+CROSS         = $(CROSS_COMPILE)

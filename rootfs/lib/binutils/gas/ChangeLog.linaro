@@ -1,0 +1,45 @@
+2013-12-20  Rob Savoye  <rob.savoye@linaro.org>
+
+      Linaro 2013.12 released.
+
+2013-03-11  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
+
+	* config/tc-arm.c (crc_ext_armv8): New feature set.
+	(UNPRED_REG): New macro.
+	(do_crc32_1): New function.
+	(do_crc32b, do_crc32h, do_crc32w, do_crc32cb,
+	do_crc32ch, do_crc32cw): Likewise.
+	(TUEc): New macro.
+	(insns): Add entries for crc32 mnemonics.
+	(arm_extensions): Add entry for crc.
+
+2013-02-28  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (aarch64_features): Add the 'crc' option.
+
+2013-06-19  Greta Yorsh  <Greta.Yorsh@arm.com>
+
+	* config/tc-arm.c (arm_cpus): Add support for Cortex-A12.
+
+2013-03-28  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
+
+	* config/tc-arm.c (arm_cpus): Add support for Cortex-A53 and
+	Cortex-A57.
+
+2013-01-02  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* config/tc-aarch64.c (aarch64_cpus): Add entries for "cortex-a53"
+	and "cortex57".
+
+2013-07-03  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* config/tc-aarch64.c (reloc_table): Merge got_prel19 into got.
+
+2012-09-12  Chris Schlumberger-Socha  <chris.schlumberger-socha@arm.com>
+
+	* config/tc-aarch64.c
+	(reloc_table): Add reloc to table entry.
+	(parse_address_main): Add support for #:<reloc_op>:<symbol>.
+	(parse_operands): Check for unused reloc.
+	(md_apply_fix): New case for reloc.
+	(aarch64_force_relocation): Likewise.

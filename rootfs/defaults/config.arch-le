@@ -1,0 +1,4 @@
+MACHINE       = mipsel
+ARCH          = mips
+CROSS_COMPILE = mipsel-linux-
+CROSS         = $(CROSS_COMPILE)

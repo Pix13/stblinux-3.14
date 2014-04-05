@@ -1,0 +1,8 @@
+2013-12-20  Rob Savoye  <rob.savoye@linaro.org>
+
+      Linaro 2013.12 released.
+
+2012-09-12  Chris Schlumberger-Socha  <chris.schlumberger-socha@arm.com>
+
+	* elf/aarch64.h (R_AARCH64_GOT_LD_PREL19): New reloc.
+
