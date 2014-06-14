@@ -314,14 +314,8 @@ static void brcm_ahci_setup_quirks(struct platform_device *pdev)
 	if (of_machine_is_compatible("brcm,bcm7145a0")) {
 		brcm_pdata->quirks |= SATA_BRCM_QK_ALT_RST;
 		brcm_pdata->quirks |= SATA_BRCM_QK_NONCQ;
-	} else if (of_machine_is_compatible("brcm,bcm7439a0"))
+	} else if (of_machine_is_compatible("brcm,bcm7439a0")) {
 		brcm_pdata->quirks |= SATA_BRCM_QK_ALT_RST;
-	else if (of_machine_is_compatible("brcm,bcm7445a0")) {
-		brcm_pdata->quirks |= SATA_BRCM_QK_INIT_PHY;
-		brcm_pdata->quirks |= SATA_BRCM_QK_NONCQ;
-	} else if (of_machine_is_compatible("brcm,bcm7445b0")) {
-		brcm_pdata->quirks |= SATA_BRCM_QK_INIT_PHY;
-		brcm_pdata->quirks |= SATA_BRCM_QK_NONCQ;
 	}
 }
 
@@ -346,7 +340,7 @@ static int brcm_ahci_probe(struct platform_device *pdev)
 	struct platform_device *ahci_pdev = NULL;
 	struct sata_brcm_pdata brcm_pdata;
 	struct ahci_platform_data ahci_pdata;
-	static u64 brcm_ahci_dmamask = DMA_BIT_MASK(32);
+	static u64 brcm_ahci_dmamask = DMA_BIT_MASK(64);
 
 	ahci_pdev = platform_device_alloc("strict-ahci", 0);
 	if (ahci_pdev == NULL) {
@@ -395,7 +389,7 @@ static int brcm_ahci_probe(struct platform_device *pdev)
 		goto err_cleanup;
 
 	ahci_pdev->dev.dma_mask = &brcm_ahci_dmamask;
-	ahci_pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+	ahci_pdev->dev.coherent_dma_mask = brcm_ahci_dmamask;
 
 	status = pdev_map(&ahci_pdev->dev, ahci_pdev, pdev);
 	if (status)

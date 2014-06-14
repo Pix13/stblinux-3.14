@@ -37,11 +37,61 @@ int fd;
 int markbad=0;
 int seed;
 
+void read_and_compare(loff_t ofs, unsigned char *data, unsigned char *rbuf)
+{
+	ssize_t len;
+	int i;
+
+	printf("\r%08x: reading...", (unsigned)ofs);
+	fflush(stdout);
+
+	len = pread(fd, rbuf, meminfo.erasesize, ofs);
+	if (len < meminfo.erasesize) {
+		printf("\n");
+		if (len)
+			fprintf(stderr, "Short read (%zd bytes)\n", len);
+		else
+			perror("read");
+		exit(1);
+	}
+
+	if (ioctl(fd, ECCGETSTATS, &newstats)) {
+		printf("\n");
+		perror("ECCGETSTATS");
+		close(fd);
+		exit(1);
+	}
+
+	if (newstats.corrected > oldstats.corrected) {
+		printf("\n %d bit(s) ECC corrected at %08x\n",
+				newstats.corrected - oldstats.corrected,
+				(unsigned) ofs);
+		oldstats.corrected = newstats.corrected;
+	}
+	if (newstats.failed > oldstats.failed) {
+		printf("\nECC failed at %08x\n", (unsigned) ofs);
+		oldstats.failed = newstats.failed;
+	}
+
+	printf("\r%08x: checking...", (unsigned)ofs);
+	fflush(stdout);
+
+	if (memcmp(data, rbuf, meminfo.erasesize)) {
+		printf("\n");
+		fprintf(stderr, "compare failed. seed %d\n", seed);
+		for (i=0; i<meminfo.erasesize; i++) {
+			if (data[i] != rbuf[i])
+				printf("Byte 0x%x is %02x should be %02x\n",
+				       i, rbuf[i], data[i]);
+		}
+		exit(1);
+	}
+}
+
 int erase_and_write(loff_t ofs, unsigned char *data, unsigned char *rbuf)
 {
 	struct erase_info_user er;
 	ssize_t len;
-	int i;
 
 	printf("\r%08x: erasing... ", (unsigned)ofs);
 	fflush(stdout);
@@ -77,52 +127,7 @@ int erase_and_write(loff_t ofs, unsigned char *data, unsigned char *rbuf)
 		exit(1);
 	}
 
-	printf("\r%08x: reading...", (unsigned)ofs);
-	fflush(stdout);
-
-	len = pread(fd, rbuf, meminfo.erasesize, ofs);
-	if (len < meminfo.erasesize) {
-		printf("\n");
-		if (len)
-			fprintf(stderr, "Short read (%zd bytes)\n", len);
-		else
-			perror("read");
-		exit(1);
-	}
-
-	if (ioctl(fd, ECCGETSTATS, &newstats)) {
-		printf("\n");
-		perror("ECCGETSTATS");
-		close(fd);
-		exit(1);
-	}
-
-	if (newstats.corrected > oldstats.corrected) {
-		printf("\n %d bit(s) ECC corrected at %08x\n",
-				newstats.corrected - oldstats.corrected,
-				(unsigned) ofs);
-		oldstats.corrected = newstats.corrected;
-	}
-	if (newstats.failed > oldstats.failed) {
-		printf("\nECC failed at %08x\n", (unsigned) ofs);
-		oldstats.failed = newstats.failed;
-	}
-	if (len < meminfo.erasesize)
-		exit(1);
-
-	printf("\r%08x: checking...", (unsigned)ofs);
-	fflush(stdout);
-
-	if (memcmp(data, rbuf, meminfo.erasesize)) {
-		printf("\n");
-		fprintf(stderr, "compare failed. seed %d\n", seed);
-		for (i=0; i<meminfo.erasesize; i++) {
-			if (data[i] != rbuf[i])
-				printf("Byte 0x%x is %02x should be %02x\n",
-				       i, rbuf[i], data[i]);
-		}
-		exit(1);
-	}
+	read_and_compare(ofs, data, rbuf);
 	return 0;
 }
 

@@ -106,6 +106,8 @@ function get_mtd_attr()
 
 function flash_is_nand()
 {
+	mtdX=$1
+	! get_mtd_attr $mtdX type flash_type && echo "Cannot get flash type" && exit 1
 	if [ "$flash_type" = "nand" ] || [ "$flash_type" = "mlc-nand" ]; then
 		return 0 # note the backwards shell return-code semantics
 	else
@@ -183,9 +185,12 @@ function handle_opt_1()
 {
 	mtd=/dev/mtd${kernel_part}
 
+	echo "Writing kernel to $mtd"
+	echo
+
 	tftp_fetch $tftphost $tftppath/vmlinuz-$plat /tmp/vmlinuz
 	flash_erase $mtd 0 0
-	if flash_is_nand; then
+	if flash_is_nand $kernel_part; then
 		nandwrite -p $mtd /tmp/vmlinuz
 	else
 		dd if=/tmp/vmlinuz of=$mtd
@@ -218,7 +223,6 @@ function handle_opt_2()
 	rem_img=ubifs-$(($flash_erasesize / 1024))k-$(($flash_writesize))-${plat}.img
 
 	if tftp_fetch -q $tftphost $tftppath/$rem_img /tmp/rootfs.img; then
-		flash_erase $mtd 0 0
 		ubiformat $mtd --yes --flash-image=/tmp/rootfs.img
 	else
 		echo ""
@@ -226,7 +230,6 @@ function handle_opt_2()
 		echo ""
 		rem_img=nfsroot-${plat}.tar.bz2
 		tftp_fetch $tftphost $tftppath/$rem_img /tmp/rootfs.tar.bz2
-		flash_erase $mtd 0 0
 		ubiformat $mtd --yes
 		ubiattach -m $rootfs_part -d 0
 		# NOTE: ubiattach/mdev may run asynchronously
@@ -294,8 +297,7 @@ function handle_opt_4()
 	rem_img=squashfs-${plat}.img
 
 	tftp_fetch $tftphost $tftppath/$rem_img /tmp/rootfs.img
-	flash_erase $mtd 0 0
-	if flash_is_nand; then
+	if flash_is_nand $rootfs_part; then
 		imgsize=$(du -k /tmp/rootfs.img | sed 's/[ \t].*//')
 		ubiformat $mtd --yes
 		ubiattach -m $rootfs_part -d 0
@@ -315,6 +317,7 @@ function handle_opt_4()
 		ubidetach -d 0
 		cmdline="ubi.mtd=${rootfs_mtd_name} root=/dev/mtdblock${newpart}"
 	else
+		flash_erase $mtd 0 0
 		newpart=$rootfs_part
 		dd if=/tmp/rootfs.img of=$mtd
 		cmdline="root=/dev/mtdblock${rootfs_part}"
@@ -328,7 +331,7 @@ function handle_opt_4()
 	echo ""
 	echo "To mount the filesystem now:"
 	echo ""
-	if flash_is_nand; then
+	if flash_is_nand $rootfs_part; then
 		echo "  ubiattach -m $rootfs_part"
 		echo "  mount /dev/mtdblock${newpart} /mnt/flash"
 		echo ""
@@ -577,7 +580,7 @@ if [ -z $rootfs_part ]; then
 	suf4="$suf2"
 fi
 
-if flash_is_nand; then
+if flash_is_nand $rootfs_part; then
 	suf3="(not available)"
 	suf4="(uses UBI)"
 fi

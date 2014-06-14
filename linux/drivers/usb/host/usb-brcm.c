@@ -170,6 +170,8 @@ struct brcm_usb_instance {
 #define SCB1_EN_m		BIT(14)
 #define SCB2_EN_m		BIT(15)
 
+#define SS_EHCI64BIT_EN_m	BIT(16)
+
 #define SETUP_REG		0x00
 #define EBRIDGE_REG		0x0c
 #define OBRIDGE_REG		0x10
@@ -191,6 +193,10 @@ static void brcm_usb_instance_hw_init(struct brcm_usb_instance *priv)
 		reg |= IOC_m;
 	if (priv->ipp)
 		reg |= IPP_m;
+
+	/* enable 64-bit mode */
+	reg |= SS_EHCI64BIT_EN_m;
+
 	writel(reg, priv->ctrl_regs + SETUP_REG);
 
 	/* override lame bridge defaults */

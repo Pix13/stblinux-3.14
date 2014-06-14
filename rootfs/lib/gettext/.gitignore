@@ -21,6 +21,8 @@ Makefile
 libelf.so*
 *.inst
 stamp-h
+stamp-h1
+autom4te.cache
 config.status
 config.log
 config.h

@@ -136,8 +136,7 @@ static int of_platform_serial_setup(struct platform_device *ofdev,
 		port->flags |= UPF_SAFER_LCR_WRITES;
 
 #if defined(CONFIG_BCM7145A0) || defined(CONFIG_BCM7366A0) || \
-    defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7445A0) || \
-    defined(CONFIG_BCM7445B0) || defined(CONFIG_BCM7445C0)
+    defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7445C0)
 	/*
 	 * All of these chips definitely have an unresettable busy
 	 * detect serial interrupt.

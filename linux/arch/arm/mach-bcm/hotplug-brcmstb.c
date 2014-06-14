@@ -242,23 +242,14 @@ int brcmstb_cpu_kill(u32 cpu)
 	u32 tmp;
 
 #if USE_MANUAL_MODE
-	/* HW7445-1175: TI2C master reset non-functional if CPU0 is powered
-	 * off.
-	 *
-	 * Do not allow powering off CPU0, the core CPU hotplug code already
-	 * refuses to power off this CPU because it is the boot CPU, but
-	 * we also need to make sure it does not get powered off by a
-	 * fatal exception in interrupt handler for instance, otherwise
-	 * TI2C master reset will not bring us to reset as the CPU remains
-	 * powered off.
-	 *
-	 * Using BPCM manual mode allows CPU0 power-down, regardless of
-	 * whether or not the above H/W JIRA is fixed. Since we don't support
-	 * the older chips that had this bug (yet) we bring this in
-	 * only when manual mode is being used.
+	/*
+	 * Ordinarily, the hardware forbids power-down of CPU0 (which is good
+	 * because it is the boot CPU), but this is not true when using BPCM
+	 * manual mode.  Consequently, we must avoid turning off CPU0 here to
+	 * ensure that TI2C master reset will work.
 	 */
 	if (cpu == 0) {
-		pr_warn("SMP: refusing to power off CPU0 on 7445B0\n");
+		pr_warn("SMP: refusing to power off CPU0\n");
 		return 1;
 	}
 #endif

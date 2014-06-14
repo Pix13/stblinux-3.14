@@ -13,6 +13,9 @@ all:
 	if [ ! -e Makefile ]; then \
 		./configure --host=$(MACHINE)-linux --prefix=$(ROMFSDIR); \
 	fi
+	$(MAKE) -f Makefile SUBDIRS=intl subconfigures
+	sed -i 's/\(gettextsrc_DATA.*\) ABOUT-NLS/\1/' Makefile
+
 	$(MAKE) -f Makefile SUBDIRS=intl
 
 .PHONY: romfs

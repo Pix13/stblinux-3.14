@@ -279,7 +279,7 @@ static const struct hc_driver ehci_brcm_hc_driver = {
 
 static int ehci_hcd_brcm_probe(struct platform_device *pdev)
 {
-	static const u64 usb_dmamask = DMA_BIT_MASK(32);
+	static const u64 usb_dmamask = DMA_BIT_MASK(64);
 	pdev->dev.dma_mask = (u64 *)&usb_dmamask;
 	pdev->dev.coherent_dma_mask = usb_dmamask;
 

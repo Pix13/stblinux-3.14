@@ -137,11 +137,6 @@ static int debug = -1;
 module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "GENET debug level");
 
-enum bcmgenet_version __genet_get_version(struct bcmgenet_priv *priv)
-{
-	return priv->version;
-}
-
 /* interrupt l2 registers accessors */
 static inline u32 bcmgenet_intrl2_0_readl(struct bcmgenet_priv *priv, u32 off)
 {
@@ -999,6 +994,15 @@ static int bcmgenet_set_rx_csum(struct net_device *dev,
 	else
 		rbuf_chk_ctrl |= RBUF_RXCHK_EN;
 	priv->desc_rxchk_en = rx_csum_en;
+
+	/* If UniMAC forwards CRC, we need to skip over it to get
+	 * a valid CHK bit to be set in the per-packet status word
+	 */
+	if (rx_csum_en && priv->crc_fwd_en)
+		rbuf_chk_ctrl |= RBUF_SKIP_FCS;
+	else
+		rbuf_chk_ctrl &= ~RBUF_SKIP_FCS;
+
 	bcmgenet_rbuf_writel(priv, rbuf_chk_ctrl, RBUF_CHK_CTRL);
 
 	spin_unlock_bh(&priv->bh_lock);
@@ -1463,21 +1467,17 @@ static void bcmgenet_power_down(struct bcmgenet_priv *priv, int mode)
 	dev = priv->dev;
 	switch (mode) {
 	case GENET_POWER_CABLE_SENSE:
-#if 0
-		/* EPHY bug, setting ext_pwr_down_dll and ext_pwr_down_phy cause
-		 * link IRQ bouncing.
-		 */
 		reg = bcmgenet_ext_readl(priv, EXT_EXT_PWR_MGMT);
 		reg |= (EXT_PWR_DOWN_PHY |
-				EXT_PWR_DOWN_DLL | EXT_PWR_DOWN_BIAS);
+			EXT_PWR_DOWN_DLL | EXT_PWR_DOWN_BIAS);
 		bcmgenet_ext_writel(priv, reg, EXT_EXT_PWR_MGMT);
-#else
+
 		/* Workaround for putting EPHY in iddq mode. */
-		if (priv->phydev)
+		if (priv->phydev && priv->phydev->drv->suspend)
 			ret = priv->phydev->drv->suspend(priv->phydev);
 		if (ret)
 			pr_warn("failed to suspend PHY\n");
-#endif
+
 		break;
 	case GENET_POWER_WOL_MAGIC:
 	case GENET_POWER_WOL_ACPI:
@@ -2412,12 +2412,6 @@ static int init_umac(struct bcmgenet_priv *priv)
 
 	/* Monitor cable plug/unpluged event for internal PHY */
 	if (priv->phy_type == BRCM_PHY_TYPE_INT) {
-#if !defined(CONFIG_BCM7445A0) && !defined(CONFIG_BCM7445B0)
-		/* HW7445-870: energy detect on A0 and B0 silicon
-		 * is unreliable
-		 */
-		cpu_mask_clear |= (UMAC_IRQ_PHY_DET_R | UMAC_IRQ_PHY_DET_F);
-#endif /* !defined(CONFIG_BCM7445A0) && !defined(CONFIG_BCM7445B0) */
 		cpu_mask_clear |= (UMAC_IRQ_LINK_DOWN | UMAC_IRQ_LINK_UP);
 		/* Turn on ENERGY_DET interrupt in bcmgenet_open()
 		 * TODO: fix me for active standby.
@@ -3552,7 +3546,6 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 
 	priv->dev = dev;
 
-#ifdef CONFIG_GENET_RUNTIME_DETECT
 	if (of_device_is_compatible(dn, "brcm,genet-v4"))
 		priv->version = GENET_V4;
 	else if (of_device_is_compatible(dn, "brcm,genet-v3"))
@@ -3566,7 +3559,7 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 		err = -EINVAL;
 		goto err;
 	}
-#endif
+
 	bcmgenet_set_hw_params(priv);
 
 	spin_lock_init(&priv->lock);

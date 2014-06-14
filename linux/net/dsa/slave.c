@@ -12,6 +12,8 @@
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/phy.h>
+#include <linux/of_net.h>
+#include <linux/of_mdio.h>
 #include "dsa_priv.h"
 
 /* slave mii_bus handling ***************************************************/
@@ -19,7 +21,7 @@ static int dsa_slave_phy_read(struct mii_bus *bus, int addr, int reg)
 {
 	struct dsa_switch *ds = bus->priv;
 
-	if (ds->phys_port_mask & (1 << addr))
+	if (ds->phys_mii_mask & (1 << addr))
 		return ds->drv->phy_read(ds, addr, reg);
 
 	return 0xffff;
@@ -29,7 +31,7 @@ static int dsa_slave_phy_write(struct mii_bus *bus, int addr, int reg, u16 val)
 {
 	struct dsa_switch *ds = bus->priv;
 
-	if (ds->phys_port_mask & (1 << addr))
+	if (ds->phys_mii_mask & (1 << addr))
 		return ds->drv->phy_write(ds, addr, reg, val);
 
 	return 0;
@@ -293,6 +295,18 @@ static const struct ethtool_ops dsa_slave_ethtool_ops = {
 	.get_sset_count		= dsa_slave_get_sset_count,
 };
 
+#ifdef CONFIG_NET_DSA_TAG_BRCM
+static const struct net_device_ops brcm_netdev_ops = {
+	.ndo_init		= dsa_slave_init,
+	.ndo_open	 	= dsa_slave_open,
+	.ndo_stop		= dsa_slave_close,
+	.ndo_start_xmit		= brcm_tag_xmit,
+	.ndo_change_rx_flags	= dsa_slave_change_rx_flags,
+	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
+	.ndo_set_mac_address	= dsa_slave_set_mac_address,
+	.ndo_do_ioctl		= dsa_slave_ioctl,
+};
+#endif
 #ifdef CONFIG_NET_DSA_TAG_DSA
 static const struct net_device_ops dsa_netdev_ops = {
 	.ndo_init		= dsa_slave_init,
@@ -330,7 +344,124 @@ static const struct net_device_ops trailer_netdev_ops = {
 };
 #endif
 
+static netdev_tx_t dsa_slave_dummy_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+
+	skb->dev = p->parent->dst->master_netdev;
+	dev_queue_xmit(skb);
+
+	return NETDEV_TX_OK;
+}
+
+static const struct net_device_ops dummy_netdev_ops = {
+	.ndo_init		= dsa_slave_init,
+	.ndo_open		= dsa_slave_open,
+	.ndo_stop		= dsa_slave_close,
+	.ndo_start_xmit		= dsa_slave_dummy_xmit,
+	.ndo_change_rx_flags	= dsa_slave_change_rx_flags,
+	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
+	.ndo_set_mac_address	= dsa_slave_set_mac_address,
+	.ndo_do_ioctl		= dsa_slave_ioctl,
+};
+
+static void dsa_slave_adjust_link(struct net_device *dev)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct dsa_switch *ds = p->parent;
+	unsigned int status_changed = 0;
+
+	if (p->old_link != p->phy->link) {
+		status_changed = 1;
+		p->old_link = p->phy->link;
+	}
+
+	if (p->old_duplex != p->phy->duplex) {
+		status_changed = 1;
+		p->old_duplex = p->phy->duplex;
+	}
+
+	if (p->old_pause != p->phy->pause) {
+		status_changed = 1;
+		p->old_pause = p->phy->pause;
+	}
+
+	if (ds->drv->adjust_link && status_changed)
+		ds->drv->adjust_link(ds, p->port, p->phy);
+
+	if (status_changed)
+		phy_print_status(p->phy);
+}
+
+static int dsa_slave_fixed_link_update(struct net_device *dev,
+					struct fixed_phy_status *status)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct dsa_switch *ds = p->parent;
+
+	if (ds->drv->fixed_link_update)
+		ds->drv->fixed_link_update(ds, p->port, status);
+
+	return 0;
+}
+
 /* slave device setup *******************************************************/
+static void dsa_slave_phy_setup(struct dsa_slave_priv *p,
+		struct net_device *slave_dev)
+{
+	struct dsa_switch *ds = p->parent;
+	struct dsa_chip_data *cd = ds->pd;
+	struct device_node *phy_dn;
+	u32 phy_addr;
+
+	p->phy_interface = of_get_phy_mode(cd->port_dn[p->port]);
+
+	phy_dn = of_parse_phandle(cd->port_dn[p->port], "phy-handle", 0);
+	if (phy_dn) {
+		/* Allow the switch driver to intercept PHY registers accesses
+		 * to address 0 and 0x1e to workaround the lack of MDIO bus
+		 * isolation on 7445D0/D1, see HW7445-1526. This is only
+		 * a problem with Broadcom switches that have a hard-coded
+		 * pseudo-PHY address 30d.
+		 */
+		if (of_device_is_compatible(phy_dn, "brcm,bcm53101") ||
+			of_device_is_compatible(phy_dn, "brcm,bcm53125")) {
+
+			if (of_property_read_u32(phy_dn, "reg", &phy_addr))
+				phy_addr = 0;
+
+			if (phy_addr >= PHY_MAX_ADDR)
+				phy_addr = 0;
+
+			p->phy = ds->slave_mii_bus->phy_map[phy_addr];
+			if (p->phy)
+				p->phy = phy_connect(slave_dev,
+						dev_name(&p->phy->dev),
+						dsa_slave_adjust_link,
+						p->phy_interface);
+		} else
+			p->phy = of_phy_connect(slave_dev, phy_dn,
+					dsa_slave_adjust_link, 0,
+					p->phy_interface);
+	} else {
+		p->phy = of_phy_connect_fixed_link(slave_dev,
+				dsa_slave_adjust_link,
+				p->phy_interface);
+		if (p->phy)
+			fixed_phy_set_link_update(p->phy,
+					dsa_slave_fixed_link_update);
+	}
+
+	/* We could not connect to a designated PHY, so use the switch internal
+	 * MDIO bus instead
+	 */
+	if (!p->phy)
+		p->phy = ds->slave_mii_bus->phy_map[p->port];
+	else
+		pr_info("attached PHY at address %d [%s]\n",
+			p->phy->addr, p->phy->drv->name);
+}
+
 struct net_device *
 dsa_slave_create(struct dsa_switch *ds, struct device *parent,
 		 int port, char *name)
@@ -366,10 +497,17 @@ dsa_slave_create(struct dsa_switch *ds, struct device *parent,
 		slave_dev->netdev_ops = &trailer_netdev_ops;
 		break;
 #endif
+#ifdef CONFIG_NET_DSA_TAG_BRCM
+	case htons(ETH_P_BRCMTAG):
+		slave_dev->netdev_ops = &brcm_netdev_ops;
+		break;
+#endif
 	default:
-		BUG();
+		slave_dev->netdev_ops = &dummy_netdev_ops;
+		break;
 	}
 
+	parent->of_node = ds->pd->port_dn[port];
 	SET_NETDEV_DEV(slave_dev, parent);
 	slave_dev->vlan_features = master->vlan_features;
 
@@ -377,7 +515,12 @@ dsa_slave_create(struct dsa_switch *ds, struct device *parent,
 	p->dev = slave_dev;
 	p->parent = ds;
 	p->port = port;
-	p->phy = ds->slave_mii_bus->phy_map[port];
+
+	p->old_pause = -1;
+	p->old_link = -1;
+	p->old_duplex = -1;
+
+	dsa_slave_phy_setup(p, slave_dev);
 
 	ret = register_netdev(slave_dev);
 	if (ret) {

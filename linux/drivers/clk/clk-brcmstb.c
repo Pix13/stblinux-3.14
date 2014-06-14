@@ -159,12 +159,9 @@ enum brcmstb_moca_clk {
 	BRCM_CLK_MOCA_PHY
 };
 
-static int bmoca_clk_prepare(struct clk_hw *hw);
-
 static struct bcm_clk brcmstb_moca_clk_table[] = {
 	[BRCM_CLK_MOCA] = {
 		.name = "moca",
-		.ops.prepare = bmoca_clk_prepare,
 	},
 	[BRCM_CLK_MOCA_CPU] = {
 		.name		= "moca-cpu",
@@ -175,25 +172,6 @@ static struct bcm_clk brcmstb_moca_clk_table[] = {
 		.parent_name = "moca",
 	},
 };
-
-static int
-bmoca_clk_prepare(struct clk_hw *hw)
-{
-#if (defined(CONFIG_BCM7445A0) || defined(CONFIG_BCM7445B0))
-	/* Configure MoCA PLL to 3600MHz */
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_RESET, RESETA, 1);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_DIV, PDIV, 3);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_DIV, NDIV_INT, 200);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0, 9);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_1, MDIV_CH1, 12);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_2, MDIV_CH2, 36);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_3, MDIV_CH3, 9);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_4, MDIV_CH4, 8);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_5, MDIV_CH5, 36);
-	BDEV_WR_F_RB(CLKGEN_PLL_MOCA_PLL_RESET, RESETA, 0);
-#endif
-	return 0;
-}
 
 static void __init bmoca_clk_init(void)
 {

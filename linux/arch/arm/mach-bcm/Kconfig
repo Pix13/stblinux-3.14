@@ -43,6 +43,10 @@ config ARCH_BRCMSTB
 	select BRCMSTB
 	select ARCH_HAS_OPP
 	select PM_OPP if PM
+	select ARM_ERRATA_798181 if SMP
+	select USB_XHCI_PLATFORM if USB && USB_XHCI_HCD
+	select ARCH_DMA_ADDR_T_64BIT if ARM_LPAE
+	select GENERIC_IRQ_CHIP
 	help
 	  Say Y if you intend to run the kernel on a Broadcom ARM-based STB
 	  chipset.
@@ -80,6 +84,14 @@ config BCM7145B0
 	select BRCM_MSPI_64B_WORDS
 	select BRCMSTB_USE_MEGA_BARRIER
 
+config BCM7250B0
+	bool "7250 Bx"
+	select BCM7250
+	select BRCM_HAS_NAND_MAJOR_7
+	select BRCM_HAS_NAND_MINOR_1
+	select BRCM_HAS_BSPI_V4
+	select BRCM_MSPI_64B_WORDS
+
 config BCM7366A0
 	bool "7366 Ax"
 	select BCM7366
@@ -90,6 +102,16 @@ config BCM7366A0
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
 	select BRCMSTB_USE_MEGA_BARRIER
+
+config BCM7366B0
+	bool "7366 Bx"
+	select BCM7366
+	select BRCM_GENET_V4
+	select BRCM_HAS_NAND_MAJOR_7
+	select BRCM_HAS_NAND_MINOR_1
+	select BRCM_HAS_BSPI_V4
+	select BRCM_HAS_MOCA_20_GEN23
+	select BRCM_MSPI_64B_WORDS
 
 config BCM7439A0
 	bool "7439 Ax"
@@ -122,7 +144,6 @@ config BCM7445D0
 	select BRCM_HAS_NAND_MINOR_1
 	select BRCM_HAS_BSPI_V4
 	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_USE_MEGA_BARRIER
 
 endchoice
 
@@ -135,13 +156,14 @@ config SPI_BRCMSTB
 
 config BCMGENET
 	tristate "Broadcom STB 10/100/1000 MAC/PHY support"
-	depends on ETHERNET && BRCMSTB && (BRCM_GENET_V3 || BRCM_GENET_V4)
+	depends on ETHERNET && BRCMSTB
 	default y
 	select CRC32
 	select MII
 	select PHYLIB
 	select FIXED_PHY
 	select BCM7XXX_PHY
+	select BCM531XX_PHY
 	help
 	  Say Y to support the internal 10/100/1000 GENET MAC/PHY on
 	  Broadcom set-top chips.  This driver also supports the datapath
@@ -184,24 +206,6 @@ config BRCM_SDIO
 
 	  If unsure, say Y.
 
-config BCMGENET
-	tristate "Broadcom STB 10/100/1000 MAC/PHY support"
-	depends on ETHERNET && BRCMSTB && (BRCM_GENET_V3 || BRCM_GENET_V4)
-	default y
-	select CRC32
-	select MII
-	select PHYLIB
-	select FIXED_PHY
-	select BCM7XXX_PHY
-	help
-	  Say Y to support the internal 10/100/1000 GENET MAC/PHY on
-	  Broadcom set-top chips.  This driver also supports the datapath
-	  for the onchip MoCA transceiver.
-
-	  If your chipset supports power management, disabling this driver
-	  will keep the device permanently powered down.
-
-
 #####################################################################
 # Hidden options
 #####################################################################
@@ -210,6 +214,9 @@ config BRCMSTB
 	bool
 
 config BCM7145
+	bool
+
+config BCM7250
 	bool
 
 config BCM7366

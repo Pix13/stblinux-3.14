@@ -144,6 +144,8 @@ dsa_switch_setup(struct dsa_switch_tree *dst, int index,
 		goto out;
 	}
 
+	ds->phys_mii_mask = ds->phys_port_mask;
+
 	/*
 	 * If the CPU connects to this switch, set the switch tree
 	 * tagging protocol to the preferred tagging format of this
@@ -410,6 +412,7 @@ static int dsa_of_probe(struct platform_device *pdev)
 	for_each_available_child_of_node(np, child) {
 		cd = &pd->chip[chip_index];
 
+		cd->of_node = child;
 		cd->mii_bus = &mdio_bus->dev;
 
 		sw_addr = of_get_property(child, "reg", NULL);
@@ -430,6 +433,8 @@ static int dsa_of_probe(struct platform_device *pdev)
 			port_name = of_get_property(port, "label", NULL);
 			if (!port_name)
 				continue;
+
+			cd->port_dn[port_index] = port;
 
 			cd->port_names[port_index] = kstrdup(port_name,
 					GFP_KERNEL);
@@ -609,6 +614,7 @@ static void dsa_shutdown(struct platform_device *pdev)
 }
 
 static const struct of_device_id dsa_of_match_table[] = {
+	{ .compatible = "brcm,bcm7445-switch-v4.0", },
 	{ .compatible = "marvell,dsa", },
 	{}
 };
@@ -642,6 +648,9 @@ static int __init dsa_init_module(void)
 #ifdef CONFIG_NET_DSA_TAG_TRAILER
 	dev_add_pack(&trailer_packet_type);
 #endif
+#ifdef CONFIG_NET_DSA_TAG_BRCM
+	dev_add_pack(&brcm_tag_packet_type);
+#endif
 	return 0;
 }
 module_init(dsa_init_module);
@@ -656,6 +665,9 @@ static void __exit dsa_cleanup_module(void)
 #endif
 #ifdef CONFIG_NET_DSA_TAG_DSA
 	dev_remove_pack(&dsa_packet_type);
+#endif
+#ifdef CONFIG_NET_DSA_TAG_BRCM
+	dev_remove_pack(&brcm_tag_packet_type);
 #endif
 	platform_driver_unregister(&dsa_driver);
 }

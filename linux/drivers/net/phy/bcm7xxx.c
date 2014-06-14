@@ -14,46 +14,6 @@
 #include <linux/delay.h>
 #include <linux/brcmphy.h>
 
-#if defined(CONFIG_BCM7445A0) || defined(CONFIG_BCM7445B0)
-static int bcm7445a0b0_config_init(struct phy_device *phydev)
-{
-	int ret;
-	const struct bcm7445_regs {
-		int reg;
-		u16 value;
-	} bcm7445_regs_cfg[] = {
-		/* increases ADC latency by 24ns */
-		{ 0x17, 0x0038 },
-		{ 0x15, 0xAB95 },
-		/* increases internal 1V LDO voltage by 5% */
-		{ 0x17, 0x2038 },
-		{ 0x15, 0xBB22 },
-		/* reduce RX low pass filter corner frequency */
-		{ 0x17, 0x6038 },
-		{ 0x15, 0xFFC5 },
-		/* reduce RX high pass filter corner frequency */
-		{ 0x17, 0x003a },
-		{ 0x15, 0x2002 },
-	};
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(bcm7445_regs_cfg); i++) {
-		ret = phy_write(phydev,
-				bcm7445_regs_cfg[i].reg,
-				bcm7445_regs_cfg[i].value);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-}
-#else
-static inline int bcm7445a0b0_config_init(struct phy_device *phydev)
-{
-	return 0;
-}
-#endif /* CONFIG_BCM7445A0 || CONFIG_BCM7445B0 */
-
 #if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7366A0) || \
 	defined(CONFIG_BCM7445C0)
 
@@ -81,7 +41,7 @@ static void phy_write_misc(struct phy_device *phydev,
 	phy_write(phydev, 0x15, value);
 }
 
-static int bcm7xxx_28nm_afe_config_init(struct phy_device *phydev)
+static int bcm7xxx_28nm_config_init(struct phy_device *phydev)
 {
 	/* Increase VCO range to prevent unlocking problem of PLL at low
 	 * temp
@@ -125,22 +85,11 @@ static int bcm7xxx_28nm_afe_config_init(struct phy_device *phydev)
 	return 0;
 }
 #else
-static inline int bcm7xxx_28nm_afe_config_init(struct phy_device *phydev)
+static inline int bcm7xxx_28nm_config_init(struct phy_device *phydev)
 {
 	return 0;
 }
 #endif /* CONFIG_BCM7366A0 || CONFIG_BCM7439A0 || CONFIG_BCM7445C0 */
-
-static int bcm7xxx_28nm_config_init(struct phy_device *phydev)
-{
-	int ret;
-
-	ret = bcm7445a0b0_config_init(phydev);
-	if (ret)
-		return ret;
-
-	return bcm7xxx_28nm_afe_config_init(phydev);
-}
 
 static int phy_set_clr_bits(struct phy_device *dev, int location,
 					int set_mask, int clr_mask)
@@ -237,7 +186,6 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_init	= bcm7xxx_28nm_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
-	.suspend	= bcm7xxx_suspend,
 	.resume		= bcm7xxx_28nm_config_init,
 	.driver		= { .owner = THIS_MODULE },
 }, {
@@ -247,11 +195,11 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.features	= PHY_GBIT_FEATURES |
 			  SUPPORTED_Pause | SUPPORTED_Asym_Pause,
 	.flags		= PHY_IS_INTERNAL,
-	.config_init	= bcm7xxx_28nm_afe_config_init,
+	.config_init	= bcm7xxx_28nm_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
 	.suspend	= bcm7xxx_suspend,
-	.resume		= bcm7xxx_28nm_afe_config_init,
+	.resume		= bcm7xxx_28nm_config_init,
 	.driver		= { .owner = THIS_MODULE },
 }, {
 	.phy_id		= PHY_ID_BCM7366,
@@ -260,11 +208,11 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.features	= PHY_GBIT_FEATURES |
 			  SUPPORTED_Pause | SUPPORTED_Asym_Pause,
 	.flags		= PHY_IS_INTERNAL,
-	.config_init	= bcm7xxx_28nm_afe_config_init,
+	.config_init	= bcm7xxx_28nm_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
 	.suspend	= bcm7xxx_suspend,
-	.resume		= bcm7xxx_28nm_afe_config_init,
+	.resume		= bcm7xxx_28nm_config_init,
 	.driver		= { .owner = THIS_MODULE },
 }, {
 	.name		= "Broadcom BCM7XXX 28nm",
@@ -276,7 +224,6 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_init	= bcm7xxx_28nm_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
-	.suspend	= bcm7xxx_suspend,
 	.resume		= bcm7xxx_28nm_config_init,
 	.driver		= { .owner = THIS_MODULE },
 }, {
@@ -289,7 +236,6 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_init	= bcm7xxx_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
-	.suspend	= bcm7xxx_suspend,
 	.resume		= bcm7xxx_config_init,
 	.driver		= { .owner = THIS_MODULE },
 }, {

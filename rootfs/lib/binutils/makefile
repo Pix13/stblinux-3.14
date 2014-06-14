@@ -14,7 +14,10 @@ all::
 		./configure --disable-shared --host=$(MACHINE)-linux || \
 			exit 1 ; \
 	fi
-	$(MAKE) -f Makefile CC=$(CC) CFLAGS=$(CFLAGS)
+	$(MAKE) -f Makefile configure-host
+	find . -name Makefile | xargs sed -i 's/\(SUBDIRS.*\) doc/\1/g'
+	find . -name Makefile | xargs sed -i '/INFO_DEPS/d'
+	$(MAKE) -f Makefile
 
 .PHONY: romfs
 romfs:

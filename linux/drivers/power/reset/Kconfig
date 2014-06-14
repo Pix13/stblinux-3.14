@@ -14,6 +14,7 @@ config POWER_RESET_AS3722
 
 config POWER_RESET_BRCMSTB
 	bool "Broadcom STB reset driver"
+	select MFD_SYSCON
 	depends on POWER_RESET && ARCH_BRCMSTB
 	help
 	  This driver provides restart support for ARM-based Broadcom STB

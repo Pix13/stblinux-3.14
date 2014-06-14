@@ -305,6 +305,7 @@ static char *get_modprobe(void)
 
 int xtables_insmod(const char *modname, const char *modprobe, bool quiet)
 {
+#if 0
 	char *buf = NULL;
 	char *argv[4];
 	int status;
@@ -349,6 +350,7 @@ int xtables_insmod(const char *modname, const char *modprobe, bool quiet)
 	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
 		return 0;
 	return -1;
+#endif
 }
 
 int xtables_load_ko(const char *modprobe, bool quiet)

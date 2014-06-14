@@ -56,7 +56,7 @@ static int wp_on = 1;
 module_param(wp_on, int, 0444);
 
 /* SWLINUX-2527: support a workaround for bugs filed in, e.g., HW7445-988 */
-#if defined(CONFIG_BCM7445B0) || defined(CONFIG_BCM7145A0)
+#if defined(CONFIG_BCM7145A0)
 #define HW7445_988_WORKAROUND
 #endif
 
@@ -113,6 +113,10 @@ struct brcm_nand_dma_desc {
 	u32 pad2[5];
 	u32 status_valid;
 } __packed;
+
+/* Bitfields for brcm_nand_dma_desc::status_valid */
+#define FLASH_DMA_ECC_ERROR	(1 << 8)
+#define FLASH_DMA_CORR_ERROR	(1 << 9)
 
 /* 512B flash cache in the NAND controller HW */
 #define FC_SHIFT		9U
@@ -245,6 +249,9 @@ struct brcmstb_nand_controller {
 	unsigned int		num_dma_descs;
 	dma_addr_t		dma_pa;
 
+	/* in-memory cache of the FLASH_CACHE, used only for some commands */
+	u32			flash_cache[FC_WORDS];
+
 	u32			nand_cs_nand_select;
 	u32			nand_cs_nand_xor;
 	u32			corr_stat_threshold;
@@ -295,45 +302,6 @@ static struct nand_ecclayout brcmstb_nand_dummy_layout = {
 	.eccbytes		= 16,
 	.eccpos			= { 0, 1, 2, 3, 4, 5, 6, 7,
 				    8, 9, 10, 11, 12, 13, 14, 15 },
-};
-
-struct brcmstb_nand_exception {
-	const char		*name;
-	int			id[7];
-	int			idlen; /* usable */
-	unsigned int		chipsize; /* MB */
-	unsigned int		writesize; /* B */
-	unsigned int		erasesize; /* B */
-	unsigned int		oobsize; /* B per page */
-	int			chipoptions;
-	int			badblockpos;
-};
-
-static struct brcmstb_nand_exception brcmstb_exceptions_list[] = {
-	{"Micron MT29F16G08ABABA",
-		{0x2C, 0x48, 0x00, 0x26, 0x89, 0x00, 0x00},
-		5, 0x00800, 4096, 0x080000, 224},
-	{"Micron MT29F16G08CBABA",
-		{0x2C, 0x48, 0x04, 0x46, 0x85, 0x00, 0x00},
-		5, 0x00800, 4096, 0x100000, 224},
-	{"Micron MT29F16G08MAA",
-		{0x2C, 0xD5, 0x94, 0x3E, 0x74, 0x00, 0x00},
-		5, 0x00800, 4096, 0x080000, 218},
-	{"Micron MT29F32G08CBACA",
-		{0x2C, 0x68, 0x04, 0x4A, 0xA9, 0x00, 0x00},
-		5, 0x01000, 4096, 0x100000, 224},
-	{"Micron MT29F64G08CBAAA",
-		{0x2C, 0x88, 0x04, 0x4B, 0xA9, 0x00, 0x00},
-		5, 0x02000, 8192, 0x200000, 448},
-	{"Micron MT29F256G08CJAAA",
-		{0x2C, 0xA8, 0x05, 0xCB, 0xA9, 0x00, 0x00},
-		5, 0x08000, 8192, 0x200000, 448},
-	{NULL,}
-};
-
-/* Used for running nand_scan_ident without the built-in heuristics */
-static struct nand_flash_dev brcmstb_empty_flash_table[] = {
-	{NULL,}
 };
 
 /***********************************************************************
@@ -795,10 +763,12 @@ static void brcmstb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 {
 	struct nand_chip *chip = mtd->priv;
 	struct brcmstb_nand_host *host = chip->priv;
+	struct brcmstb_nand_controller *ctrl = host->ctrl;
 	u64 addr = (u64)page_addr << chip->page_shift;
 	int native_cmd = 0;
 
-	if (command == NAND_CMD_READID || command == NAND_CMD_PARAM)
+	if (command == NAND_CMD_READID || command == NAND_CMD_PARAM ||
+			command == NAND_CMD_RNDOUT)
 		addr = (u64)column;
 	/* Avoid propagating a negative, don't-care address */
 	else if (page_addr < 0)
@@ -836,6 +806,19 @@ static void brcmstb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		brcmstb_nand_low_level_op(host, LL_OP_CMD, command, false);
 		brcmstb_nand_low_level_op(host, LL_OP_ADDR, column, false);
 		break;
+	case NAND_CMD_RNDOUT:
+		native_cmd = CMD_PARAMETER_CHANGE_COL;
+		addr &= ~((u64)(FC_BYTES - 1));
+		/*
+		 * HW quirk: PARAMETER_CHANGE_COL requires SECTOR_SIZE_1K=0
+		 * NB: hwcfg.sector_size_1k may not be initialized yet
+		 */
+		if (RD_ACC_CONTROL(host->cs, SECTOR_SIZE_1K)) {
+			host->hwcfg.sector_size_1k =
+				RD_ACC_CONTROL(host->cs, SECTOR_SIZE_1K);
+			WR_ACC_CONTROL(host->cs, SECTOR_SIZE_1K, 0);
+		}
+		break;
 #endif
 	}
 
@@ -849,6 +832,23 @@ static void brcmstb_nand_cmdfunc(struct mtd_info *mtd, unsigned command,
 	brcmstb_nand_send_cmd(host, native_cmd);
 	brcmstb_nand_waitfunc(mtd, chip);
 
+#if CONTROLLER_VER >= 40
+	if (native_cmd == CMD_PARAMETER_READ ||
+			native_cmd == CMD_PARAMETER_CHANGE_COL) {
+		int i;
+		/*
+		 * Must cache the FLASH_CACHE now, since changes in
+		 * SECTOR_SIZE_1K may invalidate it
+		 */
+		for (i = 0; i < FC_WORDS; i++)
+			ctrl->flash_cache[i] = le32_to_cpu(BDEV_RD(FC(i)));
+		/* Cleanup from HW quirk: restore SECTOR_SIZE_1K */
+		if (host->hwcfg.sector_size_1k)
+			WR_ACC_CONTROL(host->cs, SECTOR_SIZE_1K,
+					host->hwcfg.sector_size_1k);
+	}
+#endif
+
 	/* Re-enable protection is necessary only after erase */
 	if (command == NAND_CMD_ERASE1)
 		brcmstb_nand_wp(mtd, 1);
@@ -858,7 +858,9 @@ static uint8_t brcmstb_nand_read_byte(struct mtd_info *mtd)
 {
 	struct nand_chip *chip = mtd->priv;
 	struct brcmstb_nand_host *host = chip->priv;
+	struct brcmstb_nand_controller *ctrl = host->ctrl;
 	uint8_t ret = 0;
+	int addr, offs;
 
 	switch (host->last_cmd) {
 	case NAND_CMD_READID:
@@ -882,9 +884,16 @@ static uint8_t brcmstb_nand_read_byte(struct mtd_info *mtd)
 
 #if CONTROLLER_VER >= 40
 	case NAND_CMD_PARAM:
-		if (host->last_byte < FC_BYTES)
-			ret = BDEV_RD(FC(host->last_byte >> 2)) >>
-				(24 - ((host->last_byte & 0x03) << 3));
+	case NAND_CMD_RNDOUT:
+		addr = host->last_addr + host->last_byte;
+		offs = addr & (FC_BYTES - 1);
+
+		/* At FC_BYTES boundary, switch to next column */
+		if (host->last_byte > 0 && offs == 0)
+			chip->cmdfunc(mtd, NAND_CMD_RNDOUT, addr, -1);
+
+		ret = ctrl->flash_cache[offs >> 2] >>
+					(24 - ((offs & 0x03) << 3));
 		break;
 	case NAND_CMD_GET_FEATURES:
 		if (host->last_byte >= ONFI_SUBFEATURE_PARAM_LEN) {
@@ -927,13 +936,6 @@ static void brcmstb_nand_write_buf(struct mtd_info *mtd, const uint8_t *buf, int
 		BUG();
 		break;
 	}
-}
-
-/* Copied from nand_base.c to support custom brcmstb_check_exceptions() */
-static void brcmstb_nand_erase_cmd(struct mtd_info *mtd, int page)
-{
-	struct nand_chip *chip = mtd->priv;
-	chip->cmdfunc(mtd, NAND_CMD_ERASE1, -1, page);
 }
 
 /**
@@ -1023,18 +1025,31 @@ static int brcmstb_nand_dma_trans(struct brcmstb_nand_host *host, u64 addr,
 
 	dma_unmap_single(&host->pdev->dev, buf_pa, len, dir);
 
+	for (offs = 0, i = 0; offs < len; offs += step, i++)
+		if (ctrl->dma_descs[i].status_valid & FLASH_DMA_ECC_ERROR)
+			return -EBADMSG;
+		else if (ctrl->dma_descs[i].status_valid & FLASH_DMA_CORR_ERROR)
+			return -EUCLEAN;
+
 	return 0;
 }
 
 /*
  * Assumes proper CS is already set
  */
-static void brcmstb_nand_read_by_pio(struct mtd_info *mtd,
+static int brcmstb_nand_read_by_pio(struct mtd_info *mtd,
 	struct nand_chip *chip, u64 addr, unsigned int trans,
-	u32 *buf, u8 *oob)
+	u32 *buf, u8 *oob, u64 *err_addr)
 {
 	struct brcmstb_nand_host *host = chip->priv;
-	int i, j;
+	int i, j, ret = 0;
+
+	/* Clear error addresses */
+	BDEV_WR_RB(BCHP_NAND_ECC_UNC_ADDR, 0);
+	BDEV_WR_RB(BCHP_NAND_ECC_CORR_ADDR, 0);
+
+	BDEV_WR_RB(BCHP_NAND_CMD_EXT_ADDRESS,
+			(host->cs << 16) | ((addr >> 32) & 0xffff));
 
 	for (i = 0; i < trans; i++, addr += FC_BYTES) {
 		BDEV_WR_RB(BCHP_NAND_CMD_ADDRESS, addr & 0xffffffff);
@@ -1048,7 +1063,83 @@ static void brcmstb_nand_read_by_pio(struct mtd_info *mtd,
 
 		if (oob)
 			oob += read_oob_from_regs(i, oob, mtd->oobsize / trans, host->hwcfg.sector_size_1k);
+
+		if (!ret) {
+			*err_addr = BDEV_RD(BCHP_NAND_ECC_UNC_ADDR) |
+				((u64)(BDEV_RD(BCHP_NAND_ECC_UNC_EXT_ADDR) &
+					0xffff) << 32);
+			if (*err_addr)
+				ret = -EBADMSG;
+		}
+
+		if (!ret) {
+			*err_addr = BDEV_RD(BCHP_NAND_ECC_CORR_ADDR) |
+				((u64)(BDEV_RD(BCHP_NAND_ECC_CORR_EXT_ADDR) &
+					0xffff) << 32);
+			if (*err_addr)
+				ret = -EUCLEAN;
+		}
 	}
+
+	return ret;
+}
+
+/*
+ * Check a page to see if it is erased (w/ bitflips) after an uncorrectable ECC
+ * error
+ *
+ * Because the HW ECC signals an ECC error if an erase paged has even a single
+ * bitflip, we must check each ECC error to see if it is actually an erased
+ * page with bitflips, not a truly corrupted page.
+ *
+ * On a real error, return a negative error code (-EBADMSG for ECC error), and
+ * buf will contain raw data.
+ * Otherwise, fill buf with 0xff and return the maximum number of
+ * bitflips-per-ECC-sector to the caller.
+ *
+ */
+static int brcmstb_nand_verify_erased_page(struct mtd_info *mtd,
+		  struct nand_chip *chip, void *buf, u64 addr)
+{
+	int i, sas, oob_nbits, data_nbits;
+	void *oob = chip->oob_poi;
+	unsigned int max_bitflips = 0;
+	int page = addr >> chip->page_shift;
+	int ret;
+
+	if (!buf) {
+		buf = chip->buffers->databuf;
+		/* Invalidate page cache */
+		chip->pagebuf = -1;
+	}
+
+	sas = mtd->oobsize / chip->ecc.steps;
+	oob_nbits = sas << 3;
+	data_nbits = chip->ecc.size << 3;
+
+	/* read without ecc for verification */
+	chip->cmdfunc(mtd, NAND_CMD_READ0, 0x00, page);
+	ret = chip->ecc.read_page_raw(mtd, chip, buf, true, page);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < chip->ecc.steps; i++, oob += sas) {
+		unsigned int bitflips = 0;
+
+		bitflips += oob_nbits - bitmap_weight(oob, oob_nbits);
+		bitflips += data_nbits - bitmap_weight(buf, data_nbits);
+
+		buf += chip->ecc.size;
+		addr += chip->ecc.size;
+
+		/* Too many bitflips */
+		if (bitflips > chip->ecc.strength)
+			return -EBADMSG;
+
+		max_bitflips = max(max_bitflips, bitflips);
+	}
+
+	return max_bitflips;
 }
 
 static int brcmstb_nand_read(struct mtd_info *mtd,
@@ -1057,46 +1148,57 @@ static int brcmstb_nand_read(struct mtd_info *mtd,
 {
 	struct brcmstb_nand_host *host = chip->priv;
 	struct brcmstb_nand_controller *ctrl = host->ctrl;
-	u64 err_addr;
+	u64 err_addr = 0;
+	int err;
 
 	DBG("%s %llx -> %p\n", __func__, (unsigned long long)addr, buf);
 
-	BDEV_WR_RB(BCHP_NAND_ECC_UNC_ADDR, 0);
-	BDEV_WR_RB(BCHP_NAND_ECC_CORR_ADDR, 0);
 #if CONTROLLER_VER >= 60
 	BDEV_WR_RB(BCHP_NAND_UNCORR_ERROR_COUNT, 0);
 #endif
 
 	if (has_flash_dma(ctrl) && !oob && flash_dma_buf_ok(buf)) {
-		if (brcmstb_nand_dma_trans(host, addr, buf, trans * FC_BYTES,
-					CMD_PAGE_READ))
-			return -EIO;
+		err = brcmstb_nand_dma_trans(host, addr, buf, trans * FC_BYTES,
+					     CMD_PAGE_READ);
+		if (err) {
+			if (mtd_is_bitflip_or_eccerr(err))
+				err_addr = addr;
+			else
+				return -EIO;
+		}
 	} else {
-
-		BDEV_WR_RB(BCHP_NAND_CMD_EXT_ADDRESS,
-				(host->cs << 16) | ((addr >> 32) & 0xffff));
-
 		if (oob)
 			memset(oob, 0x99, mtd->oobsize);
 
-		brcmstb_nand_read_by_pio(mtd, chip, addr, trans, buf, oob);
+		err = brcmstb_nand_read_by_pio(mtd, chip, addr, trans, buf,
+					       oob, &err_addr);
 	}
 
-	err_addr = BDEV_RD(BCHP_NAND_ECC_UNC_ADDR) |
-		((u64)(BDEV_RD(BCHP_NAND_ECC_UNC_EXT_ADDR) & 0xffff) << 32);
-	if (err_addr != 0) {
-		dev_warn(&host->pdev->dev, "uncorrectable error at 0x%llx\n",
-			(unsigned long long)err_addr);
-		mtd->ecc_stats.failed++;
-		/* NAND layer expects zero on ECC errors */
-		return 0;
+	if (mtd_is_eccerr(err)) {
+		int ret = brcmstb_nand_verify_erased_page(mtd, chip, buf, addr);
+		if (ret < 0) {
+			dev_dbg(&host->pdev->dev,
+					"uncorrectable error at 0x%llx\n",
+					(unsigned long long)err_addr);
+			mtd->ecc_stats.failed++;
+			/* NAND layer expects zero on ECC errors */
+			return 0;
+		} else {
+			if (buf)
+				memset(buf, 0xff, FC_BYTES * trans);
+			if (oob)
+				memset(oob, 0xff, mtd->oobsize);
+
+			dev_info(&host->pdev->dev,
+					"corrected %d bitflips in blank page at 0x%llx\n",
+					ret, (unsigned long long)addr);
+			return ret;
+		}
 	}
 
-	err_addr = BDEV_RD(BCHP_NAND_ECC_CORR_ADDR) |
-		((u64)(BDEV_RD(BCHP_NAND_ECC_CORR_EXT_ADDR) & 0xffff) << 32);
-	if (err_addr) {
+	if (mtd_is_bitflip(err)) {
 		unsigned int corrected = CORR_ERROR_COUNT;
-		dev_info(&host->pdev->dev, "corrected error at 0x%llx\n",
+		dev_dbg(&host->pdev->dev, "corrected error at 0x%llx\n",
 			(unsigned long long)err_addr);
 		mtd->ecc_stats.corrected += corrected;
 		/* Always exceed the software-imposed threshold */
@@ -1487,13 +1589,8 @@ static int brcmstb_nand_setup_dev(struct brcmstb_nand_host *host)
 
 	if (!brcmstb_nand_config_match(&orig_cfg, &new_cfg)) {
 #if CONTROLLER_VER >= 50
-#ifdef CONFIG_BCM7445A0
-		/* HW7445-750: 7445A0 NAND is broken for SECTOR_SIZE = 1024B */
-		new_cfg.sector_size_1k = 0;
-#else
 		/* default to 1K sector size (if page is large enough) */
 		new_cfg.sector_size_1k = (new_cfg.page_size >= 1024) ? 1 : 0;
-#endif /* CONFIG_BCM7445A0 */
 #endif
 
 		WR_ACC_CONTROL(host->cs, RD_ECC_EN, 1);
@@ -1528,14 +1625,6 @@ static int brcmstb_nand_setup_dev(struct brcmstb_nand_host *host)
 			dev_info(&host->pdev->dev, "detected %s\n", msg);
 		}
 	} else {
-#ifdef CONFIG_BCM7445A0
-		/* HW7445-750 */
-		if (orig_cfg.sector_size_1k != 0) {
-			dev_err(&host->pdev->dev, "1KB ECC sectors not "
-					"supported on 7445A0\n");
-			return -ENXIO;
-		}
-#endif
 		/*
 		 * Set oobsize to be consistent with controller's
 		 * spare_area_size. This helps nandwrite testing.
@@ -1558,69 +1647,6 @@ static int brcmstb_nand_setup_dev(struct brcmstb_nand_host *host)
 #endif
 	mb();
 
-	return 0;
-}
-
-static int brcmstb_check_exceptions(struct mtd_info *mtd)
-{
-	struct nand_chip *chip = mtd->priv;
-	struct brcmstb_nand_exception *list = brcmstb_exceptions_list;
-	int i;
-	u8 id_data[8];
-
-	/*
-	 * run default nand_base initialization w/o built-in ID table;
-	 * should return error, so we tell it to be "silent"
-	 */
-	chip->options |= NAND_SCAN_SILENT_NODEV;
-	nand_scan_ident(mtd, 1, brcmstb_empty_flash_table);
-	chip->options &= ~NAND_SCAN_SILENT_NODEV;
-
-	/* Send the command for reading device ID */
-	chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
-
-	for (i = 0; i < 8; i++)
-		id_data[i] = chip->read_byte(mtd);
-
-	for (; list->name != NULL; list++) {
-		for (i = 0; i < list->idlen; i++)
-			if (id_data[i] != list->id[i])
-				break;
-		if (i == list->idlen)
-			break;
-	}
-
-	if (!list->name)
-		return -ENODEV;
-
-	chip->chipsize = (uint64_t)list->chipsize << 20;
-	mtd->size = chip->chipsize;
-
-	mtd->erasesize = list->erasesize;
-	mtd->writesize = list->writesize;
-	mtd->oobsize = list->oobsize;
-
-	chip->options |= list->chipoptions;
-	chip->badblockpos = list->badblockpos;
-
-	/* The 3rd id byte holds MLC / multichip data */
-	chip->bits_per_cell = id_data[2];
-
-	chip->numchips = 1;
-
-	/* Calculate the address shift from the page size */
-	chip->page_shift = ffs(mtd->writesize) - 1;
-	/* Convert chipsize to number of pages per chip -1. */
-	chip->pagemask = (chip->chipsize >> chip->page_shift) - 1;
-
-	chip->bbt_erase_shift = chip->phys_erase_shift =
-		ffs(mtd->erasesize) - 1;
-	chip->chip_shift = fls64(chip->chipsize) - 1;
-
-	chip->erase_cmd = brcmstb_nand_erase_cmd;
-
-	pr_info("%s: heuristics exception detected, %s\n",
-		mtd->name, list->name);
 	return 0;
 }
 
@@ -1677,7 +1703,7 @@ static int brcmstb_nand_init_cs(struct brcmstb_nand_host *host)
 
 	chip->controller = &ctrl->controller;
 
-	if (brcmstb_check_exceptions(mtd) && nand_scan_ident(mtd, 1, NULL))
+	if (nand_scan_ident(mtd, 1, NULL))
 		return -ENXIO;
 
 	chip->options |= NAND_NO_SUBPAGE_WRITE | NAND_SKIP_BBTSCAN;
@@ -1689,7 +1715,10 @@ static int brcmstb_nand_init_cs(struct brcmstb_nand_host *host)
 		return -ENXIO;
 
 	/* nand_scan_tail() needs this to be set up */
-	chip->ecc.strength = host->hwcfg.ecc_level
+	if (is_hamming_ecc(&host->hwcfg))
+		chip->ecc.strength = 1;
+	else
+		chip->ecc.strength = host->hwcfg.ecc_level
 				<< host->hwcfg.sector_size_1k;
 	chip->ecc.size = host->hwcfg.sector_size_1k ? 1024 : 512;
 	/* only use our internal HW threshold */
