@@ -18,4 +18,5 @@ obj-$(CONFIG_ARCH_BRCMSTB)	:= brcmstb.o cma_driver.o wktmr-brcmstb.o gisb-brcmst
 obj-$(CONFIG_SMP)		+= headsmp-brcmstb.o
 obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug-brcmstb.o
 obj-$(CONFIG_PCI)		+= pci-brcmstb.o
-obj-$(CONFIG_PM)		+= pm-brcmstb.o s2-brcmstb.o
+obj-$(CONFIG_PM)		+= pm-brcmstb.o s2-brcmstb.o regsave.o
+obj-$(CONFIG_BRCMSTB_XPT_HASH)	+= xpt_dma.o

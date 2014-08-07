@@ -141,7 +141,7 @@
 /* reg: rbuf->tbuf_bp_mc */
 #define TBUF_CPU_BP				(1 << 8)
 /* reg: rbuf->rgmii_oob_ctrl */
-#define RGMII_MODE_EN			(1 << 0)
+#define RGMII_MODE_EN			(1 << 6)
 #define RGMII_LINK				(1 << 4)
 #define OOB_DISABLE				(1 << 5)
 #define ID_MODE_DIS				(1 << 16)

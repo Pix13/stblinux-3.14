@@ -56,11 +56,12 @@
  * BRCM_PM_UNDEF to brcm_pm_set_status() means Don't Touch
  */
 
-#define BRCM_PM_UNDEF		-1
+#define BRCM_PM_UNDEF			-1
+#define CPUFREQ_AVAIL_MAXLEN	128
+#define CPUFREQ_GOV_MAXLEN		128
 
 struct brcm_pm_state
 {
-	int usb_status;		/* 1=on, 0=off */
 	int sata_status;	/* 1=on, 0=off */
 	int tp1_status;		/* 1=on, 0=off */
 	int tp2_status;		/* 1=on, 0=off */
@@ -68,8 +69,8 @@ struct brcm_pm_state
 	int memc1_status;	/* 1=on, 0=off, 2=testmode */
 
 	int cpu_base;		/* current base frequency, in Hz */
-	int cpu_divisor;	/* 1, 2, 4, or 8 */
-	int cpu_pll;		/* 0=normal, >0 = power save modes */
+	char cpufreq_avail[CPUFREQ_AVAIL_MAXLEN];	/* available cpufreqs */
+	char cpufreq_gov[CPUFREQ_GOV_MAXLEN];		/* current cpufreq gov. name */
 
 	int ddr_timeout;	/* 0=no PM, >0 = timeout for self-refresh */
 };

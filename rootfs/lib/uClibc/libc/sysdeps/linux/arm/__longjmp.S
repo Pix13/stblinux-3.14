@@ -19,6 +19,7 @@
 
 #include <features.h>
 #include <bits/arm_asm.h>
+#include <bits/arm_bx.h>
 #define _SETJMP_H
 #define _ASM
 #include <bits/setjmp.h>

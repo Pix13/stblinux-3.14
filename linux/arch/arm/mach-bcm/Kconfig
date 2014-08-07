@@ -42,9 +42,9 @@ config ARCH_BRCMSTB
 	select POWER_RESET_BRCMSTB
 	select BRCMSTB
 	select ARCH_HAS_OPP
+	select ARCH_HAS_CPUFREQ
 	select PM_OPP if PM
 	select ARM_ERRATA_798181 if SMP
-	select USB_XHCI_PLATFORM if USB && USB_XHCI_HCD
 	select ARCH_DMA_ADDR_T_64BIT if ARM_LPAE
 	select GENERIC_IRQ_CHIP
 	help
@@ -63,6 +63,15 @@ choice
 	depends on BRCMSTB
 	help
 	  Select the Broadcom STB chipset you are building for.
+
+config BCM3390A0
+	bool "3390 Ax"
+	select BCM7145
+	select BRCM_HAS_NAND_MAJOR_7
+	select BRCM_HAS_NAND_MINOR_1
+	select BRCM_HAS_BSPI_V4
+	select BRCM_HAS_MOCA_20_GEN23
+	select BRCM_MSPI_64B_WORDS
 
 config BCM7145A0
 	bool "7145 Ax"
@@ -112,6 +121,7 @@ config BCM7366B0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
+	select BRCMSTB_XPT_HASH if PM
 
 config BCM7439A0
 	bool "7439 Ax"
@@ -144,6 +154,7 @@ config BCM7445D0
 	select BRCM_HAS_NAND_MINOR_1
 	select BRCM_HAS_BSPI_V4
 	select BRCM_MSPI_64B_WORDS
+	select BRCMSTB_XPT_HASH if PM
 
 endchoice
 
@@ -184,6 +195,20 @@ config BRCM_MOCA
 
 	  If your chipset supports power management, disabling this driver
 	  will keep the device permanently powered down.
+
+config BRCM_USB
+	tristate "Broadcom STB USB support"
+	depends on BRCMSTB && USB
+	select BRCM_USB_OHCI if USB_OHCI_HCD
+	select BRCM_USB_EHCI
+	select BRCM_USB_XHCI if USB_XHCI_HCD
+	default y
+	help
+	  Say Y to enable the drivers for the onchip USB controllers.
+
+	  If your chipset supports power management, disabling this driver
+	  will keep the device permanently powered down.
+
 
 config MTD_NAND_BRCMSTB
 	tristate "Broadcom NAND controller support"
@@ -357,3 +382,16 @@ config BRCM_MSPI_64B_WORDS
 # issue noted in HW7445-1301 and derivatives.
 config BRCMSTB_USE_MEGA_BARRIER
 	bool
+
+# Perform memory hashing before entering S3, using XPT DMA
+config BRCMSTB_XPT_HASH
+	bool
+
+config BRCM_USB_OHCI
+       bool
+
+config BRCM_USB_EHCI
+       bool
+
+config BRCM_USB_XHCI
+       bool

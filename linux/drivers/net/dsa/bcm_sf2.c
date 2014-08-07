@@ -22,6 +22,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <net/dsa.h>
+#include <linux/ethtool.h>
 
 #include "bcm_sf2.h"
 #include "bcm_sf2_regs.h"
@@ -137,7 +138,13 @@ static char *bcm_sf2_sw_probe(struct mii_bus *bus, int sw_addr)
 static void bcm_sf2_imp_setup(struct dsa_switch *ds, int port)
 {
 	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	unsigned int i;
 	u32 reg, val;
+
+	/* Enable the port memories */
+	reg = core_readl(priv, CORE_MEM_PSM_VDD_CTRL);
+	reg &= ~P_TXQ_PSM_VDD(port);
+	core_writel(priv, reg, CORE_MEM_PSM_VDD_CTRL);
 
 	/* Enable Broadcast, Multicast, Unicast forwarding to IMP port */
 	reg = core_readl(priv, CORE_IMP_CTL);
@@ -147,6 +154,11 @@ static void bcm_sf2_imp_setup(struct dsa_switch *ds, int port)
 
 	/* Enable forwarding */
 	core_writel(priv, SW_FWDG_EN, CORE_SWMODE);
+
+	/* Enable IMP port in dumb mode */
+	reg = core_readl(priv, CORE_SWITCH_CTRL);
+	reg |= MII_DUMB_FWDG_EN;
+	core_writel(priv, reg, CORE_SWITCH_CTRL);
 
 	/* Resolve which bit controls the Broadcom tag */
 	switch (port) {
@@ -187,11 +199,30 @@ static void bcm_sf2_imp_setup(struct dsa_switch *ds, int port)
 	reg = core_readl(priv, CORE_STS_OVERRIDE_IMP);
 	reg |= (MII_SW_OR | LINK_STS);
 	core_writel(priv, reg, CORE_STS_OVERRIDE_IMP);
+
+	/* Enable the IMP Port to be in the same VLAN as the other ports
+	 * on a per-port basis such that we only have Port i and IMP in
+	 * the same VLAN.
+	 */
+	for (i = 0; i < priv->hw_params.num_ports; i++) {
+		if (!((1 << i) & ds->phys_port_mask))
+			continue;
+
+		reg = core_readl(priv, CORE_PORT_VLAN_CTL_PORT(i));
+		reg |= (1 << port);
+		core_writel(priv, reg, CORE_PORT_VLAN_CTL_PORT(i));
+	}
 }
 
 static void bcm_sf2_port_setup(struct dsa_switch *ds, int port)
 {
 	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	u32 reg;
+
+	/* Clear the memory power down */
+	reg = core_readl(priv, CORE_MEM_PSM_VDD_CTRL);
+	reg &= ~P_TXQ_PSM_VDD(port);
+	core_writel(priv, reg, CORE_MEM_PSM_VDD_CTRL);
 
 	/* Clear the Rx and Tx disable bits and set to no spanning tree */
 	core_writel(priv, 0, CORE_G_PCTL_PORT(port));
@@ -199,14 +230,37 @@ static void bcm_sf2_port_setup(struct dsa_switch *ds, int port)
 	/* Enable port 7 interrupts to get notified */
 	if (port == 7)
 		intrl2_1_mask_clear(priv, P_IRQ_MASK(P7_IRQ_OFF));
+
+	/* Set this port, and only this one to be in the default VLAN */
+	reg = core_readl(priv, CORE_PORT_VLAN_CTL_PORT(port));
+	reg &= ~PORT_VLAN_CTRL_MASK;
+	reg |= (1 << port);
+	core_writel(priv, reg, CORE_PORT_VLAN_CTL_PORT(port));
 }
 
 static void bcm_sf2_port_disable(struct dsa_switch *ds, int port)
 {
 	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	u32 off, reg;
 
-	/* Disable the port since it is unused */
-	core_writel(priv, RX_DIS | TX_DIS, CORE_G_PCTL_PORT(port));
+	if (priv->wol_ports_mask & (1 << port)) {
+		pr_info("%s: port %d used for WoL\n", __func__, port);
+		return;
+	}
+
+	if (dsa_is_cpu_port(ds, port))
+		off = CORE_IMP_CTL;
+	else
+		off = CORE_G_PCTL_PORT(port);
+
+	reg = core_readl(priv, off);
+	reg |= RX_DIS | TX_DIS;
+	core_writel(priv, reg, off);
+
+	/* Power down the port memory */
+	reg = core_readl(priv, CORE_MEM_PSM_VDD_CTRL);
+	reg |= P_TXQ_PSM_VDD(port);
+	core_writel(priv, reg, CORE_MEM_PSM_VDD_CTRL);
 }
 
 static irqreturn_t bcm_sf2_switch_0_isr(int irq, void *dev_id)
@@ -301,6 +355,11 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 	priv->hw_params.num_ports = core_readl(priv, CORE_IMP0_PRT_ID) + 1;
 	if (priv->hw_params.num_ports > DSA_MAX_PORTS)
 		priv->hw_params.num_ports = DSA_MAX_PORTS;
+
+	/* Assume a single GPHY setup if we can't read that property */
+	if (of_property_read_u32(dn, "brcm,num-gphy",
+				&priv->hw_params.num_gphy))
+		priv->hw_params.num_gphy = 1;
 
 	/* Enable all valid ports and disable those unused */
 	for (port = 0; port < priv->hw_params.num_ports; port++) {
@@ -508,10 +567,11 @@ static void bcm_sf2_sw_fixed_link_update(struct dsa_switch *ds, int port,
 		else
 			reg &= ~LINK_STS;
 		core_writel(priv, reg, CORE_STS_OVERRIDE_GMIIP_PORT(7));
-	} else
+		status->duplex = 1;
+	} else {
 		status->link = !!(link & (1 << port));
-
-	status->duplex = !!(duplex & (1 << port));
+		status->duplex = !!(duplex & (1 << port));
+	}
 
 	switch (speed) {
 	case SPDSTS_10:
@@ -535,6 +595,140 @@ static void bcm_sf2_sw_fixed_link_update(struct dsa_switch *ds, int port,
 		status->pause = 1;
 }
 
+static int bcm_sf2_sw_suspend(struct dsa_switch *ds)
+{
+	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	unsigned int port;
+
+	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
+	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
+	intrl2_0_writel(priv, 0, INTRL2_CPU_MASK_CLEAR);
+	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
+	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
+	intrl2_1_writel(priv, 0, INTRL2_CPU_MASK_CLEAR);
+
+	/* Disable all ports physically present including the IMP
+	 * port, the other ones have already been disabled during
+	 * bcm_sf2_sw_setup
+	 */
+	for (port = 0; port < DSA_MAX_PORTS; port++) {
+		if ((1 << port) & ds->phys_port_mask ||
+			dsa_is_cpu_port(ds, port))
+			bcm_sf2_port_disable(ds, port);
+	}
+
+	return 0;
+}
+
+static int bcm_sf2_sw_rst(struct bcm_sf2_priv *priv)
+{
+	unsigned int timeout = 1000;
+	u32 reg;
+
+	reg = core_readl(priv, CORE_WATCHDOG_CTRL);
+	reg |= SOFTWARE_RESET | EN_CHIP_RST | EN_SW_RESET;
+	core_writel(priv, reg, CORE_WATCHDOG_CTRL);
+
+	do {
+		reg = core_readl(priv, CORE_WATCHDOG_CTRL);
+		if (!(reg & SOFTWARE_RESET))
+			break;
+
+		usleep_range(1000, 2000);
+	} while (timeout-- > 0);
+
+	if (timeout == 0)
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
+static int bcm_sf2_sw_resume(struct dsa_switch *ds)
+{
+	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	unsigned int port;
+	u32 reg;
+	int ret;
+
+	ret = bcm_sf2_sw_rst(priv);
+	if (ret) {
+		pr_err("%s: failed to software reset switch\n", __func__);
+		return ret;
+	}
+
+	/* Reinitialize the single GPHY */
+	if (priv->hw_params.num_gphy == 1) {
+		reg = reg_readl(priv, REG_SPHY_CNTRL);
+		reg |= PHY_RESET;
+		reg &= ~(EXT_PWR_DOWN | IDDQ_BIAS);
+		reg_writel(priv, reg, REG_SPHY_CNTRL);
+		udelay(21);
+		reg = reg_readl(priv, REG_SPHY_CNTRL);
+		reg &= ~PHY_RESET;
+		reg_writel(priv, reg, REG_SPHY_CNTRL);
+	}
+
+	for (port = 0; port < DSA_MAX_PORTS; port++) {
+		if ((1 << port) & ds->phys_port_mask)
+			bcm_sf2_port_setup(ds, port);
+		else if (dsa_is_cpu_port(ds, port))
+			bcm_sf2_imp_setup(ds, port);
+	}
+
+	return 0;
+}
+
+static void bcm_sf2_sw_get_wol(struct dsa_switch *ds, int port,
+				struct ethtool_wolinfo *wol)
+{
+	struct net_device *p = ds->dst[ds->index].master_netdev;
+	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	struct ethtool_wolinfo pwol;
+
+	/* Get the parent device WoL settings */
+	p->ethtool_ops->get_wol(p, &pwol);
+
+	/* Advertise the parent device supported settings */
+	wol->supported = pwol.supported;
+	memset(&wol->sopass, 0, sizeof(wol->sopass));
+
+	if (pwol.wolopts & WAKE_MAGICSECURE)
+		memcpy(&wol->sopass, pwol.sopass, sizeof(wol->sopass));
+
+	if (priv->wol_ports_mask & (1 << port))
+		wol->wolopts = pwol.wolopts;
+	else
+		wol->wolopts = 0;
+}
+
+static int bcm_sf2_sw_set_wol(struct dsa_switch *ds, int port,
+				struct ethtool_wolinfo *wol)
+{
+	struct net_device *p = ds->dst[ds->index].master_netdev;
+	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+	s8 cpu_port = ds->dst[ds->index].cpu_port;
+	struct ethtool_wolinfo pwol;
+
+	p->ethtool_ops->get_wol(p, &pwol);
+	if (wol->wolopts & ~pwol.supported)
+		return -EINVAL;
+
+	if (wol->wolopts)
+		priv->wol_ports_mask |= (1 << port);
+	else
+		priv->wol_ports_mask &= ~(1 << port);
+
+	/* If we have at least one port enabled, make sure the CPU port
+	 * is also enabled
+	 */
+	if (priv->wol_ports_mask)
+		priv->wol_ports_mask |= (1 << cpu_port);
+	else
+		priv->wol_ports_mask &= ~(1 << cpu_port);
+
+	return p->ethtool_ops->set_wol(p, wol);
+}
+
 static struct dsa_switch_driver bcm_sf2_switch_driver = {
 	.tag_protocol		= htons(ETH_P_BRCMTAG),
 	.priv_size		= sizeof(struct bcm_sf2_priv),
@@ -548,6 +742,10 @@ static struct dsa_switch_driver bcm_sf2_switch_driver = {
 	.get_sset_count		= bcm_sf2_sw_get_sset_count,
 	.adjust_link		= bcm_sf2_sw_adjust_link,
 	.fixed_link_update	= bcm_sf2_sw_fixed_link_update,
+	.suspend		= bcm_sf2_sw_suspend,
+	.resume			= bcm_sf2_sw_resume,
+	.get_wol		= bcm_sf2_sw_get_wol,
+	.set_wol		= bcm_sf2_sw_set_wol,
 };
 
 static int __init bcm_sf2_init(void)

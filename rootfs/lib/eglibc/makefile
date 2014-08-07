@@ -25,7 +25,7 @@ all-rootfs:
 		mkdir -p build; \
 		cd build; \
 		../configure --host=$(shell $(CC) -dumpmachine) \
-			--prefix= \
+			--prefix=/usr \
 			--with-sysroot=$(shell $(CC) -print-sysroot) \
 			--enable-obsolete-rpc \
 			--disable-nscd; \

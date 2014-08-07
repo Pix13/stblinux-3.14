@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Thu Apr 24 03:08:31 2014
- *                 Full Compile MD5 Checksum 1af2c2cf28828ece5496e1312aac0166
+ * Date:           Generated on              Wed Jul  2 03:12:12 2014
+ *                 Full Compile MD5 Checksum 7dc2787604a7d66ecd88cf44bdf8b9f2
  *                   (minus title and desc)  
- *                 MD5 Checksum              3203ffce85e3fc9a10f84123e54057b0
+ *                 MD5 Checksum              fac21eb3a5c0bbaa870b50b1cab81ef9
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -443,10 +443,6 @@
 #define BCHP_AON_PIN_CTRL_REG_END                          0x00410718
 #define BCHP_AON_HDMI_TX_REG_START                         0x00410800
 #define BCHP_AON_HDMI_TX_REG_END                           0x004108ac
-#define BCHP_AON_HDMI_TX_1_REG_START                       0x00411000
-#define BCHP_AON_HDMI_TX_1_REG_END                         0x004110ac
-#define BCHP_AON_HDMI_RX_REG_START                         0x00411200
-#define BCHP_AON_HDMI_RX_REG_END                           0x004112d4
 #define BCHP_CNTControlBase_REG_START                      0x00412000
 #define BCHP_CNTControlBase_REG_END                        0x00412ffc
 #define BCHP_CNTReadBase_REG_START                         0x00414000
@@ -625,14 +621,6 @@
 #define BCHP_SATA_PORT1_LEG_S2_REG_END                     0x0046aa54
 #define BCHP_SATA_PORT1_LEG_S3_REG_START                   0x0046aa58
 #define BCHP_SATA_PORT1_LEG_S3_REG_END                     0x0046aa98
-#define BCHP_RFM_SYSCLK_REG_START                          0x0046c000
-#define BCHP_RFM_SYSCLK_REG_END                            0x0046c124
-#define BCHP_RFM_CLK27_REG_START                           0x0046c000
-#define BCHP_RFM_CLK27_REG_END                             0x0046c470
-#define BCHP_RFM_L2_REG_START                              0x0046cc00
-#define BCHP_RFM_L2_REG_END                                0x0046cc2c
-#define BCHP_RFM_GRB_REG_START                             0x0046d000
-#define BCHP_RFM_GRB_REG_END                               0x0046d00c
 #define BCHP_PCIE_0_RC_CFG_TYPE1_REG_START                 0x00470000
 #define BCHP_PCIE_0_RC_CFG_TYPE1_REG_END                   0x0047003c
 #define BCHP_PCIE_0_RC_CFG_PM_REG_START                    0x00470048
@@ -1229,36 +1217,6 @@
 #define BCHP_AMOLE_ANCIL_0_REG_END                         0x006a8e8c
 #define BCHP_ANCI656_ANCIL_0_REG_START                     0x006a8f00
 #define BCHP_ANCI656_ANCIL_0_REG_END                       0x006a8f24
-#define BCHP_DVP_HR_REG_START                              0x006b0000
-#define BCHP_DVP_HR_REG_END                                0x006b03fc
-#define BCHP_DVP_HR_INTR2_REG_START                        0x006b0400
-#define BCHP_DVP_HR_INTR2_REG_END                          0x006b042c
-#define BCHP_DVP_HR_KEY_RAM_REG_START                      0x006b0600
-#define BCHP_DVP_HR_KEY_RAM_REG_END                        0x006b0614
-#define BCHP_HDMI_RX_FE_SHARED_REG_START                   0x006b0800
-#define BCHP_HDMI_RX_FE_SHARED_REG_END                     0x006b090c
-#define BCHP_HDMI_RX_SHARED_REG_START                      0x006b0c00
-#define BCHP_HDMI_RX_SHARED_REG_END                        0x006b0c28
-#define BCHP_HDMI_RX_FE_0_REG_START                        0x006b1000
-#define BCHP_HDMI_RX_FE_0_REG_END                          0x006b11fc
-#define BCHP_HDMI_RX_EQ_0_REG_START                        0x006b1200
-#define BCHP_HDMI_RX_EQ_0_REG_END                          0x006b13fc
-#define BCHP_HDMI_RX_0_REG_START                           0x006b2000
-#define BCHP_HDMI_RX_0_REG_END                             0x006b27fc
-#define BCHP_HDCP2_RX_0_REG_START                          0x006b2800
-#define BCHP_HDCP2_RX_0_REG_END                            0x006b29fc
-#define BCHP_HDMI_RX_INTR2_0_REG_START                     0x006b2a00
-#define BCHP_HDMI_RX_INTR2_0_REG_END                       0x006b2a2c
-#define BCHP_HDMI_RX_BANK2_INTR2_0_REG_START               0x006b2a40
-#define BCHP_HDMI_RX_BANK2_INTR2_0_REG_END                 0x006b2a6c
-#define BCHP_HDMI_RX_HAE_INTR2_0_REG_START                 0x006b2a80
-#define BCHP_HDMI_RX_HAE_INTR2_0_REG_END                   0x006b2aac
-#define BCHP_HDCP2_RX_HAE_INTR2_0_REG_START                0x006b2ac0
-#define BCHP_HDCP2_RX_HAE_INTR2_0_REG_END                  0x006b2ad4
-#define BCHP_HD_DVI_0_REG_START                            0x006b4000
-#define BCHP_HD_DVI_0_REG_END                              0x006b427c
-#define BCHP_DVP_HR_TMR_REG_START                          0x006b4cc0
-#define BCHP_DVP_HR_TMR_REG_END                            0x006b4cfc
 #define BCHP_DVP_HT_REG_START                              0x006c0000
 #define BCHP_DVP_HT_REG_END                                0x006c0114
 #define BCHP_HDMI_REG_START                                0x006c0800
@@ -1279,26 +1237,6 @@
 #define BCHP_HDMI_TX_HAE_INTR2_0_REG_END                   0x006c10ac
 #define BCHP_HDMI_RAM_REG_START                            0x006c1100
 #define BCHP_HDMI_RAM_REG_END                              0x006c12fc
-#define BCHP_DVP_HT_1_REG_START                            0x006d0000
-#define BCHP_DVP_HT_1_REG_END                              0x006d0114
-#define BCHP_HDMI_1_REG_START                              0x006d0800
-#define BCHP_HDMI_1_REG_END                                0x006d0afc
-#define BCHP_HDMI_TX_AUTO_I2C_1_REG_START                  0x006d0b00
-#define BCHP_HDMI_TX_AUTO_I2C_1_REG_END                    0x006d0dfc
-#define BCHP_HDMI_TX_PHY_1_REG_START                       0x006d0e00
-#define BCHP_HDMI_TX_PHY_1_REG_END                         0x006d0e7c
-#define BCHP_HDMI_RM_1_REG_START                           0x006d0e80
-#define BCHP_HDMI_RM_1_REG_END                             0x006d0eb8
-#define BCHP_HDMI_TX_INTR2_1_REG_START                     0x006d0f00
-#define BCHP_HDMI_TX_INTR2_1_REG_END                       0x006d0f2c
-#define BCHP_HDMI_TX_SCDC_INTR2_0_1_REG_START              0x006d0f80
-#define BCHP_HDMI_TX_SCDC_INTR2_0_1_REG_END                0x006d0fac
-#define BCHP_HDCP2_TX_HAE_INTR2_0_1_REG_START              0x006d1000
-#define BCHP_HDCP2_TX_HAE_INTR2_0_1_REG_END                0x006d102c
-#define BCHP_HDMI_TX_HAE_INTR2_0_1_REG_START               0x006d1080
-#define BCHP_HDMI_TX_HAE_INTR2_0_1_REG_END                 0x006d10ac
-#define BCHP_HDMI_RAM_1_REG_START                          0x006d1100
-#define BCHP_HDMI_RAM_1_REG_END                            0x006d12fc
 #define BCHP_BVN_RGR_REG_START                             0x006e0000
 #define BCHP_BVN_RGR_REG_END                               0x006e0010
 #define BCHP_VICE2_CABAC_0_0_REG_START                     0x00700000

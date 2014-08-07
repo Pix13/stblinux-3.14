@@ -86,9 +86,8 @@ images: .target
 	@echo "To install under $(TFTPDIR), use \"make install\""
 	@echo ""
 
-.PHONY: initrd_kernel
-initrd_kernel: .target chkpath
-	mkdir -p images
+.PHONY: rootfs
+rootfs: .target chkpath
 	# prepare rootfs skeleton
 	if [ -z "$(SUBDIRS)" ]; then \
 		rm -rf $(ROMFSDIR) ; \
@@ -107,7 +106,7 @@ initrd_kernel: .target chkpath
 		echo "PLAT=$(PLAT)" >> romfs/etc/brcmstb.conf ; \
 		echo "VERSION=$(VERSION)" >> romfs/etc/brcmstb.conf ; \
 	fi
-	# build/install rootfs contents
+	# build rootfs contents and install to romfs/
 	if [[ "$(SUBDIRS)" != linux* ]]; then \
 		$(MAKE) -C lib all \
 			INITRD_SUBDIR="$(SUBDIRS)" || exit 1 ; \
@@ -118,6 +117,10 @@ initrd_kernel: .target chkpath
 		$(MAKE) -j1 -C user romfs \
 			INITRD_SUBDIR="$(SUBDIRS)" || exit 1 ; \
 	fi
+
+.PHONY: initrd_kernel
+initrd_kernel: .target chkpath rootfs
+	mkdir -p images
 	# configure kernel for initramfs, then build it
 	$(CFG) initramfs
 	if [ "$(ARCH)" = "mips" ]; then \
@@ -362,6 +365,7 @@ help:
 	@echo "                             then build flash images / tarballs"
 	@echo "initrd_kernel              - Build initramfs kernel for current target"
 	@echo "kernel                     - Build non-initramfs kernel for current target"
+	@echo "rootfs                     - Populates romfs/"
 	@echo ""
 	@echo "install                    - Copy all kernels/images/tarballs to TFTPDIR"
 	@echo ""

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 - 2013 Broadcom Corporation
+ * Copyright (C) 2009 - 2014 Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -10,74 +10,32 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#include <linux/dma-mapping.h>
+#include <linux/err.h>
+#include <linux/kernel.h>
+#include <linux/hrtimer.h>
+#include <linux/io.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/platform_device.h>
+#include <linux/usb.h>
+#include <linux/usb/hcd.h>
+#include <linux/usb/ehci_pdriver.h>
+#include <linux/clk.h>
+
+#include "ehci.h"
+#include "ehci-hcd.c"
 #include "usb-brcm.h"
 
-static struct platform_driver	ehci_hcd_brcm_driver;
-#define PLATFORM_DRIVER		ehci_hcd_brcm_driver
+#define BRCM_DRIVER_DESC "EHCI BRCM driver"
 
-#include "ehci-hcd.c"
+struct brcm_hcd {
+	struct clk *hcd_clk;
+};
 
-/* for global USB settings, see arch/mips/brcmstb/bchip.c */
-
-static int ehci_brcm_reset(struct usb_hcd *hcd)
-{
-	struct ehci_hcd		*ehci = hcd_to_ehci(hcd);
-	int ret;
-
-	ehci->big_endian_mmio = 1;
-
-	ehci->caps = (struct ehci_caps *) hcd->regs;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
-	ehci->regs = (struct ehci_regs *) (hcd->regs +
-		HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase)));
-#else
-	ehci->regs = (struct ehci_regs *) (hcd->regs +
-		HC_LENGTH(ehci_readl(ehci, &ehci->caps->hc_capbase)));
-#endif
-	dbg_hcs_params(ehci, "reset");
-	dbg_hcc_params(ehci, "reset");
-
-	/* cache this readonly data; minimize PCI reads */
-	ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
-
-	/* This fixes the lockup during reboot due to prior interrupts */
-	ehci_writel(ehci, CMD_RESET, &ehci->regs->command);
-	mdelay(10);
-
-	/*
-	 * SWLINUX-1705: Avoid OUT packet underflows during high memory
-	 *   bus usage
-	 * port_status[0x0f] = Broadcom-proprietary USB_EHCI_INSNREG00 @ 0x90
-	 */
-	ehci_writel(ehci, 0x00800040, &ehci->regs->port_status[0x10]);
-	ehci_writel(ehci, 0x00000001, &ehci->regs->port_status[0x12]);
-
-	/* force HC to halt state */
-	/*
-	 * TODO: Why does the original code call halt() before init()? init()
-	 * initializes our spinlock...
-	 */
-	spin_lock_init(&ehci->lock);
-	ehci_halt(ehci);
-
-	ret = ehci_init(hcd);
-	if (ret)
-		return ret;
-	ehci_reset(ehci);
-
-	return ret;
-}
-
-static void ehci_brcm_shutdown(struct usb_hcd *hcd)
-{
-	if (test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags))
-		ehci_shutdown(hcd);
-}
+static const char brcm_hcd_name[] = "ehci-brcm";
 
 /* ehci_brcm_wait_for_sof
  * Wait for start of next microframe, then wait extra delay microseconds
@@ -135,55 +93,97 @@ static int ehci_brcm_hub_control(
 	return retval;
 }
 
-#ifdef CONFIG_PM
+static int ehci_brcm_reset(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+
+	ehci->big_endian_mmio = 1;
+
+	ehci->caps = (struct ehci_caps *) hcd->regs;
+	ehci->regs = (struct ehci_regs *) (hcd->regs +
+		HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase)));
+
+	/* This fixes the lockup during reboot due to prior interrupts */
+	ehci_writel(ehci, CMD_RESET, &ehci->regs->command);
+	mdelay(10);
+
+	/*
+	 * SWLINUX-1705: Avoid OUT packet underflows during high memory
+	 *   bus usage
+	 * port_status[0x0f] = Broadcom-proprietary USB_EHCI_INSNREG00 @ 0x90
+	 */
+	ehci_writel(ehci, 0x00800040, &ehci->regs->port_status[0x10]);
+	ehci_writel(ehci, 0x00000001, &ehci->regs->port_status[0x12]);
+
+	return ehci_setup(hcd);
+}
+
+static struct hc_driver __read_mostly ehci_brcm_hc_driver;
+
+static const struct ehci_driver_overrides brcm_overrides __initconst = {
+
+	.reset =	ehci_brcm_reset,
+	.extra_priv_size = sizeof(struct brcm_hcd),
+};
+
+static int ehci_brcm_probe(struct platform_device *dev)
+{
+	int err;
+	struct brcm_hcd *brcm_hcd_ptr;
+	struct clk *usb_clk;
+	struct usb_hcd *hcd;
+
+	err = dma_coerce_mask_and_coherent(&dev->dev, DMA_BIT_MASK(64));
+	if (err)
+		return err;
+
+	/* Hook the hub control routine to work around a bug */
+	ehci_brcm_hc_driver.hub_control = ehci_brcm_hub_control;
+
+	err = brcm_usb_probe(dev, &ehci_brcm_hc_driver, &hcd, &usb_clk);
+	if (!err) {
+		brcm_hcd_ptr = (struct brcm_hcd *)hcd_to_ehci(hcd)->priv;
+		brcm_hcd_ptr->hcd_clk = usb_clk;
+	}
+	return err;
+}
+
+static int ehci_brcm_remove(struct platform_device *dev)
+{
+	struct usb_hcd *hcd = platform_get_drvdata(dev);
+	struct brcm_hcd *brcm_hcd_ptr =
+		(struct brcm_hcd *)hcd_to_ehci(hcd)->priv;
+
+	return brcm_usb_remove(dev, brcm_hcd_ptr->hcd_clk);
+}
+
+#ifdef CONFIG_PM_SLEEP
+
 static int ehci_brcm_suspend(struct device *dev)
 {
-	struct usb_hcd		*hcd = dev_get_drvdata(dev);
-	struct ehci_hcd		*ehci = hcd_to_ehci(hcd);
-	unsigned long		flags;
+	int ret;
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct brcm_hcd *brcm_hcd_ptr =
+		(struct brcm_hcd *)hcd_to_ehci(hcd)->priv;
+	bool do_wakeup = device_may_wakeup(dev);
 
-	if (time_before(jiffies, ehci->next_statechange))
-		msleep(10);
+	ret = ehci_suspend(hcd, do_wakeup);
+	clk_disable(brcm_hcd_ptr->hcd_clk);
 
-	/* Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible.  The PM and USB cores make sure that
-	 * the root hub is either suspended or stopped.
-	 */
-	ehci_prepare_ports_for_controller_suspend(ehci, device_may_wakeup(dev));
-	spin_lock_irqsave(&ehci->lock, flags);
-	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
-	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
-	brcm_usb_suspend(hcd);
-	spin_unlock_irqrestore(&ehci->lock, flags);
-
-	return 0;
+	return ret;
 }
 
 static int ehci_brcm_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct brcm_hcd *brcm_hcd_ptr =
+		(struct brcm_hcd *)hcd_to_ehci(hcd)->priv;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int err;
 
-	brcm_usb_resume(hcd);
-	if (time_before(jiffies, ehci->next_statechange))
-		msleep(100);
-
-	/* If CF is still set, we maintained PCI Vaux power.
-	 * Just undo the effect of ehci_pci_suspend().
-	 */
-	if (ehci_readl(ehci, &ehci->regs->configured_flag) == FLAG_CF) {
-		int mask = INTR_MASK;
-
-		ehci_prepare_ports_for_controller_resume(ehci);
-		if (!hcd->self.root_hub->do_remote_wakeup)
-			mask &= ~STS_PCD;
-		ehci_writel(ehci, mask, &ehci->regs->intr_enable);
-		ehci_readl(ehci, &ehci->regs->intr_enable);
-		return 0;
-	}
-
-	dev_info(dev, "lost power, restarting\n");
-	usb_root_hub_lost_power(hcd->self.root_hub);
+	err = clk_enable(brcm_hcd_ptr->hcd_clk);
+	if (err)
+		return err;
 
 	/*
 	 * SWLINUX-1705: Avoid OUT packet underflows during high memory
@@ -194,118 +194,53 @@ static int ehci_brcm_resume(struct device *dev)
 	ehci_writel(ehci, 0x00800040, &ehci->regs->port_status[0x10]);
 	ehci_writel(ehci, 0x00000001, &ehci->regs->port_status[0x12]);
 
-	/* Else reset, to cope with power loss or flush-to-storage
-	 * style "resume" having let BIOS kick in during reboot.
-	 */
-	(void) ehci_halt(ehci);
-	(void) ehci_reset(ehci);
-
-	/* emptying the schedule aborts any urbs */
-	spin_lock_irq(&ehci->lock);
-	if (!list_empty(&ehci->async_unlink))
-		end_unlink_async(ehci);
-	ehci_work(ehci);
-	spin_unlock_irq(&ehci->lock);
-
-	ehci_writel(ehci, ehci->command, &ehci->regs->command);
-	ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
-	ehci_readl(ehci, &ehci->regs->command);	/* unblock posted writes */
-
-	ehci->rh_state = EHCI_RH_SUSPENDED;
+	ehci_resume(hcd, false);
 	return 0;
 }
+#endif /* CONFIG_PM_SLEEP */
 
-static const struct dev_pm_ops brcm_ehci_pmops = {
-	.suspend	= ehci_brcm_suspend,
-	.resume		= ehci_brcm_resume,
+static SIMPLE_DEV_PM_OPS(ehci_brcm_pm_ops, ehci_brcm_suspend,
+		ehci_brcm_resume);
+
+#ifdef CONFIG_OF
+static const struct of_device_id brcm_ehci_of_match[] = {
+	{ .compatible = "brcm,ehci-brcm", },
+	{}
 };
 
-#define BRCM_EHCI_PMOPS (&brcm_ehci_pmops)
+MODULE_DEVICE_TABLE(platform, brcm_ehci_of_match);
+#endif /* CONFIG_OF */
 
-#else
-#define BRCM_EHCI_PMOPS NULL
-#endif
-
-
-/*-------------------------------------------------------------------------*/
-
-static const struct hc_driver ehci_brcm_hc_driver = {
-	.description =		hcd_name,
-	.product_desc =		"Broadcom STB EHCI",
-	.hcd_priv_size =	sizeof(struct ehci_hcd),
-
-	/*
-	 * generic hardware linkage
-	 */
-	.irq =			ehci_irq,
-	.flags =		HCD_MEMORY | HCD_USB2 | HCD_BH,
-
-	/*
-	 * basic lifecycle operations
-	 */
-	.reset =		ehci_brcm_reset,
-	.start =		ehci_run,
-	.stop =			ehci_stop,
-	.shutdown =		ehci_brcm_shutdown,
-
-	/*
-	 * managing i/o requests and associated device resources
-	 */
-	.urb_enqueue =		ehci_urb_enqueue,
-	.urb_dequeue =		ehci_urb_dequeue,
-	.endpoint_disable =	ehci_endpoint_disable,
-	.endpoint_reset =	ehci_endpoint_reset,
-	.clear_tt_buffer_complete =	ehci_clear_tt_buffer_complete,
-
-	/*
-	 * scheduling support
-	 */
-	.get_frame_number =	ehci_get_frame,
-
-	/*
-	 * root hub support
-	 */
-	.hub_status_data =	ehci_hub_status_data,
-	.hub_control =		ehci_brcm_hub_control,
-#ifdef	CONFIG_PM
-	.bus_suspend =		ehci_bus_suspend,
-	.bus_resume =		ehci_bus_resume,
-#endif
-	.relinquish_port =	ehci_relinquish_port,
-	.port_handed_over =	ehci_port_handed_over,
-};
-
-/*-------------------------------------------------------------------------*/
-
-static int ehci_hcd_brcm_probe(struct platform_device *pdev)
-{
-	static const u64 usb_dmamask = DMA_BIT_MASK(64);
-	pdev->dev.dma_mask = (u64 *)&usb_dmamask;
-	pdev->dev.coherent_dma_mask = usb_dmamask;
-
-	return brcm_usb_probe(pdev, hcd_name, &ehci_brcm_hc_driver);
-}
-
-static int ehci_hcd_brcm_remove(struct platform_device *pdev)
-{
-	return brcm_usb_remove(pdev);
-}
-
-static const struct of_device_id usb_hcd_brcm_match[] = {
-	{ .compatible = "brcm,ehci-brcm" },
-	{},
-};
-
-static struct platform_driver ehci_hcd_brcm_driver = {
-	.probe = ehci_hcd_brcm_probe,
-	.remove = ehci_hcd_brcm_remove,
-	.shutdown = usb_hcd_platform_shutdown,
-	.driver = {
-		.name = "ehci-brcm",
-		.bus = &platform_bus_type,
-		.of_match_table = of_match_ptr(usb_hcd_brcm_match),
-		.pm = BRCM_EHCI_PMOPS,
+static struct platform_driver ehci_brcm_driver = {
+	.probe		= ehci_brcm_probe,
+	.remove		= ehci_brcm_remove,
+	.shutdown	= usb_hcd_platform_shutdown,
+	.driver		= {
+		.owner	= THIS_MODULE,
+		.name	= "ehci-brcm",
+		.pm	= &ehci_brcm_pm_ops,
+		.of_match_table = of_match_ptr(brcm_ehci_of_match),
 	}
 };
 
-MODULE_ALIAS("ehci-brcm");
+static int __init ehci_brcm_init(void)
+{
+	if (usb_disabled())
+		return -ENODEV;
+
+	pr_info("%s: " BRCM_DRIVER_DESC "\n", brcm_hcd_name);
+
+	ehci_init_driver(&ehci_brcm_hc_driver, &brcm_overrides);
+	return platform_driver_register(&ehci_brcm_driver);
+}
+module_init(ehci_brcm_init);
+
+static void __exit ehci_brcm_cleanup(void)
+{
+	platform_driver_unregister(&ehci_brcm_driver);
+}
+module_exit(ehci_brcm_cleanup);
+
+MODULE_DESCRIPTION(BRCM_DRIVER_DESC);
+MODULE_AUTHOR("Al Cooper");
+MODULE_LICENSE("GPL");

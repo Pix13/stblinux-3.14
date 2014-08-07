@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 - 2013 Broadcom Corporation
+ * Copyright (C) 2009 - 2014 Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -10,178 +10,146 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#include <linux/dma-mapping.h>
+#include <linux/hrtimer.h>
+#include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/err.h>
+#include <linux/platform_device.h>
+#include <linux/usb/ohci_pdriver.h>
+#include <linux/usb.h>
+#include <linux/usb/hcd.h>
+#include <linux/clk.h>
+#include <linux/of.h>
+
+#include "ohci.h"
 #include "usb-brcm.h"
 
-static struct platform_driver	ohci_hcd_brcm_driver;
-#define PLATFORM_DRIVER		ohci_hcd_brcm_driver
+#define BRCM_DRIVER_DESC "OHCI BRCM driver"
 
-#include "ohci-hcd.c"
+static const char hcd_name[] = "ohci-brcm";
 
-/* for global USB settings, see arch/mips/brcmstb/bchip.c */
+struct brcm_hcd {
+	struct clk *hcd_clk;
+};
 
 static int ohci_brcm_reset(struct usb_hcd *hcd)
 {
 	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
 
 	ohci->flags |= OHCI_QUIRK_BE_MMIO;
-	distrust_firmware = 0;
-	ohci_hcd_init(ohci);
-	return ohci_init(ohci);
+	return ohci_setup(hcd);
 }
 
-static int ohci_brcm_start(struct usb_hcd *hcd)
+static struct hc_driver __read_mostly ohci_brcm_hc_driver;
+
+static const struct ohci_driver_overrides brcm_overrides __initconst = {
+	.product_desc =	"BRCM OHCI controller",
+	.reset =	ohci_brcm_reset,
+	.extra_priv_size = sizeof(struct brcm_hcd),
+};
+
+static int ohci_brcm_probe(struct platform_device *dev)
 {
-	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
-	struct ohci_regs __iomem *regs;
+	int err;
+	struct usb_hcd *hcd;
+	struct brcm_hcd *brcm_hcd_ptr;
+	struct clk *usb_clk;
 
-	regs = hcd->regs;
-
-	ohci_writel(ohci, 1, &regs->cmdstatus);
-	ohci_readl(ohci, &regs->cmdstatus);
-	mdelay(10);
-
-	ohci_hcd_init(ohci);
-	ohci_init(ohci);
-	ohci_run(ohci);
-	hcd->state = HC_STATE_RUNNING;
-	return 0;
+	err = dma_coerce_mask_and_coherent(&dev->dev, DMA_BIT_MASK(32));
+	if (err)
+		return err;
+	err = brcm_usb_probe(dev, &ohci_brcm_hc_driver, &hcd, &usb_clk);
+	if (!err) {
+		brcm_hcd_ptr = (struct brcm_hcd *)hcd_to_ohci(hcd)->priv;
+		brcm_hcd_ptr->hcd_clk = usb_clk;
+	}
+	return err;
 }
 
-static void ohci_brcm_shutdown(struct usb_hcd *hcd)
+static int ohci_brcm_remove(struct platform_device *dev)
 {
-	if (test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags))
-		ohci_shutdown(hcd);
+	struct usb_hcd *hcd = platform_get_drvdata(dev);
+	struct brcm_hcd *brcm_hcd_ptr =
+		(struct brcm_hcd *)hcd_to_ohci(hcd)->priv;
+
+	return brcm_usb_remove(dev, brcm_hcd_ptr->hcd_clk);
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+
 static int ohci_brcm_suspend(struct device *dev)
 {
+	int ret;
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
-	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
-	unsigned long	flags;
-	int		rc = 0;
+	struct brcm_hcd *brcm_hcd_ptr =
+		(struct brcm_hcd *)hcd_to_ohci(hcd)->priv;
+	bool do_wakeup = device_may_wakeup(dev);
 
-	/* Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible, bail out if RH has been resumed. Use
-	 * the spinlock to properly synchronize with possible pending
-	 * RH suspend or resume activity.
-	 */
-	spin_lock_irqsave(&ohci->lock, flags);
-	if (ohci->rh_state != OHCI_RH_SUSPENDED) {
-		rc = -EINVAL;
-		goto bail;
-	}
-	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
-	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
-
-	brcm_usb_suspend(hcd);
- bail:
-	spin_unlock_irqrestore(&ohci->lock, flags);
-
-	return rc;
+	ret = ohci_suspend(hcd, do_wakeup);
+	clk_disable(brcm_hcd_ptr->hcd_clk);
+	return ret;
 }
 
 static int ohci_brcm_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct brcm_hcd *brcm_hcd_ptr =
+		(struct brcm_hcd *)hcd_to_ohci(hcd)->priv;
+	int err;
 
-	brcm_usb_resume(hcd);
-	ohci_usb_reset(hcd_to_ohci(hcd));
+	err = clk_enable(brcm_hcd_ptr->hcd_clk);
+	if (err)
+		return err;
 	ohci_resume(hcd, false);
 	return 0;
 }
+#endif /* CONFIG_PM_SLEEP */
 
-static const struct dev_pm_ops brcm_ohci_pmops = {
-	.suspend	= ohci_brcm_suspend,
-	.resume		= ohci_brcm_resume,
+static SIMPLE_DEV_PM_OPS(ohci_brcm_pm_ops, ohci_brcm_suspend,
+		ohci_brcm_resume);
+
+#ifdef CONFIG_OF
+static const struct of_device_id brcm_ohci_of_match[] = {
+	{ .compatible = "brcm,ohci-brcm", },
+	{}
 };
 
-#define BRCM_OHCI_PMOPS (&brcm_ohci_pmops)
+MODULE_DEVICE_TABLE(platform, brcm_ohci_of_match);
+#endif /* CONFIG_OF */
 
-#else
-#define BRCM_OHCI_PMOPS NULL
-#endif
-
-static const struct hc_driver ohci_brcm_hc_driver = {
-	.description =		hcd_name,
-	.product_desc =		"Broadcom STB OHCI",
-	.hcd_priv_size =	sizeof(struct ohci_hcd),
-
-	/*
-	 * generic hardware linkage
-	 */
-	.irq =			ohci_irq,
-	.flags =		HCD_USB11 | HCD_MEMORY,
-
-	/*
-	 * basic lifecycle operations
-	 */
-	.reset =		ohci_brcm_reset,
-	.start =		ohci_brcm_start,
-	.stop =			ohci_stop,
-	.shutdown =		ohci_brcm_shutdown,
-
-	/*
-	 * managing i/o requests and associated device resources
-	 */
-	.urb_enqueue =		ohci_urb_enqueue,
-	.urb_dequeue =		ohci_urb_dequeue,
-	.endpoint_disable =	ohci_endpoint_disable,
-
-	/*
-	 * scheduling support
-	 */
-	.get_frame_number =	ohci_get_frame,
-
-	/*
-	 * root hub support
-	 */
-	.hub_status_data =	ohci_hub_status_data,
-	.hub_control =		ohci_hub_control,
-#ifdef	CONFIG_PM
-	.bus_suspend =		ohci_bus_suspend,
-	.bus_resume =		ohci_bus_resume,
-#endif
-	.start_port_reset =	ohci_start_port_reset,
-};
-
-/*-------------------------------------------------------------------------*/
-
-static int ohci_hcd_brcm_probe(struct platform_device *pdev)
-{
-	static const u64 usb_dmamask = DMA_BIT_MASK(32);
-	pdev->dev.dma_mask = (u64 *)&usb_dmamask;
-	pdev->dev.coherent_dma_mask = usb_dmamask;
-
-	return brcm_usb_probe(pdev, hcd_name, &ohci_brcm_hc_driver);
-}
-
-static int ohci_hcd_brcm_remove(struct platform_device *pdev)
-{
-	return brcm_usb_remove(pdev);
-}
-
-static const struct of_device_id usb_hcd_brcm_match[] = {
-	{ .compatible = "brcm,ohci-brcm" },
-	{},
-};
-
-static struct platform_driver ohci_hcd_brcm_driver = {
-	.probe		= ohci_hcd_brcm_probe,
-	.remove		= ohci_hcd_brcm_remove,
+static struct platform_driver ohci_brcm_driver = {
+	.probe		= ohci_brcm_probe,
+	.remove		= ohci_brcm_remove,
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver		= {
-		.name	= "ohci-brcm",
 		.owner	= THIS_MODULE,
-		.pm = BRCM_OHCI_PMOPS,
-		.bus = &platform_bus_type,
-		.of_match_table = of_match_ptr(usb_hcd_brcm_match),
-	},
+		.name	= "ohci-brcm",
+		.pm	= &ohci_brcm_pm_ops,
+		.of_match_table = of_match_ptr(brcm_ohci_of_match),
+	}
 };
 
-MODULE_ALIAS("ohci-brcm");
+static int __init ohci_brcm_init(void)
+{
+	if (usb_disabled())
+		return -ENODEV;
+
+	pr_info("%s: " BRCM_DRIVER_DESC "\n", hcd_name);
+
+	ohci_init_driver(&ohci_brcm_hc_driver, &brcm_overrides);
+	return platform_driver_register(&ohci_brcm_driver);
+}
+module_init(ohci_brcm_init);
+
+static void __exit ohci_brcm_cleanup(void)
+{
+	platform_driver_unregister(&ohci_brcm_driver);
+}
+module_exit(ohci_brcm_cleanup);
+
+MODULE_DESCRIPTION(BRCM_DRIVER_DESC);
+MODULE_AUTHOR("Al Cooper");

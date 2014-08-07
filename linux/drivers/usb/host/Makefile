@@ -24,7 +24,11 @@ endif
 obj-$(CONFIG_USB_WHCI_HCD)	+= whci/
 
 obj-$(CONFIG_PCI)		+= pci-quirks.o
-obj-$(CONFIG_ARCH_BRCMSTB)	+= usb-brcm.o ehci-brcm.o ohci-brcm.o
+
+obj-$(CONFIG_BRCM_USB)		+= usb-brcm.o usb-brcm-common-init.o
+obj-$(CONFIG_BRCM_USB_OHCI)	+= ohci-brcm.o
+obj-$(CONFIG_BRCM_USB_EHCI)	+= ehci-brcm.o
+obj-$(CONFIG_BRCM_USB_XHCI)	+= xhci-brcm.o
 
 obj-$(CONFIG_USB_EHCI_HCD)	+= ehci-hcd.o
 obj-$(CONFIG_USB_EHCI_PCI)	+= ehci-pci.o

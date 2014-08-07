@@ -17,51 +17,46 @@
 
 #include <linux/usb.h>
 #include <linux/platform_device.h>
-#include <linux/mutex.h>
-#include <linux/pm.h>
 #include <linux/clk.h>
-#include <linux/version.h>
 #include <linux/module.h>
-#include <linux/bitops.h>
-#include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)
 #include <linux/usb/hcd.h>
-#else
-#include "../core/hcd.h"
-#endif
 
-#define MAX_HCD			8
+#include "usb-brcm-common-init.h"
 
-static struct clk *usb_clk;
+struct brcm_usb_instance {
+	void __iomem		*ctrl_regs;
+	int			ioc;
+	int			ipp;
+	int			has_xhci;
+	struct clk		*usb_clk;
+};
 
-/* FIXME */
-#define clk_enable(...) do { } while (0)
-#define clk_disable(...) do { } while (0)
+static const char msg_clk_not_found[] = "Clock not found in Device Tree\n";
 
 /***********************************************************************
  * Library functions
  ***********************************************************************/
 
-int brcm_usb_probe(struct platform_device *pdev, char *hcd_name,
-	const struct hc_driver *hc_driver)
+int brcm_usb_probe(struct platform_device *pdev,
+		const struct hc_driver *hc_driver,
+		struct usb_hcd **hcdptr,
+		struct clk **hcd_clk_ptr)
 {
-	struct resource *res = NULL;
-	struct usb_hcd *hcd = NULL;
-	int irq, ret, len;
+	struct resource *res_mem;
+	int irq;
+	struct usb_hcd *hcd;
+	struct device_node *dn = pdev->dev.of_node;
+	struct clk *usb_clk;
+	int err;
 
 	if (usb_disabled())
 		return -ENODEV;
 
-	if (!usb_clk)
-		usb_clk = clk_get(NULL, "usb");
-	clk_enable(usb_clk);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
+	res_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res_mem) {
 		dev_err(&pdev->dev, "platform_get_resource error.\n");
 		return -ENODEV;
 	}
@@ -72,74 +67,59 @@ int brcm_usb_probe(struct platform_device *pdev, char *hcd_name,
 		return -ENODEV;
 	}
 
+	usb_clk = of_clk_get_by_name(dn, "sw_usb");
+	if (IS_ERR(usb_clk)) {
+		dev_err(&pdev->dev, msg_clk_not_found);
+		usb_clk = NULL;
+	}
+	err = clk_prepare_enable(usb_clk);
+	if (err)
+		return err;
+	*hcd_clk_ptr = usb_clk;
+
 	/* initialize hcd */
-	hcd = usb_create_hcd(hc_driver, &pdev->dev, (char *)hcd_name);
+	hcd = usb_create_hcd(hc_driver, &pdev->dev, dev_name(&pdev->dev));
 	if (!hcd) {
 		dev_err(&pdev->dev, "Failed to create hcd\n");
+		clk_disable(usb_clk);
 		return -ENOMEM;
 	}
+	*hcdptr = hcd;
+	hcd->rsrc_start = res_mem->start;
+	hcd->rsrc_len = resource_size(res_mem);
 
-	len = res->end - res->start + 1;
-	hcd->regs = ioremap(res->start, len);
-	hcd->rsrc_start = res->start;
-	hcd->rsrc_len = len;
-	ret = usb_add_hcd(hcd, irq, IRQF_DISABLED);
-	if (ret != 0) {
-		dev_err(&pdev->dev, "Failed to add hcd\n");
-		iounmap(hcd->regs);
-		usb_put_hcd(hcd);
-		clk_disable(usb_clk);
-		return ret;
+	hcd->regs = devm_ioremap_resource(&pdev->dev, res_mem);
+	if (IS_ERR(hcd->regs)) {
+		err = PTR_ERR(hcd->regs);
+		goto err_put_hcd;
 	}
+	err = usb_add_hcd(hcd, irq, IRQF_SHARED);
+	if (err)
+		goto err_put_hcd;
 
-#ifdef CONFIG_PM
-	/* disable autosuspend by default to preserve
-	 * original behavior
-	 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
-	usb_disable_autosuspend(hcd->self.root_hub);
-#else
-	hcd->self.root_hub->autosuspend_disabled = 1;
-#endif
-#endif
+	device_wakeup_enable(hcd->self.controller);
+	platform_set_drvdata(pdev, hcd);
+	return err;
 
-	return ret;
+err_put_hcd:
+	clk_disable(usb_clk);
+	usb_put_hcd(hcd);
+
+	return err;
 }
 EXPORT_SYMBOL(brcm_usb_probe);
 
-int brcm_usb_remove(struct platform_device *pdev)
+int brcm_usb_remove(struct platform_device *pdev, struct clk *hcd_clk)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
-	clk_disable(usb_clk);
 	usb_remove_hcd(hcd);
-	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
+	clk_disable(hcd_clk);
 
 	return 0;
 }
 EXPORT_SYMBOL(brcm_usb_remove);
 
-void brcm_usb_suspend(struct usb_hcd *hcd)
-{
-	/* Since all HCs share clock source, once we enable USB clock, all
-	   controllers are capable to generate interrupts if enabled. Since some
-	   controllers at this time are still marked as non-accessible, this
-	   leads to spurious interrupts.
-	   To avoid this, disable controller interrupts.
-	*/
-	disable_irq(hcd->irq);
-	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-	clk_disable(usb_clk);
-}
-EXPORT_SYMBOL(brcm_usb_suspend);
-
-void brcm_usb_resume(struct usb_hcd *hcd)
-{
-	clk_enable(usb_clk);
-	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
-	enable_irq(hcd->irq);
-}
-EXPORT_SYMBOL(brcm_usb_resume);
 
 #ifdef CONFIG_OF
 
@@ -147,76 +127,14 @@ EXPORT_SYMBOL(brcm_usb_resume);
  * DT support for USB instances
  ***********************************************************************/
 
-struct brcm_usb_instance {
-	void __iomem		*ctrl_regs;
-	int			ioc;
-	int			ipp;
-};
-
-#ifdef __LITTLE_ENDIAN
-#define ENDIAN_SETTING		0x03 /* !WABO !FNBO FNHW BABO */
-#else
-#define ENDIAN_SETTING		0x0e /* WABO FNBO FNHW !BABO */
-#endif
-
-#define ENDIAN_m		0x0f
-#define IOC_m			BIT(4)
-#define IPP_m			BIT(5)
-
-#define SEQ_EN_m		BIT(0)
-#define SCB_SIZE_s		7
-#define SCB_SIZE_m		(0x1f << SCB_SIZE_s)
-
-#define SCB1_EN_m		BIT(14)
-#define SCB2_EN_m		BIT(15)
-
-#define SS_EHCI64BIT_EN_m	BIT(16)
-
-#define SETUP_REG		0x00
-#define EBRIDGE_REG		0x0c
-#define OBRIDGE_REG		0x10
-
-static void brcm_usb_instance_hw_init(struct brcm_usb_instance *priv)
-{
-	u32 reg;
-
-	/* set up byte order for DRAM accesses */
-	reg = (readl(priv->ctrl_regs + SETUP_REG) & ~ENDIAN_m) |
-	      ENDIAN_SETTING;
-
-	/* enable the second and third memory controller interfaces */
-	reg |= (SCB1_EN_m | SCB2_EN_m);
-
-	/* set overcurrent and power polarity based on DT properties */
-	reg &= ~(IOC_m | IPP_m);
-	if (priv->ioc)
-		reg |= IOC_m;
-	if (priv->ipp)
-		reg |= IPP_m;
-
-	/* enable 64-bit mode */
-	reg |= SS_EHCI64BIT_EN_m;
-
-	writel(reg, priv->ctrl_regs + SETUP_REG);
-
-	/* override lame bridge defaults */
-	reg = readl(priv->ctrl_regs + OBRIDGE_REG);
-	reg &= ~SEQ_EN_m;
-	writel(reg, priv->ctrl_regs + OBRIDGE_REG);
-
-	reg = readl(priv->ctrl_regs + EBRIDGE_REG);
-	reg &= ~SEQ_EN_m;
-	reg &= ~SCB_SIZE_m;
-	reg |= 0x08 << SCB_SIZE_s;
-	writel(reg, priv->ctrl_regs + EBRIDGE_REG);
-}
-
 static int brcm_usb_instance_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = pdev->dev.of_node;
 	struct resource ctrl_res;
 	const u32 *prop;
 	struct brcm_usb_instance *priv;
+	struct device_node *node;
+	int err;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -242,10 +160,43 @@ static int brcm_usb_instance_probe(struct platform_device *pdev)
 	if (prop)
 		priv->ioc = be32_to_cpup(prop);
 
-	brcm_usb_instance_hw_init(priv);
-
+	node = of_find_compatible_node(dn, NULL, "xhci-platform");
+	of_node_put(node);
+	priv->has_xhci = node != NULL;
+	priv->usb_clk = of_clk_get_by_name(dn, "sw_usb");
+	if (IS_ERR(priv->usb_clk)) {
+		dev_err(&pdev->dev, msg_clk_not_found);
+		priv->usb_clk = NULL;
+	}
+	err = clk_prepare_enable(priv->usb_clk);
+	if (err)
+		return err;
+	brcm_usb_common_ctrl_init((uintptr_t)priv->ctrl_regs, priv->ioc,
+				priv->ipp, priv->has_xhci);
 	return of_platform_populate(dn, NULL, NULL, NULL);
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int brcm_usb_instance_suspend(struct device *dev)
+{
+	struct brcm_usb_instance *priv = dev_get_drvdata(dev);
+
+	clk_disable(priv->usb_clk);
+	return 0;
+}
+
+static int brcm_usb_instance_resume(struct device *dev)
+{
+	struct brcm_usb_instance *priv = dev_get_drvdata(dev);
+	clk_enable(priv->usb_clk);
+	brcm_usb_common_ctrl_init((uintptr_t)priv->ctrl_regs, priv->ioc,
+				priv->ipp, priv->has_xhci);
+	return 0;
+}
+#endif /* CONFIG_PM_SLEEP */
+
+static SIMPLE_DEV_PM_OPS(brcm_usb_instance_pm_ops, brcm_usb_instance_suspend,
+		brcm_usb_instance_resume);
 
 static const struct of_device_id brcm_usb_instance_match[] = {
 	{ .compatible = "brcm,usb-instance" },
@@ -257,6 +208,7 @@ static struct platform_driver brcm_usb_instance_driver = {
 		.name = "usb-brcm",
 		.bus = &platform_bus_type,
 		.of_match_table = of_match_ptr(brcm_usb_instance_match),
+		.pm = &brcm_usb_instance_pm_ops,
 	}
 };
 

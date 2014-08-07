@@ -32,15 +32,70 @@
 static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
 };
 
+#ifdef CONFIG_PM_SLEEP
+
+static int sdhci_brcmstb_suspend(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	int res;
+
+	res = sdhci_suspend_host(host);
+	if (res)
+		return res;
+	clk_disable(pltfm_host->clk);
+	return res;
+}
+
+static int sdhci_brcmstb_resume(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	int err;
+
+	err = clk_enable(pltfm_host->clk);
+	if (err)
+		return err;
+	return sdhci_resume_host(host);
+}
+
+#endif /* CONFIG_PM_SLEEP */
+
+static SIMPLE_DEV_PM_OPS(sdhci_brcmstb_pmops, sdhci_brcmstb_suspend,
+			sdhci_brcmstb_resume);
 
 static int sdhci_brcmstb_probe(struct platform_device *pdev)
 {
-	return sdhci_pltfm_register(pdev, &sdhci_brcmstb_pdata, 0);
+	struct device_node *dn = pdev->dev.of_node;
+	struct sdhci_host *host;
+	struct sdhci_pltfm_host *pltfm_host;
+	int res;
+
+	res = sdhci_pltfm_register(pdev, &sdhci_brcmstb_pdata, 0);
+	if (res)
+		return res;
+	host = platform_get_drvdata(pdev);
+	pltfm_host = sdhci_priv(host);
+
+	pltfm_host->clk = of_clk_get_by_name(dn, "sw_sdio");
+	if (IS_ERR(pltfm_host->clk)) {
+		dev_err(&pdev->dev, "Clock not found in Device Tree\n");
+		pltfm_host->clk = NULL;
+	}
+	res = clk_prepare_enable(pltfm_host->clk);
+	if (res)
+		sdhci_pltfm_unregister(pdev);
+	return res;
 }
 
 static int sdhci_brcmstb_remove(struct platform_device *pdev)
 {
-	return sdhci_pltfm_unregister(pdev);
+	struct sdhci_host *host = platform_get_drvdata(pdev);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	int res;
+	res = sdhci_pltfm_unregister(pdev);
+	clk_disable_unprepare(pltfm_host->clk);
+	return res;
 }
 
 
@@ -53,6 +108,7 @@ static struct platform_driver sdhci_brcmstb_driver = {
 	.driver		= {
 		.name	= "sdhci-brcmstb",
 		.owner	= THIS_MODULE,
+		.pm	= &sdhci_brcmstb_pmops,
 		.of_match_table = of_match_ptr(sdhci_brcm_of_match),
 	},
 	.probe		= sdhci_brcmstb_probe,

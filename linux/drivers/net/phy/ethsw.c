@@ -691,6 +691,12 @@ static int bcm53x25_ethsw_init(struct phy_device *phydev)
 	return 0;
 }
 
+static int bcm53x25_ethsw_resume(struct phy_device *phydev)
+{
+	bcm53x25_ethsw_init(phydev);
+	return ethsw_force_speed(phydev);
+}
+
 static int bcm53x25_config_aneg(struct phy_device *phydev)
 {
 	return ethsw_force_speed(phydev);
@@ -756,6 +762,7 @@ static struct phy_driver bcm53x25_driver[] = {
 		.config_init	= bcm53x25_ethsw_init,
 		.config_aneg	= bcm53x25_config_aneg,
 		.read_status	= bcm53x25_read_status,
+		.resume		= bcm53x25_ethsw_resume,
 		.driver		= { .owner = THIS_MODULE },
 	},
 	{
@@ -768,6 +775,7 @@ static struct phy_driver bcm53x25_driver[] = {
 		.config_init	= bcm53x25_ethsw_init,
 		.config_aneg	= bcm53x25_config_aneg,
 		.read_status	= bcm53x25_read_status,
+		.resume		= bcm53x25_ethsw_resume,
 		.driver		= { .owner = THIS_MODULE },
 	},
 };

@@ -71,6 +71,7 @@ my @patchlist = ("lttng", "android", "newubi");
 my %use_patch = ( );
 
 my %defsuf = (
+	"6328"	=> "-nohdd",  # JTAG probe
 	"7118"	=> "-docsis",
 	"7125"	=> "-docsis",
 	"7400"	=> "-docsis",
@@ -225,25 +226,37 @@ sub get_tgt($)
 		die "no target specified";
 	}
 
-	if($tgt !~ m/^([0-9]+[a-z][0-9])(_be)?(-\S+)?$/) {
+	unless($tgt =~ m/^([0-9]+[a-z][0-9])(_be)?(-\S+)?$/) {
 		die "invalid target format: $tgt";
 	}
 	($chip, $be, $suffix) = ($1, defined($2) ? 1 : 0,
 		defined($3) ? $3 : "");
 
-	# FIXME: if we're using a semi-multiplatform kernel we need a new
+	# Original plan: if using a semi-multiplatform kernel we need a new
 	# way to tell if the chip is MIPS or ARM.  Suggest adding new
 	# metadata under include/linux/brcmstb/7*
+	#
+	# However, it doesn't look like that's actually happening.  Until it
+	# does, we can assume that anything that has an entry under
+	# include/linux/brcmstb is ARM.
 	if(-d "$LINUXDIR/include/linux/brcmstb/${chip}") {
 		$linux_defaults = "$LINUXDIR/arch/arm/configs/brcmstb_defconfig";
 		$linux_new_defaults = "$LINUXDIR/arch/arm/configs/brcmstb_new_defconfig";
 		$ARCH = "arm";
 		return;
 	}
+	$linux_defaults = "$LINUXDIR/arch/mips/configs/bcm${chip}_defconfig";
+	if(-e $linux_defaults) {
+		$linux_new_defaults = $linux_defaults;
+		$linux_new_defaults =~ s/defconfig$/new_defconfig/;
+		$ARCH = "mips";
+		return;
+	}
 
 	print "\n";
 	print "ERROR: No Linux configuration for $chip\n";
-	print "Attempted to open: $LINUXDIR/arch/arm/configs/brcmstb_defconfig\n";
+	print "Attempted to open: $LINUXDIR/arch/arm/configs/brcmstb_defconfig,\n";
+	print "                   $linux_defaults\n";
 	print "\n";
 	exit 1;
 }
@@ -297,7 +310,8 @@ sub expand_modifiers($$)
 
 sub get_chiplist()
 {
-	my @defs = glob("$LINUXDIR/include/linux/brcmstb/7*");
+	my @defs = glob("$LINUXDIR/include/linux/brcmstb/7*
+	                $LINUXDIR/arch/mips/configs/bcm*_defconfig");
 	my @out = ( );
 
 	foreach (@defs) {
@@ -437,7 +451,7 @@ sub cmd_defaults($)
 	}
 
 	unlink($linux_config);
-	system("make -C $LINUXDIR ARCH=$ARCH brcmstb_defconfig");
+	system("make -C $LINUXDIR ARCH=$ARCH " . basename($linux_defaults));
 
 	read_cfg($linux_config, \%linux);
 	read_cfg($eglibc_defaults, \%eglibc);
@@ -464,6 +478,9 @@ sub cmd_defaults($)
 
 		read_cfg("defaults/override.uClibc-arm", \%uclibc_o);
 		override_cfg(\%uclibc, \%uclibc_o);
+	} else {
+		# The kernel CMA components are currently arm-only.
+		$vendor{"CONFIG_USER_CMATEST"} = "n";
 	}
 
 	# basic hardware support
@@ -483,7 +500,9 @@ sub cmd_defaults($)
 	# set default modifiers for each chip
 
 	my $shortchip = $chip;
-	$shortchip =~ s/[^0-9].*//;
+	if($shortchip =~ /^\d{3,}/) {
+		$shortchip =~ s/[^\d].*//;
+	}
 
 	if(defined($defsuf{$shortchip})) {
 		$suffix = $defsuf{$shortchip}.$suffix;
@@ -855,7 +874,7 @@ sub cmd_defaults($)
 	write_cfg($vendor_defaults, $vendor_config, \%vendor);
 
 	# fix up the kernel defconfig (due to CONFIG_BCM* munging)
-	system("make -C $LINUXDIR ARCH=$ARCH brcmstb_new_defconfig");
+	system("make -C $LINUXDIR ARCH=$ARCH " . basename($linux_new_defaults));
 	unlink($linux_new_defaults);
 
 	gen_arch_config($ARCH);

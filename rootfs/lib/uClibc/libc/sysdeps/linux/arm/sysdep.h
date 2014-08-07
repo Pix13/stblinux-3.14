@@ -21,6 +21,7 @@
 #define _LINUX_ARM_SYSDEP_H 1
 
 #include <common/sysdep.h>
+#include <bits/arm_bx.h>
 
 #include <sys/syscall.h>
 /* For Linux we can use the system call table in the header file

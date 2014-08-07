@@ -60,6 +60,9 @@
 #include <linux/migrate.h>
 #include <linux/string.h>
 #include <linux/dma-debug.h>
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/cma_driver.h>
+#endif
 
 #include <asm/io.h>
 #include <asm/pgalloc.h>
@@ -1780,6 +1783,19 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 			goto next_page;
 		}
 
+#ifdef CONFIG_BRCMSTB
+		/* handle direct I/O on CMA regions */
+		if (!cma_dev_get_page(mm, vma, start,
+				      pages ? &pages[i] : NULL)) {
+			if (vmas)
+				vmas[i] = vma;
+			i++;
+			start += PAGE_SIZE;
+			nr_pages--;
+			continue;
+		}
+#endif
+
 		if (!vma ||
 		    (vma->vm_flags & (VM_IO | VM_PFNMAP)) ||
 		    !(vm_flags & vma->vm_flags))
@@ -1929,10 +1945,15 @@ int fixup_user_fault(struct task_struct *tsk, struct mm_struct *mm,
 		     unsigned long address, unsigned int fault_flags)
 {
 	struct vm_area_struct *vma;
+	vm_flags_t vm_flags;
 	int ret;
 
 	vma = find_extend_vma(mm, address);
 	if (!vma || address < vma->vm_start)
+		return -EFAULT;
+
+	vm_flags = (fault_flags & FAULT_FLAG_WRITE) ? VM_WRITE : VM_READ;
+	if (!(vm_flags & vma->vm_flags))
 		return -EFAULT;
 
 	ret = handle_mm_fault(mm, vma, address, fault_flags);
@@ -3750,9 +3771,6 @@ static int __handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 			}
 		}
 	}
-
-	/* THP should already have been handled */
-	BUG_ON(pmd_numa(*pmd));
 
 	/*
 	 * Use __pte_alloc instead of pte_alloc_map, because we can't

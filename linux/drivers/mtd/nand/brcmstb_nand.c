@@ -39,11 +39,9 @@
 #include <linux/of_platform.h>
 #include <linux/slab.h>
 #include <linux/list.h>
+#include <linux/log2.h>
 
 #include <linux/brcmstb/brcmstb.h>
-
-/* FIXME */
-#define brcm_pm_deep_sleep()	1
 
 /*
  * SWLINUX-1818: this flag controls if WP stays on between erase/write
@@ -255,7 +253,6 @@ struct brcmstb_nand_controller {
 	u32			nand_cs_nand_select;
 	u32			nand_cs_nand_xor;
 	u32			corr_stat_threshold;
-	u32			hif_intr2;
 	u32			flash_dma_mode;
 
 #ifdef HW7445_988_WORKAROUND
@@ -278,6 +275,7 @@ struct brcmstb_nand_cfg {
 	/* use for low-power standby/resume only */
 	u32			acc_control;
 	u32			config;
+	u32			config_ext;
 	u32			timing_1;
 	u32			timing_2;
 };
@@ -1542,9 +1540,10 @@ static bool brcmstb_nand_config_match(struct brcmstb_nand_cfg *orig,
 		return false;
 	if (orig->col_adr_bytes != new->col_adr_bytes)
 		return false;
-	if (orig->blk_adr_bytes != new->blk_adr_bytes)
+	/* blk_adr_bytes can be larger than expected, but not smaller */
+	if (orig->blk_adr_bytes < new->blk_adr_bytes)
 		return false;
-	if (orig->ful_adr_bytes != new->ful_adr_bytes)
+	if (orig->ful_adr_bytes < new->ful_adr_bytes)
 		return false;
 
 	/* Positive matches */
@@ -1552,6 +1551,18 @@ static bool brcmstb_nand_config_match(struct brcmstb_nand_cfg *orig,
 		return true;
 	return orig->spare_area_size >= 27 &&
 	       orig->spare_area_size <= new->spare_area_size;
+}
+
+/*
+ * Minimum number of bytes to address a page. Calculated as:
+ *     roundup(log2(size / page-size) / 8)
+ *
+ * NB: the following does not "round up" for non-power-of-2 'size'; but this is
+ *     OK because many other things will break if 'size' is irregular...
+ */
+static inline int get_blk_adr_bytes(u64 size, u32 writesize)
+{
+	return ALIGN(ilog2(size) - ilog2(writesize), 8) >> 3;
 }
 
 static int brcmstb_nand_setup_dev(struct brcmstb_nand_host *host)
@@ -1571,18 +1582,13 @@ static int brcmstb_nand_setup_dev(struct brcmstb_nand_host *host)
 	new_cfg.spare_area_size = mtd->oobsize / (mtd->writesize >> FC_SHIFT);
 	new_cfg.device_width = (chip->options & NAND_BUSWIDTH_16) ? 16 : 8;
 	new_cfg.col_adr_bytes = 2;
+	new_cfg.blk_adr_bytes = get_blk_adr_bytes(mtd->size, mtd->writesize);
 
+	new_cfg.ful_adr_bytes = new_cfg.blk_adr_bytes;
 	if (mtd->writesize > 512)
-		if (mtd->size >= (256 << 20))
-			new_cfg.blk_adr_bytes = 3;
-		else
-			new_cfg.blk_adr_bytes = 2;
+		new_cfg.ful_adr_bytes += new_cfg.col_adr_bytes;
 	else
-		if (mtd->size >= (64 << 20))
-			new_cfg.blk_adr_bytes = 3;
-		else
-			new_cfg.blk_adr_bytes = 2;
-	new_cfg.ful_adr_bytes = new_cfg.blk_adr_bytes + new_cfg.col_adr_bytes;
+		new_cfg.ful_adr_bytes += 1;
 
 	if (new_cfg.spare_area_size > MAX_CONTROLLER_OOB)
 		new_cfg.spare_area_size = MAX_CONTROLLER_OOB;
@@ -1707,6 +1713,13 @@ static int brcmstb_nand_init_cs(struct brcmstb_nand_host *host)
 		return -ENXIO;
 
 	chip->options |= NAND_NO_SUBPAGE_WRITE | NAND_SKIP_BBTSCAN;
+	/*
+	 * NAND_USE_BOUNCE_BUFFER option prevents us from getting
+	 * passed kmapped buffer that we cannot DMA.
+	 * When option is set nand_base passes preallocated poi
+	 * buffer that is used as bounce buffer for DMA
+	 */
+	chip->options |= NAND_USE_BOUNCE_BUFFER;
 
 	if (of_get_nand_on_flash_bbt(dn))
 		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
@@ -1743,29 +1756,30 @@ static int brcmstb_nand_suspend(struct device *dev)
 	struct brcmstb_nand_controller *ctrl = dev_get_drvdata(dev);
 	struct brcmstb_nand_host *host;
 
-	if (!brcm_pm_deep_sleep())
-		return 0;
-
 	dev_dbg(dev, "Save state for S3 suspend\n");
-	ctrl->nand_cs_nand_select = BDEV_RD(BCHP_NAND_CS_NAND_SELECT);
-	ctrl->nand_cs_nand_xor = BDEV_RD(BCHP_NAND_CS_NAND_XOR);
-	ctrl->corr_stat_threshold =
-		BDEV_RD(BCHP_NAND_CORR_STAT_THRESHOLD);
-
-	if (!ctrl->irq_cascaded)
-		ctrl->hif_intr2 = HIF_ENABLED_IRQ(NAND_CTLRDY);
-	if (has_flash_dma(ctrl)) {
-		if (!ctrl->irq_cascaded)
-			ctrl->hif_intr2 |= flash_dma_irq_enabled(ctrl);
-		ctrl->flash_dma_mode = flash_dma_readl(ctrl, FLASH_DMA_MODE);
-	}
 
 	list_for_each_entry(host, &ctrl->host_list, node) {
 		host->hwcfg.acc_control = BDEV_RD(REG_ACC_CONTROL(host->cs));
 		host->hwcfg.config = BDEV_RD(REG_CONFIG(host->cs));
+#if CONTROLLER_VER >= 71
+		host->hwcfg.config_ext = BDEV_RD(REG_CONFIG_EXT(host->cs));
+#endif
 		host->hwcfg.timing_1 = BDEV_RD(REG_TIMING_1(host->cs));
 		host->hwcfg.timing_2 = BDEV_RD(REG_TIMING_2(host->cs));
 	}
+
+	ctrl->nand_cs_nand_select = BDEV_RD(BCHP_NAND_CS_NAND_SELECT);
+	ctrl->nand_cs_nand_xor = BDEV_RD(BCHP_NAND_CS_NAND_XOR);
+	ctrl->corr_stat_threshold = BDEV_RD(BCHP_NAND_CORR_STAT_THRESHOLD);
+
+	if (!ctrl->irq_cascaded) {
+		HIF_DISABLE_IRQ(NAND_CTLRDY);
+		if (has_flash_dma(ctrl))
+			flash_dma_irq_disable(ctrl);
+	}
+
+	if (has_flash_dma(ctrl))
+		ctrl->flash_dma_mode = flash_dma_readl(ctrl, FLASH_DMA_MODE);
 
 	return 0;
 }
@@ -1774,9 +1788,6 @@ static int brcmstb_nand_resume(struct device *dev)
 {
 	struct brcmstb_nand_controller *ctrl = dev_get_drvdata(dev);
 	struct brcmstb_nand_host *host;
-
-	if (!brcm_pm_deep_sleep())
-		return 0;
 
 	dev_dbg(dev, "Restore state after S3 suspend\n");
 
@@ -1790,7 +1801,7 @@ static int brcmstb_nand_resume(struct device *dev)
 	BDEV_WR_RB(BCHP_NAND_CORR_STAT_THRESHOLD,
 			ctrl->corr_stat_threshold);
 
-	if (!ctrl->irq_cascaded && ctrl->hif_intr2) {
+	if (!ctrl->irq_cascaded) {
 		HIF_ACK_IRQ(NAND_CTLRDY);
 		HIF_ENABLE_IRQ(NAND_CTLRDY);
 		if (has_flash_dma(ctrl))
@@ -1803,6 +1814,9 @@ static int brcmstb_nand_resume(struct device *dev)
 
 		BDEV_WR_RB(REG_ACC_CONTROL(host->cs), host->hwcfg.acc_control);
 		BDEV_WR_RB(REG_CONFIG(host->cs), host->hwcfg.config);
+#if CONTROLLER_VER >= 71
+		BDEV_WR_RB(REG_CONFIG_EXT(host->cs), host->hwcfg.config_ext);
+#endif
 		BDEV_WR_RB(REG_TIMING_1(host->cs), host->hwcfg.timing_1);
 		BDEV_WR_RB(REG_TIMING_2(host->cs), host->hwcfg.timing_2);
 
@@ -2044,7 +2058,8 @@ static int brcmstb_nand_remove(struct platform_device *pdev)
 
 	if (!ctrl->irq_cascaded) {
 		HIF_DISABLE_IRQ(NAND_CTLRDY);
-		flash_dma_irq_disable(ctrl);
+		if (has_flash_dma(ctrl))
+			flash_dma_irq_disable(ctrl);
 	}
 
 	dev_set_drvdata(&pdev->dev, NULL);

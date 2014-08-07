@@ -170,27 +170,37 @@ static inline void of_add_fixed_phys(void)
 }
 #endif /* CONFIG_FIXED_PHY */
 
+void brcmstb_irq0_init(void)
+{
+	BDEV_WR(BCHP_IRQ0_IRQEN, BCHP_IRQ0_IRQEN_uarta_irqen_MASK
+		| BCHP_IRQ0_IRQEN_uartb_irqen_MASK
+		| BCHP_IRQ0_IRQEN_uartc_irqen_MASK
+	);
+}
+
 static void __init brcmstb_init_irq(void)
 {
 	/* Force lazily-disabled IRQs to be masked before suspend */
 	gic_arch_extn.flags |= IRQCHIP_MASK_ON_SUSPEND;
 
-	BDEV_WR(BCHP_IRQ0_IRQEN, BCHP_IRQ0_IRQEN_uarta_irqen_MASK
-		| BCHP_IRQ0_IRQEN_uartb_irqen_MASK
-		| BCHP_IRQ0_IRQEN_uartc_irqen_MASK
-	);
-
+	brcmstb_irq0_init();
 	irqchip_init();
 }
 
 static void __init brcmstb_init_machine(void)
 {
+	struct platform_device_info devinfo = { .name = "cpufreq-cpu0", };
+	int ret;
+
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 	cma_register();
 	of_add_fixed_phys();
 	brcmstb_hook_fault_code();
 	brcmstb_clocks_init();
-	brcmstb_pm_init();
+	ret = brcmstb_pm_init();
+	if (ret)
+		pr_warn("PM: initialization failed with code %d\n", ret);
+	platform_device_register_full(&devinfo);
 }
 
 static void __init brcmstb_init_early(void)

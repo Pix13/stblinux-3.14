@@ -7,6 +7,7 @@
  */
 
 #include <features.h>
+#include <bits/arm_bx.h>
 
 #if !defined(__thumb__)
 __asm__(

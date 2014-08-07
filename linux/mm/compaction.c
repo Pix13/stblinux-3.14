@@ -251,7 +251,6 @@ static unsigned long isolate_freepages_block(struct compact_control *cc,
 {
 	int nr_scanned = 0, total_isolated = 0;
 	struct page *cursor, *valid_page = NULL;
-	unsigned long nr_strict_required = end_pfn - blockpfn;
 	unsigned long flags;
 	bool locked = false;
 
@@ -264,11 +263,12 @@ static unsigned long isolate_freepages_block(struct compact_control *cc,
 
 		nr_scanned++;
 		if (!pfn_valid_within(blockpfn))
-			continue;
+			goto isolate_fail;
+
 		if (!valid_page)
 			valid_page = page;
 		if (!PageBuddy(page))
-			continue;
+			goto isolate_fail;
 
 		/*
 		 * The zone lock must be held to isolate freepages.
@@ -289,12 +289,10 @@ static unsigned long isolate_freepages_block(struct compact_control *cc,
 
 		/* Recheck this is a buddy page under lock */
 		if (!PageBuddy(page))
-			continue;
+			goto isolate_fail;
 
 		/* Found a free page, break it into order-0 pages */
 		isolated = split_free_page(page);
-		if (!isolated && strict)
-			break;
 		total_isolated += isolated;
 		for (i = 0; i < isolated; i++) {
 			list_add(&page->lru, freelist);
@@ -305,7 +303,15 @@ static unsigned long isolate_freepages_block(struct compact_control *cc,
 		if (isolated) {
 			blockpfn += isolated - 1;
 			cursor += isolated - 1;
+			continue;
 		}
+
+isolate_fail:
+		if (strict)
+			break;
+		else
+			continue;
+
 	}
 
 	trace_mm_compaction_isolate_freepages(nr_scanned, total_isolated);
@@ -315,7 +321,7 @@ static unsigned long isolate_freepages_block(struct compact_control *cc,
 	 * pages requested were isolated. If there were any failures, 0 is
 	 * returned and CMA will fail.
 	 */
-	if (strict && nr_strict_required > total_isolated)
+	if (strict && blockpfn < end_pfn)
 		total_isolated = 0;
 
 	if (locked)
@@ -660,16 +666,20 @@ static void isolate_freepages(struct zone *zone,
 				struct compact_control *cc)
 {
 	struct page *page;
-	unsigned long high_pfn, low_pfn, pfn, z_end_pfn, end_pfn;
+	unsigned long high_pfn, low_pfn, pfn, z_end_pfn;
 	int nr_freepages = cc->nr_freepages;
 	struct list_head *freelist = &cc->freepages;
 
 	/*
 	 * Initialise the free scanner. The starting point is where we last
-	 * scanned from (or the end of the zone if starting). The low point
-	 * is the end of the pageblock the migration scanner is using.
+	 * successfully isolated from, zone-cached value, or the end of the
+	 * zone when isolating for the first time. We need this aligned to
+	 * the pageblock boundary, because we do pfn -= pageblock_nr_pages
+	 * in the for loop.
+	 * The low boundary is the end of the pageblock the migration scanner
+	 * is using.
 	 */
-	pfn = cc->free_pfn;
+	pfn = cc->free_pfn & ~(pageblock_nr_pages-1);
 	low_pfn = ALIGN(cc->migrate_pfn + 1, pageblock_nr_pages);
 
 	/*
@@ -689,6 +699,7 @@ static void isolate_freepages(struct zone *zone,
 	for (; pfn >= low_pfn && cc->nr_migratepages > nr_freepages;
 					pfn -= pageblock_nr_pages) {
 		unsigned long isolated;
+		unsigned long end_pfn;
 
 		/*
 		 * This can iterate a massively long zone without finding any
@@ -723,13 +734,10 @@ static void isolate_freepages(struct zone *zone,
 		isolated = 0;
 
 		/*
-		 * As pfn may not start aligned, pfn+pageblock_nr_page
-		 * may cross a MAX_ORDER_NR_PAGES boundary and miss
-		 * a pfn_valid check. Ensure isolate_freepages_block()
-		 * only scans within a pageblock
+		 * Take care when isolating in last pageblock of a zone which
+		 * ends in the middle of a pageblock.
 		 */
-		end_pfn = ALIGN(pfn + 1, pageblock_nr_pages);
-		end_pfn = min(end_pfn, z_end_pfn);
+		end_pfn = min(pfn + pageblock_nr_pages, z_end_pfn);
 		isolated = isolate_freepages_block(cc, pfn, end_pfn,
 						   freelist, false);
 		nr_freepages += isolated;

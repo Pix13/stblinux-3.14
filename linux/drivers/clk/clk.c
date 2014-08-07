@@ -35,6 +35,7 @@ static int enable_refcnt;
 static HLIST_HEAD(clk_root_list);
 static HLIST_HEAD(clk_orphan_list);
 static LIST_HEAD(clk_notifier_list);
+static HLIST_HEAD(clk_sw_list);
 
 /***           locking             ***/
 static void clk_prepare_lock(void)
@@ -99,7 +100,34 @@ static void clk_enable_unlock(unsigned long flags)
 
 static struct dentry *rootdir;
 static struct dentry *orphandir;
+static struct dentry *swdir;
 static int inited = 0;
+
+/* Only used when (flags & CLK_IS_SW) */
+static int sw_clk_show(struct seq_file *s, void *what)
+{
+	struct clk *clk = s->private;
+	int i;
+
+	seq_printf(s, "Parents of %s:\n", clk->name);
+	for (i = 0; i < clk->num_parents; i++)
+		seq_printf(s, "\t%s\n", clk->parents[i]
+			   ? clk->parents[i]->name : "null");
+	return 0;
+}
+
+/* Only used when (flags & CLK_IS_SW) */
+static int sw_clk_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, sw_clk_show, inode->i_private);
+}
+
+static const struct file_operations sw_clk_ops = {
+	.open		= sw_clk_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static void clk_summary_show_one(struct seq_file *s, struct clk *c, int level)
 {
@@ -277,6 +305,13 @@ static int clk_debug_create_one(struct clk *clk, struct dentry *pdentry)
 	if (!d)
 		goto err_out;
 
+	if (clk->flags & CLK_IS_SW) {
+		d = debugfs_create_file("parents", S_IFREG | S_IRUGO,
+					clk->dentry, clk, &sw_clk_ops);
+		if (!d)
+			goto err_out;
+	}
+
 	ret = 0;
 	goto out;
 
@@ -285,6 +320,31 @@ err_out:
 	clk->dentry = NULL;
 out:
 	return ret;
+}
+
+/* For sw clks which have multiple parents, create a symlink from
+ * the clock's directory to the sw_clock */
+static int clk_debug_create_symlink(struct clk *clk, struct clk *sw_clk)
+{
+	int i, n;
+	struct clk *tmp;
+	char *target;
+
+	for (n = 0, tmp = clk; tmp; n++)
+		tmp = __clk_get_parent(tmp);
+
+	target = kzalloc(strlen(clk->name) + sizeof("sw-clks/")
+			       + 3*n + 1, GFP_KERNEL);
+	if (!target)
+		return -ENOMEM;
+
+	for (i = 0; i < n; i++)
+		strcat(target, "../");
+	strcat(target, "sw-clks/");
+	strcat(target, sw_clk->name);
+	debugfs_create_symlink(sw_clk->name, clk->dentry, target);
+	kfree(target);
+	return 0;
 }
 
 /* caller must hold prepare_lock */
@@ -300,6 +360,15 @@ static int clk_debug_create_subtree(struct clk *clk, struct dentry *pdentry)
 
 	if (ret)
 		goto out;
+
+	if (clk->flags & CLK_IS_SW) {
+		int i;
+
+		for (i = 0, ret = 0; i < clk->num_parents && ret == 0; i++)
+			if (clk->parents[i])
+				ret = clk_debug_create_symlink(
+					clk->parents[i], clk);
+	}
 
 	hlist_for_each_entry(child, &clk->children, child_node)
 		clk_debug_create_subtree(child, clk->dentry);
@@ -338,6 +407,8 @@ static int clk_debug_register(struct clk *clk)
 	if (!parent)
 		if (clk->flags & CLK_IS_ROOT)
 			pdentry = rootdir;
+		else if (clk->flags & CLK_IS_SW)
+			pdentry = swdir;
 		else
 			pdentry = orphandir;
 	else
@@ -437,6 +508,11 @@ static int __init clk_debug_init(void)
 	if (!orphandir)
 		return -ENOMEM;
 
+	swdir = debugfs_create_dir("sw-clks", rootdir);
+
+	if (!swdir)
+		return -ENOMEM;
+
 	clk_prepare_lock();
 
 	hlist_for_each_entry(clk, &clk_root_list, child_node)
@@ -444,6 +520,9 @@ static int __init clk_debug_init(void)
 
 	hlist_for_each_entry(clk, &clk_orphan_list, child_node)
 		clk_debug_create_subtree(clk, orphandir);
+
+	hlist_for_each_entry(clk, &clk_sw_list, child_node)
+		clk_debug_create_subtree(clk, swdir);
 
 	inited = 1;
 
@@ -788,6 +867,8 @@ EXPORT_SYMBOL_GPL(__clk_mux_determine_rate);
 
 void __clk_unprepare(struct clk *clk)
 {
+	int i;
+
 	if (!clk)
 		return;
 
@@ -802,7 +883,11 @@ void __clk_unprepare(struct clk *clk)
 	if (clk->ops->unprepare)
 		clk->ops->unprepare(clk->hw);
 
-	__clk_unprepare(clk->parent);
+	if (clk->flags & CLK_IS_SW)
+		for (i = 0; i < clk->num_parents; i++)
+			__clk_unprepare(clk->parents[i]);
+	else
+		__clk_unprepare(clk->parent);
 }
 
 /**
@@ -826,13 +911,25 @@ EXPORT_SYMBOL_GPL(clk_unprepare);
 
 int __clk_prepare(struct clk *clk)
 {
-	int ret = 0;
+	int i, j, ret = 0;
 
 	if (!clk)
 		return 0;
 
 	if (clk->prepare_count == 0) {
-		ret = __clk_prepare(clk->parent);
+		if (clk->flags & CLK_IS_SW)
+			for (i = 0; i < clk->num_parents; i++) {
+				ret = __clk_prepare(clk->parents[i]);
+				if (ret) {
+					for (j = i - 1; j >= 0; j--)
+						__clk_unprepare(
+							clk->parents[j]);
+					break;
+				}
+			}
+		else
+			ret = __clk_prepare(clk->parent);
+
 		if (ret)
 			return ret;
 
@@ -876,6 +973,8 @@ EXPORT_SYMBOL_GPL(clk_prepare);
 
 static void __clk_disable(struct clk *clk)
 {
+	int i;
+
 	if (!clk)
 		return;
 
@@ -891,7 +990,11 @@ static void __clk_disable(struct clk *clk)
 	if (clk->ops->disable)
 		clk->ops->disable(clk->hw);
 
-	__clk_disable(clk->parent);
+	if (clk->flags & CLK_IS_SW)
+		for (i = 0; i < clk->num_parents; i++)
+			__clk_disable(clk->parents[i]);
+	else
+		__clk_disable(clk->parent);
 }
 
 /**
@@ -918,7 +1021,7 @@ EXPORT_SYMBOL_GPL(clk_disable);
 
 static int __clk_enable(struct clk *clk)
 {
-	int ret = 0;
+	int i, j, ret = 0;
 
 	if (!clk)
 		return 0;
@@ -927,7 +1030,17 @@ static int __clk_enable(struct clk *clk)
 		return -ESHUTDOWN;
 
 	if (clk->enable_count == 0) {
-		ret = __clk_enable(clk->parent);
+		if (clk->flags & CLK_IS_SW)
+			for (i = 0; i < clk->num_parents && !ret; i++) {
+				ret = __clk_enable(clk->parents[i]);
+				if (ret) {
+					for (j = i - 1; j >= 0; j--)
+						__clk_disable(clk->parents[j]);
+					break;
+				}
+			}
+		else
+			ret = __clk_enable(clk->parent);
 
 		if (ret)
 			return ret;
@@ -1848,7 +1961,7 @@ int __clk_init(struct device *dev, struct clk *clk)
 					__clk_lookup(clk->parent_names[i]);
 	}
 
-	clk->parent = __clk_init_parent(clk);
+	clk->parent = (clk->flags & CLK_IS_SW) ? NULL : __clk_init_parent(clk);
 
 	/*
 	 * Populate clk->parent if parent has already been __clk_init'd.  If
@@ -1865,6 +1978,8 @@ int __clk_init(struct device *dev, struct clk *clk)
 				&clk->parent->children);
 	else if (clk->flags & CLK_IS_ROOT)
 		hlist_add_head(&clk->child_node, &clk_root_list);
+	else if (clk->flags & CLK_IS_SW)
+		hlist_add_head(&clk->child_node, &clk_sw_list);
 	else
 		hlist_add_head(&clk->child_node, &clk_orphan_list);
 
@@ -1977,9 +2092,28 @@ struct clk *__clk_register(struct device *dev, struct clk_hw *hw)
 }
 EXPORT_SYMBOL_GPL(__clk_register);
 
-static int _clk_register(struct device *dev, struct clk_hw *hw, struct clk *clk)
+/**
+ * clk_register - allocate a new clock, register it and return an opaque cookie
+ * @dev: device that is registering this clock
+ * @hw: link to hardware-specific clock data
+ *
+ * clk_register is the primary interface for populating the clock tree with new
+ * clock nodes.  It returns a pointer to the newly allocated struct clk which
+ * cannot be dereferenced by driver code but may be used in conjuction with the
+ * rest of the clock API.  In the event of an error clk_register will return an
+ * error code; drivers must test for an error code after calling clk_register.
+ */
+struct clk *clk_register(struct device *dev, struct clk_hw *hw)
 {
 	int i, ret;
+	struct clk *clk;
+
+	clk = kzalloc(sizeof(*clk), GFP_KERNEL);
+	if (!clk) {
+		pr_err("%s: could not allocate clk\n", __func__);
+		ret = -ENOMEM;
+		goto fail_out;
+	}
 
 	clk->name = kstrdup(hw->init->name, GFP_KERNEL);
 	if (!clk->name) {
@@ -2019,7 +2153,7 @@ static int _clk_register(struct device *dev, struct clk_hw *hw, struct clk *clk)
 
 	ret = __clk_init(dev, clk);
 	if (!ret)
-		return 0;
+		return clk;
 
 fail_parent_names_copy:
 	while (--i >= 0)
@@ -2028,36 +2162,6 @@ fail_parent_names_copy:
 fail_parent_names:
 	kfree(clk->name);
 fail_name:
-	return ret;
-}
-
-/**
- * clk_register - allocate a new clock, register it and return an opaque cookie
- * @dev: device that is registering this clock
- * @hw: link to hardware-specific clock data
- *
- * clk_register is the primary interface for populating the clock tree with new
- * clock nodes.  It returns a pointer to the newly allocated struct clk which
- * cannot be dereferenced by driver code but may be used in conjuction with the
- * rest of the clock API.  In the event of an error clk_register will return an
- * error code; drivers must test for an error code after calling clk_register.
- */
-struct clk *clk_register(struct device *dev, struct clk_hw *hw)
-{
-	int ret;
-	struct clk *clk;
-
-	clk = kzalloc(sizeof(*clk), GFP_KERNEL);
-	if (!clk) {
-		pr_err("%s: could not allocate clk\n", __func__);
-		ret = -ENOMEM;
-		goto fail_out;
-	}
-
-	ret = _clk_register(dev, hw, clk);
-	if (!ret)
-		return clk;
-
 	kfree(clk);
 fail_out:
 	return ERR_PTR(ret);
@@ -2144,9 +2248,10 @@ void clk_unregister(struct clk *clk)
 
 	if (!hlist_empty(&clk->children)) {
 		struct clk *child;
+		struct hlist_node *t;
 
 		/* Reparent all children to the orphan list. */
-		hlist_for_each_entry(child, &clk->children, child_node)
+		hlist_for_each_entry_safe(child, t, &clk->children, child_node)
 			clk_set_parent(child, NULL);
 	}
 
@@ -2166,7 +2271,7 @@ EXPORT_SYMBOL_GPL(clk_unregister);
 
 static void devm_clk_release(struct device *dev, void *res)
 {
-	clk_unregister(res);
+	clk_unregister(*(struct clk **)res);
 }
 
 /**
@@ -2181,18 +2286,18 @@ static void devm_clk_release(struct device *dev, void *res)
 struct clk *devm_clk_register(struct device *dev, struct clk_hw *hw)
 {
 	struct clk *clk;
-	int ret;
+	struct clk **clkp;
 
-	clk = devres_alloc(devm_clk_release, sizeof(*clk), GFP_KERNEL);
-	if (!clk)
+	clkp = devres_alloc(devm_clk_release, sizeof(*clkp), GFP_KERNEL);
+	if (!clkp)
 		return ERR_PTR(-ENOMEM);
 
-	ret = _clk_register(dev, hw, clk);
-	if (!ret) {
-		devres_add(dev, clk);
+	clk = clk_register(dev, hw);
+	if (!IS_ERR(clk)) {
+		*clkp = clk;
+		devres_add(dev, clkp);
 	} else {
-		devres_free(clk);
-		clk = ERR_PTR(ret);
+		devres_free(clkp);
 	}
 
 	return clk;

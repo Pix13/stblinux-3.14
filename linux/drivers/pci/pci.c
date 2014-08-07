@@ -1192,6 +1192,9 @@ static int do_pci_enable_device(struct pci_dev *dev, int bars)
 		return err;
 	pci_fixup_device(pci_fixup_enable, dev);
 
+	if (dev->msi_enabled || dev->msix_enabled)
+		return 0;
+
 	pci_read_config_byte(dev, PCI_INTERRUPT_PIN, &pin);
 	if (pin) {
 		pci_read_config_word(dev, PCI_COMMAND, &cmd);
@@ -3040,7 +3043,8 @@ int pci_wait_for_pending_transaction(struct pci_dev *dev)
 	if (!pci_is_pcie(dev))
 		return 1;
 
-	return pci_wait_for_pending(dev, PCI_EXP_DEVSTA, PCI_EXP_DEVSTA_TRPND);
+	return pci_wait_for_pending(dev, pci_pcie_cap(dev) + PCI_EXP_DEVSTA,
+				    PCI_EXP_DEVSTA_TRPND);
 }
 EXPORT_SYMBOL(pci_wait_for_pending_transaction);
 
@@ -3081,8 +3085,13 @@ static int pci_af_flr(struct pci_dev *dev, int probe)
 	if (probe)
 		return 0;
 
-	/* Wait for Transaction Pending bit clean */
-	if (pci_wait_for_pending(dev, PCI_AF_STATUS, PCI_AF_STATUS_TP))
+	/*
+	 * Wait for Transaction Pending bit to clear.  A word-aligned test
+	 * is used, so we use the conrol offset rather than status and shift
+	 * the test bit to match.
+	 */
+	if (pci_wait_for_pending(dev, pos + PCI_AF_CTRL,
+				 PCI_AF_STATUS_TP << 8))
 		goto clear;
 
 	dev_err(&dev->dev, "transaction is not cleared; "
@@ -4098,7 +4107,7 @@ int pci_set_vga_state(struct pci_dev *dev, bool decode,
 	u16 cmd;
 	int rc;
 
-	WARN_ON((flags & PCI_VGA_STATE_CHANGE_DECODES) & (command_bits & ~(PCI_COMMAND_IO|PCI_COMMAND_MEMORY)));
+	WARN_ON((flags & PCI_VGA_STATE_CHANGE_DECODES) && (command_bits & ~(PCI_COMMAND_IO|PCI_COMMAND_MEMORY)));
 
 	/* ARCH specific VGA enables */
 	rc = pci_set_vga_state_arch(dev, decode, command_bits, flags);

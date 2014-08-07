@@ -91,6 +91,17 @@ static inline int bcm7xxx_28nm_config_init(struct phy_device *phydev)
 }
 #endif /* CONFIG_BCM7366A0 || CONFIG_BCM7439A0 || CONFIG_BCM7445C0 */
 
+static int bcm7xxx_28nm_resume(struct phy_device *phydev)
+{
+	int ret;
+
+	ret = bcm7xxx_28nm_config_init(phydev);
+	if (ret)
+		return ret;
+
+	return genphy_config_aneg(phydev);
+}
+
 static int phy_set_clr_bits(struct phy_device *dev, int location,
 					int set_mask, int clr_mask)
 {
@@ -186,7 +197,7 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_init	= bcm7xxx_28nm_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
-	.resume		= bcm7xxx_28nm_config_init,
+	.resume		= bcm7xxx_28nm_resume,
 	.driver		= { .owner = THIS_MODULE },
 }, {
 	.phy_id		= PHY_ID_BCM7439,
@@ -199,7 +210,7 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
 	.suspend	= bcm7xxx_suspend,
-	.resume		= bcm7xxx_28nm_config_init,
+	.resume		= bcm7xxx_28nm_resume,
 	.driver		= { .owner = THIS_MODULE },
 }, {
 	.phy_id		= PHY_ID_BCM7366,
@@ -212,7 +223,7 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
 	.suspend	= bcm7xxx_suspend,
-	.resume		= bcm7xxx_28nm_config_init,
+	.resume		= bcm7xxx_28nm_resume,
 	.driver		= { .owner = THIS_MODULE },
 }, {
 	.name		= "Broadcom BCM7XXX 28nm",
@@ -224,7 +235,7 @@ static struct phy_driver bcm7xxx_driver[] = {
 	.config_init	= bcm7xxx_28nm_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
-	.resume		= bcm7xxx_28nm_config_init,
+	.resume		= bcm7xxx_28nm_resume,
 	.driver		= { .owner = THIS_MODULE },
 }, {
 	.phy_id		= PHY_BCM_OUI_4,

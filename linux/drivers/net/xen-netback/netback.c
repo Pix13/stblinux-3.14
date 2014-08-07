@@ -192,8 +192,8 @@ static bool start_new_rx_buffer(int offset, unsigned long size, int head)
 	 * into multiple copies tend to give large frags their
 	 * own buffers as before.
 	 */
-	if ((offset + size > MAX_BUFFER_OFFSET) &&
-	    (size <= MAX_BUFFER_OFFSET) && offset && !head)
+	BUG_ON(size > MAX_BUFFER_OFFSET);
+	if ((offset + size > MAX_BUFFER_OFFSET) && offset && !head)
 		return true;
 
 	return false;
@@ -240,7 +240,7 @@ static void xenvif_gop_frag_copy(struct xenvif *vif, struct sk_buff *skb,
 	struct gnttab_copy *copy_gop;
 	struct xenvif_rx_meta *meta;
 	unsigned long bytes;
-	int gso_type;
+	int gso_type = XEN_NETIF_GSO_TYPE_NONE;
 
 	/* Data must not cross a page boundary. */
 	BUG_ON(size + offset > PAGE_SIZE<<compound_order(page));
@@ -299,12 +299,12 @@ static void xenvif_gop_frag_copy(struct xenvif *vif, struct sk_buff *skb,
 		}
 
 		/* Leave a gap for the GSO descriptor. */
-		if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4)
-			gso_type = XEN_NETIF_GSO_TYPE_TCPV4;
-		else if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6)
-			gso_type = XEN_NETIF_GSO_TYPE_TCPV6;
-		else
-			gso_type = XEN_NETIF_GSO_TYPE_NONE;
+		if (skb_is_gso(skb)) {
+			if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4)
+				gso_type = XEN_NETIF_GSO_TYPE_TCPV4;
+			else if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6)
+				gso_type = XEN_NETIF_GSO_TYPE_TCPV6;
+		}
 
 		if (*head && ((1 << gso_type) & vif->gso_mask))
 			vif->rx.req_cons++;
@@ -338,19 +338,15 @@ static int xenvif_gop_skb(struct sk_buff *skb,
 	int head = 1;
 	int old_meta_prod;
 	int gso_type;
-	int gso_size;
 
 	old_meta_prod = npo->meta_prod;
 
-	if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4) {
-		gso_type = XEN_NETIF_GSO_TYPE_TCPV4;
-		gso_size = skb_shinfo(skb)->gso_size;
-	} else if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6) {
-		gso_type = XEN_NETIF_GSO_TYPE_TCPV6;
-		gso_size = skb_shinfo(skb)->gso_size;
-	} else {
-		gso_type = XEN_NETIF_GSO_TYPE_NONE;
-		gso_size = 0;
+	gso_type = XEN_NETIF_GSO_TYPE_NONE;
+	if (skb_is_gso(skb)) {
+		if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4)
+			gso_type = XEN_NETIF_GSO_TYPE_TCPV4;
+		else if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6)
+			gso_type = XEN_NETIF_GSO_TYPE_TCPV6;
 	}
 
 	/* Set up a GSO prefix descriptor, if necessary */
@@ -358,7 +354,7 @@ static int xenvif_gop_skb(struct sk_buff *skb,
 		req = RING_GET_REQUEST(&vif->rx, vif->rx.req_cons++);
 		meta = npo->meta + npo->meta_prod++;
 		meta->gso_type = gso_type;
-		meta->gso_size = gso_size;
+		meta->gso_size = skb_shinfo(skb)->gso_size;
 		meta->size = 0;
 		meta->id = req->id;
 	}
@@ -368,7 +364,7 @@ static int xenvif_gop_skb(struct sk_buff *skb,
 
 	if ((1 << gso_type) & vif->gso_mask) {
 		meta->gso_type = gso_type;
-		meta->gso_size = gso_size;
+		meta->gso_size = skb_shinfo(skb)->gso_size;
 	} else {
 		meta->gso_type = XEN_NETIF_GSO_TYPE_NONE;
 		meta->gso_size = 0;
@@ -486,6 +482,8 @@ static void xenvif_rx_action(struct xenvif *vif)
 
 	while ((skb = skb_dequeue(&vif->rx_queue)) != NULL) {
 		RING_IDX max_slots_needed;
+		RING_IDX old_req_cons;
+		RING_IDX ring_slots_used;
 		int i;
 
 		/* We need a cheap worse case estimate for the number of
@@ -497,11 +495,31 @@ static void xenvif_rx_action(struct xenvif *vif)
 						PAGE_SIZE);
 		for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
 			unsigned int size;
+			unsigned int offset;
+
 			size = skb_frag_size(&skb_shinfo(skb)->frags[i]);
-			max_slots_needed += DIV_ROUND_UP(size, PAGE_SIZE);
+			offset = skb_shinfo(skb)->frags[i].page_offset;
+
+			/* For a worse-case estimate we need to factor in
+			 * the fragment page offset as this will affect the
+			 * number of times xenvif_gop_frag_copy() will
+			 * call start_new_rx_buffer().
+			 */
+			max_slots_needed += DIV_ROUND_UP(offset + size,
+							 PAGE_SIZE);
 		}
-		if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4 ||
-		    skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6)
+
+		/* To avoid the estimate becoming too pessimal for some
+		 * frontends that limit posted rx requests, cap the estimate
+		 * at MAX_SKB_FRAGS.
+		 */
+		if (max_slots_needed > MAX_SKB_FRAGS)
+			max_slots_needed = MAX_SKB_FRAGS;
+
+		/* We may need one more slot for GSO metadata */
+		if (skb_is_gso(skb) &&
+		   (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4 ||
+		    skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6))
 			max_slots_needed++;
 
 		/* If the skb may not fit then bail out now */
@@ -514,8 +532,12 @@ static void xenvif_rx_action(struct xenvif *vif)
 			vif->rx_last_skb_slots = 0;
 
 		sco = (struct skb_cb_overlay *)skb->cb;
+
+		old_req_cons = vif->rx.req_cons;
 		sco->meta_slots_used = xenvif_gop_skb(skb, &npo);
-		BUG_ON(sco->meta_slots_used > max_slots_needed);
+		ring_slots_used = vif->rx.req_cons - old_req_cons;
+
+		BUG_ON(ring_slots_used > max_slots_needed);
 
 		__skb_queue_tail(&rxq, skb);
 	}
@@ -658,7 +680,8 @@ static void xenvif_tx_err(struct xenvif *vif,
 static void xenvif_fatal_tx_err(struct xenvif *vif)
 {
 	netdev_err(vif->dev, "fatal error; disabling device\n");
-	xenvif_carrier_off(vif);
+	vif->disabled = true;
+	xenvif_kick_thread(vif);
 }
 
 static int xenvif_count_requests(struct xenvif *vif,
@@ -1129,7 +1152,7 @@ static unsigned xenvif_tx_build_gops(struct xenvif *vif, int budget)
 				   vif->tx.sring->req_prod, vif->tx.req_cons,
 				   XEN_NETIF_TX_RING_SIZE);
 			xenvif_fatal_tx_err(vif);
-			continue;
+			break;
 		}
 
 		work_to_do = RING_HAS_UNCONSUMED_REQUESTS(&vif->tx);
@@ -1551,7 +1574,18 @@ int xenvif_kthread(void *data)
 	while (!kthread_should_stop()) {
 		wait_event_interruptible(vif->wq,
 					 rx_work_todo(vif) ||
+					 vif->disabled ||
 					 kthread_should_stop());
+
+		/* This frontend is found to be rogue, disable it in
+		 * kthread context. Currently this is only set when
+		 * netback finds out frontend sends malformed packet,
+		 * but we cannot disable the interface in softirq
+		 * context so we defer it here.
+		 */
+		if (unlikely(vif->disabled && netif_carrier_ok(vif->dev)))
+			xenvif_carrier_off(vif);
+
 		if (kthread_should_stop())
 			break;
 

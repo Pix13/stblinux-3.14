@@ -224,7 +224,7 @@ UCLIBC_HAS_GLOB=y
 # Library Installation Options
 #
 RUNTIME_PREFIX="/"
-DEVEL_PREFIX="/usr/"
+DEVEL_PREFIX="/usr"
 MULTILIB_DIR="lib"
 # HARDWIRED_ABSPATH is not set
 

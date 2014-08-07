@@ -20,18 +20,8 @@
 
 #include <linux/usb.h>
 #include <linux/platform_device.h>
-#include <linux/mmdebug.h>
 #include <linux/io.h>
-#include <linux/version.h>
-#include <linux/irq.h>
-#include <linux/dma-mapping.h>
-#include <linux/of.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)
 #include <linux/usb/hcd.h>
-#else
-#include "../core/hcd.h"
-#endif
 
 /* force non-byteswapping reads/writes on LE and BE alike */
 #define CONFIG_USB_EHCI_BIG_ENDIAN_MMIO		1
@@ -41,11 +31,10 @@
 #define readl_be(x)				__raw_readl(x)
 #define writel_be(x, y)				__raw_writel(x, y)
 
-extern int brcm_usb_probe(struct platform_device *, const char *,
-	const struct hc_driver *);
-extern int brcm_usb_remove(struct platform_device *pdev);
-extern void brcm_usb_suspend(struct usb_hcd *hcd);
-extern void brcm_usb_resume(struct usb_hcd *hcd);
-extern int brcm_usb_is_inactive(void);
+extern int brcm_usb_probe(struct platform_device *pdev,
+			const struct hc_driver *hc_driver,
+			struct usb_hcd **hcdptr,
+			struct clk **hcd_clk_ptr);
+extern int brcm_usb_remove(struct platform_device *pdev, struct clk *hcd_clk);
 
 #endif /* _USB_BRCM_H */

@@ -54,12 +54,17 @@ enum {
 };
 
 #if (defined(CONFIG_BCM7445C0) || defined(CONFIG_BCM7445D0) || \
-	defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7366A0))
+	defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7366A0) || \
+	defined(CONFIG_BCM7366B0))
 /* HW7445-1290, HW7439-463, HW7366-422: 2nd'ary CPU cores may fail to boot
  * ---
  *
  * There is a design flaw with the BPCM logic, which requires a manual
  * software sequencing during CPU power-on/power-off.
+ *
+ * See HW7445-1743: BPCM is still not correct; let's keep the workaround
+ * enabled for now
+ * TODO: we may need the workaround on all chips
  */
 #define USE_MANUAL_MODE 1
 #else
@@ -71,7 +76,7 @@ static void __iomem *hif_cont_block;
 static u32 cpu0_pwr_zone_ctrl_reg;
 static u32 cpu_rst_cfg_reg;
 static u32 hif_cont_reg;
-DEFINE_PER_CPU_ALIGNED(int, per_cpu_sw_state);
+static DEFINE_PER_CPU_ALIGNED(int, per_cpu_sw_state);
 
 static int per_cpu_sw_state_rd(u32 cpu)
 {
@@ -260,6 +265,16 @@ int brcmstb_cpu_kill(u32 cpu)
 		;
 
 	if (USE_MANUAL_MODE) {
+		/*
+		 * FIXME: See HW7445-1743
+		 * We are often trying to yank the CPU power before it is
+		 * actually ready. We suspect this is (at least partly) because
+		 * we aren't polling the STANDBYWFI signal to ensure that the
+		 * CPU we just killed has fully quiesced. This is a magic
+		 * number delay determined experimentally.
+		 */
+		mdelay(50);
+
 		pr_info("SMP: Using manual power-off sequence\n");
 
 		pwr_ctrl_set(cpu, ZONE_MANUAL_CONTROL_MASK, -1);

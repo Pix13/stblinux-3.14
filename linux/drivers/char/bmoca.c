@@ -183,7 +183,7 @@ struct moca_priv_data {
 	struct work_struct	work;
 	void __iomem		*base;
 	void __iomem		*i2c_base;
-	struct platform_device	*enet_pdev;
+	struct device_node	*enet_node;
 
 	unsigned int		mbx_offset[2]; /* indexed by MoCA cpu */
 	struct page		*fw_pages[MAX_FW_PAGES];
@@ -1744,17 +1744,17 @@ static int moca_ioctl_get_drv_info(struct moca_priv_data *priv,
 	info.rf_band = pd->rf_band;
 	info.phy_freq = priv->phy_freq;
 
-	if (priv->enet_pdev && get_device(&priv->enet_pdev->dev)) {
+	if (priv->enet_node) {
 		struct net_device *enet_dev;
+
 		rcu_read_lock();
-		enet_dev = platform_get_drvdata(priv->enet_pdev);
+		enet_dev = of_find_net_device_by_node(priv->enet_node);
 		if (enet_dev) {
 			dev_hold(enet_dev);
 			strlcpy(info.enet_name, enet_dev->name, IFNAMSIZ);
 			dev_put(enet_dev);
 		}
 		rcu_read_unlock();
-		put_device(&priv->enet_pdev->dev);
 		info.enet_id = MOCA_IFNAME_USE_ID;
 	} else {
 		strlcpy(info.enet_name, pd->enet_name, IFNAMSIZ);
@@ -2155,7 +2155,7 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 {
 	struct platform_device *pdev = priv->pdev;
 	struct moca_platform_data pd;
-	struct device_node *of_node = pdev->dev.of_node, *enet_node;
+	struct device_node *of_node = pdev->dev.of_node;
 	phandle enet_ph;
 	int status = 0, i = 0;
 	const u8 *macaddr;
@@ -2172,10 +2172,8 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 	status = of_property_read_u32(of_node, "enet-id", &enet_ph);
 	if (status)
 		goto err;
-	enet_node = of_find_node_by_phandle(enet_ph);
-	priv->enet_pdev = of_find_device_by_node(enet_node);
-	of_node_put(enet_node);
-	if (!priv->enet_pdev) {
+	priv->enet_node = of_find_node_by_phandle(enet_ph);
+	if (!priv->enet_node) {
 		dev_err(&pdev->dev,
 			"can't find associated network interface\n");
 		return -EINVAL;
