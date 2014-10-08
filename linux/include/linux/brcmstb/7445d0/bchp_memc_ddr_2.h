@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Oct 23 03:22:44 2013
- *                 Full Compile MD5 Checksum 04357d64d93017c4cfc4adffa17a9c98
+ * Date:           Generated on              Wed Sep  3 11:52:52 2014
+ *                 Full Compile MD5 Checksum 4a20c0e31b928020bbfa96c583b9e661
  *                   (minus title and desc)  
- *                 MD5 Checksum              80a33a953974f005342f663a773c35db
+ *                 MD5 Checksum              077c6f684bcabb645ae9da4069fea8e4
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008008
+ *                 Perl Interpreter          5.008005
  *                 Operating System          linux
  *
  * Revision History:
@@ -579,9 +579,14 @@
 /***************************************************************************
  *DRAM_INIT_STATUS - Dram initialization status
  ***************************************************************************/
-/* MEMC_DDR_2 :: DRAM_INIT_STATUS :: reserved0 [31:02] */
-#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_reserved0_MASK            0xfffffffc
-#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_reserved0_SHIFT           2
+/* MEMC_DDR_2 :: DRAM_INIT_STATUS :: reserved0 [31:03] */
+#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_reserved0_MASK            0xfffffff8
+#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_reserved0_SHIFT           3
+
+/* MEMC_DDR_2 :: DRAM_INIT_STATUS :: INIT_CLIENT_BUSY [02:02] */
+#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_INIT_CLIENT_BUSY_MASK     0x00000004
+#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_INIT_CLIENT_BUSY_SHIFT    2
+#define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_INIT_CLIENT_BUSY_DEFAULT  0x00000000
 
 /* MEMC_DDR_2 :: DRAM_INIT_STATUS :: PHY_DFI_REQUEST_VALUE [01:01] */
 #define BCHP_MEMC_DDR_2_DRAM_INIT_STATUS_PHY_DFI_REQUEST_VALUE_MASK 0x00000002
@@ -2388,9 +2393,14 @@
 #define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_KEEP_OPEN_DISABLE_SHIFT      31
 #define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_KEEP_OPEN_DISABLE_DEFAULT    0x00000000
 
-/* MEMC_DDR_2 :: CMD_LOOKAHEAD :: reserved0 [30:08] */
-#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_reserved0_MASK               0x7fffff00
-#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_reserved0_SHIFT              8
+/* MEMC_DDR_2 :: CMD_LOOKAHEAD :: KEEP_OPEN_RW_DISABLE [30:30] */
+#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_KEEP_OPEN_RW_DISABLE_MASK    0x40000000
+#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_KEEP_OPEN_RW_DISABLE_SHIFT   30
+#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_KEEP_OPEN_RW_DISABLE_DEFAULT 0x00000000
+
+/* MEMC_DDR_2 :: CMD_LOOKAHEAD :: reserved_for_padding0 [29:08] */
+#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_reserved_for_padding0_MASK   0x3fffff00
+#define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_reserved_for_padding0_SHIFT  8
 
 /* MEMC_DDR_2 :: CMD_LOOKAHEAD :: CAS_LOOKAHEAD [07:00] */
 #define BCHP_MEMC_DDR_2_CMD_LOOKAHEAD_CAS_LOOKAHEAD_MASK           0x000000ff

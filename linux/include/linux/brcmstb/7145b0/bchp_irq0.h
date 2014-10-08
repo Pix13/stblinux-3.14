@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Fri Oct 25 17:33:27 2013
- *                 Full Compile MD5 Checksum 8344a9003ae3c954c1e4a33b9128d4d6
+ * Date:           Generated on              Wed Sep  3 12:36:42 2014
+ *                 Full Compile MD5 Checksum 1e5d73e2e037f01f6ffd5061d00a97a7
  *                   (minus title and desc)  
- *                 MD5 Checksum              383dbfcd91460427fa61afa66d6c98f8
+ *                 MD5 Checksum              c8f174845d8a27ef5365467f1c7a712b
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -44,8 +44,8 @@
 /***************************************************************************
  *IRQ0 - Level 2 CPU Interrupt Enable/Status
  ***************************************************************************/
-#define BCHP_IRQ0_IRQEN                          0x20408900 /* Interrupt Enable */
-#define BCHP_IRQ0_IRQSTAT                        0x20408904 /* Interrupt Status */
+#define BCHP_IRQ0_IRQEN                          0x2040a800 /* Interrupt Enable */
+#define BCHP_IRQ0_IRQSTAT                        0x2040a804 /* Interrupt Status */
 
 /***************************************************************************
  *IRQEN - Interrupt Enable

@@ -29,6 +29,9 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/brcmstb/brcmstb.h>
+#include <linux/clk/clk-brcmstb.h>
+
+static bool shut_off_unused_clks;
 
 struct bcm_clk {
 	struct clk_hw hw;
@@ -290,14 +293,7 @@ static void __init cpu_clk_div_setup(struct device_node *np)
 {
 	struct clk *clk;
 	void __iomem *reg;
-	struct platform_device *pdev = NULL;
 	int rc;
-
-	pdev = of_find_device_by_node(np);
-	if (!pdev) {
-		pr_err("no platform_device for cpu clk divider\n");
-		return;
-	}
 
 	reg = of_iomap(np, 0);
 	if (!reg) {
@@ -313,7 +309,7 @@ static void __init cpu_clk_div_setup(struct device_node *np)
 	if (rc)
 		goto err;
 
-	clk = clk_register_divider_table(&pdev->dev, "cpu-clk-div",
+	clk = clk_register_divider_table(NULL, "cpu-clk-div",
 					 of_clk_get_parent_name(np, 0), 0, reg,
 					 cpu_clk_div_pos, cpu_clk_div_width,
 					 0, cpu_clk_div_table, &lock);
@@ -405,9 +401,18 @@ static int brcmstb_clk_gate_is_enabled(struct clk_hw *hw)
 	return reg ? 1 : 0;
 }
 
-const struct clk_ops brcmstb_clk_gate_ops = {
+static const struct clk_ops brcmstb_clk_gate_ops = {
 	.enable = brcmstb_clk_gate_enable,
 	.disable = brcmstb_clk_gate_disable,
+	.is_enabled = brcmstb_clk_gate_is_enabled,
+};
+
+static const struct clk_ops brcmstb_clk_gate_inhib_dis_ops = {
+	.enable = brcmstb_clk_gate_enable,
+	.is_enabled = brcmstb_clk_gate_is_enabled,
+};
+
+static const struct clk_ops brcmstb_clk_gate_ro_ops = {
 	.is_enabled = brcmstb_clk_gate_is_enabled,
 };
 
@@ -423,10 +428,11 @@ const struct clk_ops brcmstb_clk_gate_ops = {
  * @delay: usec delay in turning on, off.
  * @lock: shared register lock for this clock
  */
-struct clk __init *brcm_clk_gate_register(
+static struct clk __init *brcm_clk_gate_register(
 	struct device *dev, const char *name, const char *parent_name,
 	unsigned long flags, void __iomem *reg, u8 bit_idx,
-	u8 clk_gate_flags, u32 delay[2], spinlock_t *lock)
+	u8 clk_gate_flags, u32 delay[2], spinlock_t *lock,
+	bool read_only, bool inhibit_disable)
 {
 	struct bcm_clk_gate *gate;
 	struct clk *clk;
@@ -440,11 +446,13 @@ struct clk __init *brcm_clk_gate_register(
 	}
 
 	init.name = name;
-	init.ops = &brcmstb_clk_gate_ops;
+	init.ops = inhibit_disable ? &brcmstb_clk_gate_inhib_dis_ops
+		: read_only ? &brcmstb_clk_gate_ro_ops : &brcmstb_clk_gate_ops;
 	init.parent_names = (parent_name ? &parent_name : NULL);
 	init.num_parents = (parent_name ? 1 : 0);
 	init.flags = flags | (parent_name ? 0 : CLK_IS_ROOT);
-	init.flags |= CLK_IGNORE_UNUSED; /* FIXME */
+	if (!shut_off_unused_clks)
+		init.flags |= CLK_IGNORE_UNUSED; /* FIXME */
 
 	/* struct bcm_gate assignments */
 	gate->reg = reg;
@@ -463,7 +471,7 @@ struct clk __init *brcm_clk_gate_register(
 	return clk;
 }
 
-const struct clk_ops brcmstb_clk_sw_ops = {};
+static const struct clk_ops brcmstb_clk_sw_ops = {};
 
 /**
  * brcmstb_clk_sw_register - register a bcm gate clock with the clock framework.
@@ -474,7 +482,7 @@ const struct clk_ops brcmstb_clk_sw_ops = {};
  * @flags: framework-specific flags for this clock
  * @lock: shared register lock for this clock
  */
-struct clk __init *brcmstb_clk_sw_register(
+static struct clk __init *brcmstb_clk_sw_register(
 	struct device *dev, const char *name, const char **parent_names,
 	int num_parents, unsigned long flags, spinlock_t *lock)
 {
@@ -494,7 +502,8 @@ struct clk __init *brcmstb_clk_sw_register(
 	init.parent_names = parent_names;
 	init.num_parents = num_parents;
 	init.flags = flags | CLK_IS_BASIC | CLK_IS_SW;
-	init.flags |= CLK_IGNORE_UNUSED; /* FIXME */
+	if (!shut_off_unused_clks)
+		init.flags |= CLK_IGNORE_UNUSED; /* FIXME */
 
 	sw_clk->hw.init = &init;
 	clk = clk_register(dev, &sw_clk->hw);
@@ -516,6 +525,8 @@ static void __init of_brcmstb_clk_gate_setup(struct device_node *node)
 	u32 bit_idx = 0;
 	u32 delay[2] = {0, 0};
 	int ret;
+	bool read_only = false;
+	bool inhibit_disable = false;
 
 	of_property_read_string(node, "clock-output-names", &clk_name);
 	parent_name = of_clk_get_parent_name(node, 0);
@@ -535,9 +546,15 @@ static void __init of_brcmstb_clk_gate_setup(struct device_node *node)
 	if (of_property_read_bool(node, "set-bit-to-disable"))
 		clk_gate_flags |= CLK_GATE_SET_TO_DISABLE;
 
+	if (of_property_read_bool(node, "brcm,read-only"))
+		read_only = true;
+
+	if (of_property_read_bool(node, "brcm,inhibit-disable"))
+		inhibit_disable = true;
+
 	clk = brcm_clk_gate_register(NULL, clk_name, parent_name, 0, reg,
 				     (u8) bit_idx, clk_gate_flags, delay,
-				     &lock);
+				     &lock, read_only, inhibit_disable);
 	if (!IS_ERR(clk)) {
 		of_clk_add_provider(node, of_clk_src_simple_get, clk);
 		ret = clk_register_clkdev(clk, clk_name, NULL);
@@ -580,11 +597,18 @@ static void __init of_brcmstb_clk_sw_setup(struct device_node *node)
 	}
 }
 
-static bool bcm_full_clk;
+static bool bcm_full_clk = true;
 
 static int __init _bcm_full_clk(char *str)
 {
-	bcm_full_clk = true;
+	int level = 1;
+
+	get_option(&str, &level);
+	if (level == 0)
+		bcm_full_clk = false;
+	else if (level > 1)
+		shut_off_unused_clks = true;
+
 	return 0;
 }
 
@@ -599,14 +623,18 @@ static const struct of_device_id brcmstb_clk_match[] __initconst = {
 };
 
 static const struct of_device_id brcmstb_clk_match_full[] __initconst = {
-	{ .compatible = "fixed-clock",
-	  .data = of_fixed_clk_setup, },
 	{ .compatible = "brcm,brcmstb-gate-clk",
 	  .data = of_brcmstb_clk_gate_setup, },
 	{ .compatible = "brcm,brcmstb-sw-clk",
 	  .data = of_brcmstb_clk_sw_setup, },
 	{ .compatible = "brcm,brcmstb-cpu-clk-div",
 	  .data = cpu_clk_div_setup, },
+	{ .compatible = "fixed-clock",
+	  .data = of_fixed_clk_setup, },
+	{ .compatible = "fixed-factor-clock",
+	  .data = of_fixed_factor_clk_setup, },
+	{ .compatible = "divider-clock",
+	  .data = of_divider_clk_setup, },
 	{}
 };
 

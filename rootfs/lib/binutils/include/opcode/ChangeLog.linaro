@@ -1,7 +1,3 @@
-2013-12-20  Rob Savoye  <rob.savoye@linaro.org>
-
-      Linaro 2013.12 released.
-
 2013-03-11  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 
 	* arm.h (CRC_EXT_ARMV8): New constant.

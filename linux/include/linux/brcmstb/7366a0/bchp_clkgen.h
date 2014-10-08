@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Sat Apr 20 03:07:44 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Thu Sep  4 04:55:50 2014
+ *                 Full Compile MD5 Checksum 2eaa9317512328c8756d93904a25ac95
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              c0047f47b6dd0f59933c5894611e993f
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008008
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -4996,7 +4998,7 @@
 /* CLKGEN :: PLL_XPT_PLL_GAIN :: LOOP_GAIN_PROPORTIONAL_IN_PHASE [09:06] */
 #define BCHP_CLKGEN_PLL_XPT_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_MASK 0x000003c0
 #define BCHP_CLKGEN_PLL_XPT_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_SHIFT 6
-#define BCHP_CLKGEN_PLL_XPT_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_DEFAULT 0x00000005
+#define BCHP_CLKGEN_PLL_XPT_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_DEFAULT 0x00000003
 
 /* CLKGEN :: PLL_XPT_PLL_GAIN :: LOOP_GAIN_IN_FREQ [05:03] */
 #define BCHP_CLKGEN_PLL_XPT_PLL_GAIN_LOOP_GAIN_IN_FREQ_MASK        0x00000038

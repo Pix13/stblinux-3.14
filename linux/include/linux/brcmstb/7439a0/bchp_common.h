@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Tue Apr 16 03:26:34 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 14:30:27 2014
+ *                 Full Compile MD5 Checksum edbc259d5ef948d04693ec04bc4d44b4
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              de2524c7728bb833dc65ac44b70daaa5
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -231,16 +233,10 @@
 #define BCHP_BSP_GLB_CONTROL_REG_END                       0x0032d0b0
 #define BCHP_BSP_PKL_REG_START                             0x0032d300
 #define BCHP_BSP_PKL_REG_END                               0x0032d37c
-#define BCHP_BSP_INST_PATCH_CTRL_REG_START                 0x0032d400
-#define BCHP_BSP_INST_PATCH_CTRL_REG_END                   0x0032d408
-#define BCHP_BSP_BOOT_PATCH_CTRL_REG_START                 0x0032d410
-#define BCHP_BSP_BOOT_PATCH_CTRL_REG_END                   0x0032d418
 #define BCHP_BSP_CONTROL_INTR2_REG_START                   0x0032d800
 #define BCHP_BSP_CONTROL_INTR2_REG_END                     0x0032d82c
 #define BCHP_BSP_VISTA_GENACC_REG_START                    0x0032d900
 #define BCHP_BSP_VISTA_GENACC_REG_END                      0x0032d9fc
-#define BCHP_BSP_VISTA_GENACC2_REG_START                   0x0032da00
-#define BCHP_BSP_VISTA_GENACC2_REG_END                     0x0032dafc
 #define BCHP_BSP_OTP_SCRATCH_REG_START                     0x0032e000
 #define BCHP_BSP_OTP_SCRATCH_REG_END                       0x0032fffc
 #define BCHP_XPT_SECURITY_REG_START                        0x00360000
@@ -1136,11 +1132,17 @@
 #define BCHP_XPT_RMX1_REG_START                            0x00a02e00
 #define BCHP_XPT_RMX1_REG_END                              0x00a02e08
 #define BCHP_XPT_RSBUFF_REG_START                          0x00a03000
-#define BCHP_XPT_RSBUFF_REG_END                            0x00a03e6c
+#define BCHP_XPT_RSBUFF_REG_END                            0x00a03e70
 #define BCHP_XPT_XCBUFF_REG_START                          0x00a04000
 #define BCHP_XPT_XCBUFF_REG_END                            0x00a05ce0
 #define BCHP_XPT_PCROFFSET_REG_START                       0x00a08000
 #define BCHP_XPT_PCROFFSET_REG_END                         0x00a0aafc
+#define BCHP_XPT_TSIO_CONFIG_REGISTERS_REG_START           0x00a0c000
+#define BCHP_XPT_TSIO_CONFIG_REGISTERS_REG_END             0x00a0ea04
+#define BCHP_XPT_TSIO_CALIB_REGISTERS_REG_START            0x00a0f000
+#define BCHP_XPT_TSIO_CALIB_REGISTERS_REG_END              0x00a0f9fc
+#define BCHP_XPT_TSIO_INTR_L2_REG_START                    0x00a0fc00
+#define BCHP_XPT_TSIO_INTR_L2_REG_END                      0x00a0fc2c
 #define BCHP_XPT_FULL_PID_PARSER_REG_START                 0x00a10000
 #define BCHP_XPT_FULL_PID_PARSER_REG_END                   0x00a14050
 #define BCHP_XPT_FE_REG_START                              0x00a20000
@@ -1253,6 +1255,10 @@
 #define BCHP_XPT_RAVE_ITB_MIN_DEPTH_THRESH_CX00_31_L2_INTR_REG_END 0x00a4f72c
 #define BCHP_XPT_RAVE_ITB_MIN_DEPTH_THRESH_CX32_47_L2_INTR_REG_START 0x00a4f740
 #define BCHP_XPT_RAVE_ITB_MIN_DEPTH_THRESH_CX32_47_L2_INTR_REG_END 0x00a4f76c
+#define BCHP_XPT_RAVE_TSIO_DMA_END_CX00_31_L2_INTR_REG_START 0x00a4f780
+#define BCHP_XPT_RAVE_TSIO_DMA_END_CX00_31_L2_INTR_REG_END 0x00a4f7ac
+#define BCHP_XPT_RAVE_TSIO_DMA_END_CX32_47_L2_INTR_REG_START 0x00a4f7c0
+#define BCHP_XPT_RAVE_TSIO_DMA_END_CX32_47_L2_INTR_REG_END 0x00a4f7ec
 #define BCHP_XPT_RAVE_FW_GENERIC_1_CX00_31_L2_INTR_REG_START 0x00a4f800
 #define BCHP_XPT_RAVE_FW_GENERIC_1_CX00_31_L2_INTR_REG_END 0x00a4f82c
 #define BCHP_XPT_RAVE_FW_GENERIC_1_CX32_47_L2_INTR_REG_START 0x00a4f840
@@ -2693,7 +2699,7 @@
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_SHIFT 0
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Hard_left 2147483647
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Middle 0
-#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Hard_right 2147483648
+#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Hard_right -2147483648
 
 /***************************************************************************
  *AC3_PLUS_UPS_WORD_49 - AC3 Plus User Parameters Structure Word 49 - EXT_V2_LEVEL
@@ -2712,7 +2718,7 @@
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_SHIFT 0
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Hard_left 2147483647
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Middle 0
-#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Hard_right 2147483648
+#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Hard_right -2147483648
 
 /***************************************************************************
  *AC3_PLUS_UPS_WORD_51 - AC3 Plus User Parameters Structure Word 51 - EXT_GM_LEVEL
@@ -2731,7 +2737,7 @@
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_SHIFT 0
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Hard_left 2147483647
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Middle 0
-#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Hard_right 2147483648
+#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Hard_right -2147483648
 
 /***************************************************************************
  *AAC_UPS_WORD_00 - AAC User Parameters Structure Word 0 - XPT_FORMAT
@@ -2960,7 +2966,7 @@
  *EOP_ID_256 - EOP_ID
  ***************************************************************************/
 /* RDC :: EOP_ID_256 :: eop_id [255:00] */
-#define BCHP_RDC_EOP_ID_256_eop_id_MASK                            0x0000000000000000000000000000000000000000000000000000000000000000
+#define BCHP_RDC_EOP_ID_256_eop_id_MASK                            0x00000000000000000000000000000000000000000000000000000000ffffffff
 #define BCHP_RDC_EOP_ID_256_eop_id_SHIFT                           0
 #define BCHP_RDC_EOP_ID_256_eop_id_vnet_f_scl_0                    0
 #define BCHP_RDC_EOP_ID_256_eop_id_vnet_f_scl_1                    1

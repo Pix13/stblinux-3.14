@@ -59,7 +59,7 @@ Required properties:
 - reg : the register address of the bit that gets set/unset.  The
 	register range will always have a size of four bytes.
 - #clock-cells : see clock-bindings.txt.
-- bit-shift -- the bit position that enables/disables the clock.
+- bit-shift -- the bit position of reg that enables/disables the clock.
 
 Optional properties:
 - clocks : see clock-bindings.txt.
@@ -73,6 +73,12 @@ Optional properties:
 	example of <0 200>, there must be a delay of 200 usec after
 	setting the bit to 1.  
 - clock-output-names : see clock-bindings.txt.
+- brcm,read-only : specified if a clock can whose enable and 
+	disable actions do nothing as they do not write the
+	register.  This is a boolean.
+- brcm,inhibit-disable : specified if a clock is allowed to
+	enable but not disable; ie the disable action does
+	nothing.  This is a boolean.
 
 example:
 	lc_pll_reseta : lc_pll_reseta@f04e014c {
@@ -89,7 +95,7 @@ example:
 === bcm_clk_sw ===
 
 bcm_clk_sw is a clock type which has no hardware counterpart: it
-is used solely to enable/disable two or more parent clocks in
+is used solely to enable/disable one or more parent clocks in
 unison.  
 
 Required properties:

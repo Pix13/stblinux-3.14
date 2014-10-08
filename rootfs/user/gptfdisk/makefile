@@ -6,9 +6,9 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-STRIP			:= $(MACHINE)-linux-strip
-CC			:= $(MACHINE)-linux-gcc
-CXX			:= $(MACHINE)-linux-g++
+STRIP			:= $(CROSS_COMPILE)strip
+CC			:= $(CROSS_COMPILE)gcc
+CXX			:= $(CROSS_COMPILE)g++
 CFLAGS			:= -Os
 
 export CC CFLAGS

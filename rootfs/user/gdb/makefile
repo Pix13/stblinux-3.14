@@ -2,8 +2,8 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-CC			:= $(MACHINE)-linux-gcc
-STRIP			:= $(MACHINE)-linux-strip
+CC			:= $(CROSS_COMPILE)gcc
+STRIP			:= $(CROSS_COMPILE)strip
 CFLAGS			:= -Os
 
 export CC CFLAGS
@@ -26,6 +26,10 @@ all::
 romfs::
 	$(STRIP) gdb/gdb
 	$(ROMFSINST) -e CONFIG_USER_GDB_GDB gdb/gdb /bin/gdb
+
+.PHONY: clean distclean
+clean distclean::
+	[ ! -f Makefile ] || $(MAKE) -f Makefile $@
 
 # These targets must not be passed through to the original Makefile
 .PHONY: $(BOGUS_TARGETS)

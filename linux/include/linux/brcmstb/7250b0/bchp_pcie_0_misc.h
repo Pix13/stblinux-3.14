@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Thu May  8 18:43:52 2014
- *                 Full Compile MD5 Checksum 38a69701e4a8587ad79f065a389355cd
+ * Date:           Generated on              Sat Sep 13 03:11:33 2014
+ *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
  *                   (minus title and desc)  
- *                 MD5 Checksum              9624d46404976e509a15e5a9755e7873
+ *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008005
+ *                 Perl Interpreter          5.008008
  *                 Operating System          linux
  *
  * Revision History:
@@ -95,6 +95,7 @@
 #define BCHP_PCIE_0_MISC_UBUS_BAR3_CONFIG_REMAP_HI 0x004740c0 /* Unused */
 #define BCHP_PCIE_0_MISC_UBUS_STATUS             0x004740c4 /* Unused */
 #define BCHP_PCIE_0_MISC_SCB_STATUS              0x004740c8 /* SCB Status */
+#define BCHP_PCIE_0_MISC_SCB_CTRL                0x004740cc /* SCB Control */
 
 /***************************************************************************
  *RESET_CTRL - Reset Control Register
@@ -567,7 +568,7 @@
 /* PCIE_0_MISC :: REVISION :: MINOR [07:00] */
 #define BCHP_PCIE_0_MISC_REVISION_MINOR_MASK                       0x000000ff
 #define BCHP_PCIE_0_MISC_REVISION_MINOR_SHIFT                      0
-#define BCHP_PCIE_0_MISC_REVISION_MINOR_DEFAULT                    0x00000001
+#define BCHP_PCIE_0_MISC_REVISION_MINOR_DEFAULT                    0x00000002
 
 /***************************************************************************
  *CPU_2_PCIE_MEM_WIN0_BASE_LIMIT - CPU to PCIe Memory Window 0 base/limit
@@ -970,10 +971,25 @@
 /***************************************************************************
  *SCB_STATUS - SCB Status
  ***************************************************************************/
-/* PCIE_0_MISC :: SCB_STATUS :: UNUSED_31_3 [31:03] */
-#define BCHP_PCIE_0_MISC_SCB_STATUS_UNUSED_31_3_MASK               0xfffffff8
-#define BCHP_PCIE_0_MISC_SCB_STATUS_UNUSED_31_3_SHIFT              3
-#define BCHP_PCIE_0_MISC_SCB_STATUS_UNUSED_31_3_DEFAULT            0x00000000
+/* PCIE_0_MISC :: SCB_STATUS :: UNUSED_31_6 [31:06] */
+#define BCHP_PCIE_0_MISC_SCB_STATUS_UNUSED_31_6_MASK               0xffffffc0
+#define BCHP_PCIE_0_MISC_SCB_STATUS_UNUSED_31_6_SHIFT              6
+#define BCHP_PCIE_0_MISC_SCB_STATUS_UNUSED_31_6_DEFAULT            0x00000000
+
+/* PCIE_0_MISC :: SCB_STATUS :: SCB2_WR_WITH_REPLY_SUPPORTED [05:05] */
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB2_WR_WITH_REPLY_SUPPORTED_MASK 0x00000020
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB2_WR_WITH_REPLY_SUPPORTED_SHIFT 5
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB2_WR_WITH_REPLY_SUPPORTED_DEFAULT 0x00000000
+
+/* PCIE_0_MISC :: SCB_STATUS :: SCB1_WR_WITH_REPLY_SUPPORTED [04:04] */
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB1_WR_WITH_REPLY_SUPPORTED_MASK 0x00000010
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB1_WR_WITH_REPLY_SUPPORTED_SHIFT 4
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB1_WR_WITH_REPLY_SUPPORTED_DEFAULT 0x00000000
+
+/* PCIE_0_MISC :: SCB_STATUS :: SCB0_WR_WITH_REPLY_SUPPORTED [03:03] */
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB0_WR_WITH_REPLY_SUPPORTED_MASK 0x00000008
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB0_WR_WITH_REPLY_SUPPORTED_SHIFT 3
+#define BCHP_PCIE_0_MISC_SCB_STATUS_SCB0_WR_WITH_REPLY_SUPPORTED_DEFAULT 0x00000000
 
 /* PCIE_0_MISC :: SCB_STATUS :: SCB2_INIT_STATE [02:02] */
 #define BCHP_PCIE_0_MISC_SCB_STATUS_SCB2_INIT_STATE_MASK           0x00000004
@@ -989,6 +1005,39 @@
 #define BCHP_PCIE_0_MISC_SCB_STATUS_SCB0_INIT_STATE_MASK           0x00000001
 #define BCHP_PCIE_0_MISC_SCB_STATUS_SCB0_INIT_STATE_SHIFT          0
 #define BCHP_PCIE_0_MISC_SCB_STATUS_SCB0_INIT_STATE_DEFAULT        0x00000000
+
+/***************************************************************************
+ *SCB_CTRL - SCB Control
+ ***************************************************************************/
+/* PCIE_0_MISC :: SCB_CTRL :: TBD_OPTION_31_6 [31:06] */
+#define BCHP_PCIE_0_MISC_SCB_CTRL_TBD_OPTION_31_6_MASK             0xffffffc0
+#define BCHP_PCIE_0_MISC_SCB_CTRL_TBD_OPTION_31_6_SHIFT            6
+#define BCHP_PCIE_0_MISC_SCB_CTRL_TBD_OPTION_31_6_DEFAULT          0x00000000
+
+/* PCIE_0_MISC :: SCB_CTRL :: SCB2_WR_WITH_REPLY_EN [05:05] */
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB2_WR_WITH_REPLY_EN_MASK       0x00000020
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB2_WR_WITH_REPLY_EN_SHIFT      5
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB2_WR_WITH_REPLY_EN_DEFAULT    0x00000000
+
+/* PCIE_0_MISC :: SCB_CTRL :: SCB1_WR_WITH_REPLY_EN [04:04] */
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB1_WR_WITH_REPLY_EN_MASK       0x00000010
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB1_WR_WITH_REPLY_EN_SHIFT      4
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB1_WR_WITH_REPLY_EN_DEFAULT    0x00000000
+
+/* PCIE_0_MISC :: SCB_CTRL :: SCB0_WR_WITH_REPLY_EN [03:03] */
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB0_WR_WITH_REPLY_EN_MASK       0x00000008
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB0_WR_WITH_REPLY_EN_SHIFT      3
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB0_WR_WITH_REPLY_EN_DEFAULT    0x00000000
+
+/* PCIE_0_MISC :: SCB_CTRL :: SCB_DMA_WR_WITH_REPLY [02:01] */
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB_DMA_WR_WITH_REPLY_MASK       0x00000006
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB_DMA_WR_WITH_REPLY_SHIFT      1
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB_DMA_WR_WITH_REPLY_DEFAULT    0x00000000
+
+/* PCIE_0_MISC :: SCB_CTRL :: SCB_WR_WITH_REPLY [00:00] */
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB_WR_WITH_REPLY_MASK           0x00000001
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB_WR_WITH_REPLY_SHIFT          0
+#define BCHP_PCIE_0_MISC_SCB_CTRL_SCB_WR_WITH_REPLY_DEFAULT        0x00000000
 
 #endif /* #ifndef BCHP_PCIE_0_MISC_H__ */
 

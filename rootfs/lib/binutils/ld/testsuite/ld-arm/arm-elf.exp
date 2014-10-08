@@ -456,6 +456,9 @@ set armelftests_nonacl {
       {objdump {-s -j.data -j.got} ifunc-17.gd}
       {readelf -r ifunc-17.rd}}
      "ifunc-17"}
+    {"IFUNC and TLS descriptor shared library" "-shared -T arm-lib.ld --version-script=ifunc-gdesc.ver" "" "" {ifunc-gdesc.s}
+     {{objdump "-Rw" ifunc-gdesc.r}}
+     "ifunc-gdesc.so"}
 }
 
 run_ld_link_tests $armelftests_common

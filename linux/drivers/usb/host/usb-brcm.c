@@ -171,6 +171,7 @@ static int brcm_usb_instance_probe(struct platform_device *pdev)
 	err = clk_prepare_enable(priv->usb_clk);
 	if (err)
 		return err;
+	brcm_usb_common_ctrl_xhci_soft_reset((uintptr_t)priv->ctrl_regs, false);
 	brcm_usb_common_ctrl_init((uintptr_t)priv->ctrl_regs, priv->ioc,
 				priv->ipp, priv->has_xhci);
 	return of_platform_populate(dn, NULL, NULL, NULL);
@@ -189,6 +190,7 @@ static int brcm_usb_instance_resume(struct device *dev)
 {
 	struct brcm_usb_instance *priv = dev_get_drvdata(dev);
 	clk_enable(priv->usb_clk);
+	brcm_usb_common_ctrl_xhci_soft_reset((uintptr_t)priv->ctrl_regs, false);
 	brcm_usb_common_ctrl_init((uintptr_t)priv->ctrl_regs, priv->ioc,
 				priv->ipp, priv->has_xhci);
 	return 0;

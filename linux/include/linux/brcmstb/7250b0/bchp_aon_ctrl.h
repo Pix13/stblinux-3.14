@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Thu May  8 18:43:52 2014
- *                 Full Compile MD5 Checksum 38a69701e4a8587ad79f065a389355cd
+ * Date:           Generated on              Sat Sep 13 03:11:33 2014
+ *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
  *                   (minus title and desc)  
- *                 MD5 Checksum              9624d46404976e509a15e5a9755e7873
+ *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008005
+ *                 Perl Interpreter          5.008008
  *                 Operating System          linux
  *
  * Revision History:
@@ -1446,7 +1446,7 @@
 /* AON_CTRL :: ANA_XTAL_CONTROL :: osc_cml_sel_pd [06:03] */
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_MASK         0x00000078
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_SHIFT        3
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_DEFAULT      0x0000000e
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_DEFAULT      0x0000000c
 
 /* AON_CTRL :: ANA_XTAL_CONTROL :: osc_d2cbias_gisb_control [02:00] */
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_d2cbias_gisb_control_MASK 0x00000007
@@ -1632,15 +1632,14 @@
 #define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_PMSM_S3_pd_buffer_SHIFT 5
 #define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_PMSM_S3_pd_buffer_DEFAULT 0x00000000
 
-/* AON_CTRL :: ANA_XTAL_EXT_CML_CONTROL :: osc_override_strap [04:04] */
-#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_override_strap_MASK 0x00000010
-#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_override_strap_SHIFT 4
-#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_override_strap_DEFAULT 0x00000000
+/* AON_CTRL :: ANA_XTAL_EXT_CML_CONTROL :: reserved1 [04:04] */
+#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_reserved1_MASK      0x00000010
+#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_reserved1_SHIFT     4
 
 /* AON_CTRL :: ANA_XTAL_EXT_CML_CONTROL :: osc_pd_buffer [03:03] */
 #define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_pd_buffer_MASK  0x00000008
 #define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_pd_buffer_SHIFT 3
-#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_pd_buffer_DEFAULT 0x00000000
+#define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_pd_buffer_DEFAULT 0x00000001
 
 /* AON_CTRL :: ANA_XTAL_EXT_CML_CONTROL :: osc_div2_sel [02:02] */
 #define BCHP_AON_CTRL_ANA_XTAL_EXT_CML_CONTROL_osc_div2_sel_MASK   0x00000004

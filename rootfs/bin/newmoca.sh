@@ -52,8 +52,14 @@ fi
 
 set -ex
 
-rm -rf $mocadir/{src,fw,mipsel,mips,arm}
-mkdir $mocadir/{src,fw,mipsel,mips,arm}
+LIBCDIR="eglibc"
+
+DIRARM=arm.$LIBCDIR
+DIRMIPSEL=mipsel.$LIBCDIR
+DIRMIPS=mips.$LIBCDIR
+
+rm -rf $mocadir/{src,fw,$DIRMIPSEL,$DIRMIPS,$DIRARM}
+mkdir $mocadir/{src,fw,$DIRMIPSEL,$DIRMIPS,$DIRARM}
 
 cp $tarball $mocadir/src/TARBALL
 
@@ -78,16 +84,16 @@ cp moca*-gen*.bin ../fw/
 
 make clean
 make CROSS=arm-linux-
-eval cp bin/{$binaries} ../arm/
-arm-linux-strip --strip-all ../arm/*
+eval cp bin/{$binaries} ../$DIRARM/
+arm-linux-strip --strip-all ../$DIRARM/*
 make clean
 make CROSS=mipsel-linux-
-eval cp bin/{$binaries} ../mipsel/
-mipsel-linux-strip --strip-all ../mipsel/*
+eval cp bin/{$binaries} ../$DIRMIPSEL/
+mipsel-linux-strip --strip-all ../$DIRMIPSEL/*
 make clean
 make CROSS=mips-linux-
-eval cp bin/{$binaries} ../mips/
-mips-linux-strip --strip-all ../mips/*
+eval cp bin/{$binaries} ../$DIRMIPS/
+mips-linux-strip --strip-all ../$DIRMIPS/*
 
 popd
 

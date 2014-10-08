@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Oct 23 03:22:44 2013
- *                 Full Compile MD5 Checksum 04357d64d93017c4cfc4adffa17a9c98
+ * Date:           Generated on              Wed Sep  3 11:52:52 2014
+ *                 Full Compile MD5 Checksum 4a20c0e31b928020bbfa96c583b9e661
  *                   (minus title and desc)  
- *                 MD5 Checksum              80a33a953974f005342f663a773c35db
+ *                 MD5 Checksum              077c6f684bcabb645ae9da4069fea8e4
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008008
+ *                 Perl Interpreter          5.008005
  *                 Operating System          linux
  *
  * Revision History:
@@ -163,7 +163,7 @@
 /* GIO :: IODIR_HI :: iodir [31:00] */
 #define BCHP_GIO_IODIR_HI_iodir_MASK                               0xffffffff
 #define BCHP_GIO_IODIR_HI_iodir_SHIFT                              0
-#define BCHP_GIO_IODIR_HI_iodir_DEFAULT                            0x000001ff
+#define BCHP_GIO_IODIR_HI_iodir_DEFAULT                            0xffffffff
 
 /***************************************************************************
  *EC_HI - GENERAL PURPOSE I/O EDGE CONFIGURATION [63:32]

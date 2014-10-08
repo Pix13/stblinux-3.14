@@ -1,7 +1,7 @@
 /* tc-i386.c -- Assemble code for the Intel 80386
    Copyright 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
    2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
-   2012
+   2012, 2013, 2014
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -902,6 +902,14 @@ static const arch_entry cpu_arch[] =
     CPU_MPX_FLAGS, 0, 0 },
   { STRING_COMMA_LEN (".sha"), PROCESSOR_UNKNOWN,
     CPU_SHA_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".clflushopt"), PROCESSOR_UNKNOWN,
+    CPU_CLFLUSHOPT_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".xsavec"), PROCESSOR_UNKNOWN,
+    CPU_XSAVEC_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".xsaves"), PROCESSOR_UNKNOWN,
+    CPU_XSAVES_FLAGS, 0, 0 },
+  { STRING_COMMA_LEN (".prefetchwt1"), PROCESSOR_UNKNOWN,
+    CPU_PREFETCHWT1_FLAGS, 0, 0 },
 };
 
 #ifdef I386COFF
@@ -1665,8 +1673,6 @@ static const i386_operand_type imm16_32 = OPERAND_TYPE_IMM16_32;
 static const i386_operand_type imm16_32s = OPERAND_TYPE_IMM16_32S;
 static const i386_operand_type imm16_32_32s = OPERAND_TYPE_IMM16_32_32S;
 static const i386_operand_type vec_imm4 = OPERAND_TYPE_VEC_IMM4;
-static const i386_operand_type regbnd = OPERAND_TYPE_REGBND;
-static const i386_operand_type vec_disp8 = OPERAND_TYPE_VEC_DISP8;
 
 enum operand_type
 {
@@ -4374,11 +4380,9 @@ check_VecOperands (const insn_template *t)
       if (i.reg_operands == 2 && !i.mask)
 	{
 	  gas_assert (i.types[0].bitfield.regxmm
-		      || i.types[0].bitfield.regymm
-		      || i.types[0].bitfield.regzmm);
+		      || i.types[0].bitfield.regymm);
 	  gas_assert (i.types[2].bitfield.regxmm
-		      || i.types[2].bitfield.regymm
-		      || i.types[2].bitfield.regzmm);
+		      || i.types[2].bitfield.regymm);
 	  if (operand_check == check_none)
 	    return 0;
 	  if (register_number (i.op[0].regs)
@@ -4394,6 +4398,22 @@ check_VecOperands (const insn_template *t)
 	      return 1;
 	    }
 	  as_warn (_("mask, index, and destination registers should be distinct"));
+	}
+      else if (i.reg_operands == 1 && i.mask)
+	{
+	  if ((i.types[1].bitfield.regymm
+	       || i.types[1].bitfield.regzmm)
+	      && (register_number (i.op[1].regs)
+		  == register_number (i.index_reg)))
+	    {
+	      if (operand_check == check_error)
+		{
+		  i.error = invalid_vector_register_set;
+		  return 1;
+		}
+	      if (operand_check != check_none)
+		as_warn (_("index and destination registers should be distinct"));
+	    }
 	}
     }
 
@@ -9390,6 +9410,8 @@ parse_register (char *reg_string, char **end_op)
 	  know (e->X_add_number >= 0
 		&& (valueT) e->X_add_number < i386_regtab_size);
 	  r = i386_regtab + e->X_add_number;
+	  if ((r->reg_flags & RegVRex))
+	    i.need_vrex = 1;
 	  *end_op = input_line_pointer;
 	}
       *input_line_pointer = c;

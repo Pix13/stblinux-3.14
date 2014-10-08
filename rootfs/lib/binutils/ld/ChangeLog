@@ -1,3 +1,76 @@
+2014-06-18  Alan Modra  <amodra@gmail.com>
+
+	PR 17047
+	* ldlang.c (lang_finish): Don't free linker hash table.
+
+2014-06-17  Alan Modra  <amodra@gmail.com>
+
+	* scripttempl/elf.sc: Edit out __rela_iplt symbol assignments from
+	.rel sections, and __rel_iplt from .rela sections.
+
+2014-06-12  Alan Modra  <amodra@gmail.com>
+
+	Backport mainline patches
+	2014-06-07  Alan Modra  <amodra@gmail.com>
+	* ldexp.c (exp_fold_tree_1 <etree_provide>): Make PROVIDEd
+	linker script symbol value override a built-in linker symbol.
+
+	2014-02-19  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc64elf.em (params): Init new field.
+	(ppc_create_output_section_statements): Set params.save_restore_funcs
+	default.
+	(PARSE_AND_LIST_*): Add support for --save-restore-funcs and
+	--no-save-restore-funcs.
+
+	2014-02-17  Alan Modra  <amodra@gmail.com>
+	* emultemps/ppc64elf.em (params): New static struct replacing
+	various other static vars.  Adjust code throughout file.
+
+2014-05-11  Chung-Lin Tang  <cltang@codesourcery.com>
+
+	Backport from master
+
+	2014-05-11  Chung-Lin Tang  <cltang@codesourcery.com>
+	* emulparams/nios2linux.sh (OTHER_GOT_SYMBOLS): Wrap _gp in HIDDEN(),
+	and gp in PROVIDE_HIDDEN.
+
+2014-04-16  Alan Modra  <amodra@gmail.com>
+
+	Apply mainline patches for ppc476 workaround
+	2014-04-09  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (no_zero_padding, ppc_finish): New functions.
+	(LDEMUL_FINISH): Define.
+
+	2014-02-27  Alan Modra  <amodra@gmail.com>
+	* emulparams/elf32ppcvxworks.sh: Source plt_unwind.sh and
+	use ppc32elf.em.
+	* emultempl/ppc32elf.em (ppc_after_open): Don't compile for
+	vxworks.
+	(LDEMUL_AFTER_OPEN): Don't set for vxworks.
+	(PARSE_AND_LIST_LONGOPTS, PARSE_AND_LIST_OPTIONS): Exclude
+	-secure-plt, -bss-plt and -sdata-got when vxworks.
+
+	2014-02-17  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (ppc_after_open_output): Really enable
+	ppc476 workaround for ld -r.
+
+	2014-02-12  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (pagesize): New static var.
+	(ppc_after_open_output): Set params.pagesize_p2 from pagesize.
+	(PARSE_AND_LIST_ARGS_CASES): Adjust to use pagesize.
+
+	2014-02-03  Alan Modra  <amodra@gmail.com>
+	* emultempl/ppc32elf.em (no_tls_get_addr_opt, emit_stub_syms)
+	plt_style): Delete.  Adjust all refs to instead use..
+	(params): ..this.  New variable.
+	(ppc_after_open_output): New function.  Tweak params and pass to
+	ppc_elf_link_params.
+	(ppc_after_open): Adjust ppc_elf_select_plt_layout call.
+	(ppc_before_allocation): Adjust ppc_elf_tls_setup call.  Enable
+	relaxation for ppc476 workaround.
+	(PARSE_AND_LIST_*): Add --{no-,}ppc476-workaround support.
+	(LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS): Define.
+
 2013-12-10  Roland McGrath  <mcgrathr@google.com>
 
 	* Makefile.am (install-exec-local): Prefix libtool invocation with

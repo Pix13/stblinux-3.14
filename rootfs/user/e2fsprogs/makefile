@@ -2,8 +2,8 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-CC			:= $(MACHINE)-linux-gcc
-STRIP			:= $(MACHINE)-linux-strip
+CC			:= $(CROSS_COMPILE)gcc
+STRIP			:= $(CROSS_COMPILE)strip
 CFLAGS			:= -Os
 SHELL			:= bash
 
@@ -63,6 +63,10 @@ romfs::
 		misc/uuidgen /bin/uuidgen
 	$(ROMFSINST) -e CONFIG_USER_E2FSPROGS_DEBUGFS_DEBUGFS \
 		debugfs/debugfs /sbin/debugfs
+
+.PHONY: clean distclean
+clean distclean::
+	[ ! -f Makefile ] || $(MAKE) -f Makefile $@
 
 # These targets must not be passed through to the original Makefile
 .PHONY: $(BOGUS_TARGETS)

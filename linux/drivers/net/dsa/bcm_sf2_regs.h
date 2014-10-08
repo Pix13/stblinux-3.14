@@ -1,5 +1,5 @@
 /*
- * Broadcom Starfigther 2 switch register defines
+ * Broadcom Starfighter 2 switch register defines
  *
  * Copyright (C) 2014, Broadcom Corporation
  *
@@ -60,6 +60,10 @@
 #define  TX_CLK_STOP_EN			(1 << 8)
 #define  LPI_COUNT_SHIFT		9
 #define  LPI_COUNT_MASK			0x3F
+
+#define REG_LED_CNTRL_BASE		0x90
+#define REG_LED_CNTRL(x)		(REG_LED_CNTRL_BASE + (x) * 4)
+#define  SPDLNK_SRC_SEL			(1 << 24)
 
 /* Register set relative to 'INTRL2_0' and 'INTRL2_1' */
 #define INTRL2_CPU_STATUS		0x00
@@ -224,5 +228,8 @@
 
 #define CORE_PORT_VLAN_CTL_PORT(x)	(0xc400 + ((x) * 0x8))
 #define  PORT_VLAN_CTRL_MASK		0x1ff
+
+#define CORE_EEE_EN_CTRL		0x24800
+#define CORE_EEE_LPI_INDICATE		0x24810
 
 #endif /* __BCM_SF2_REGS_H */

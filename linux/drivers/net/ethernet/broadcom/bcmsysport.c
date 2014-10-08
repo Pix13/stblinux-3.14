@@ -32,6 +32,7 @@
 #include <linux/of_mdio.h>
 #include <linux/phy.h>
 #include <linux/phy_fixed.h>
+#include <linux/clk.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
 
@@ -370,36 +371,6 @@ static void bcm_sysport_update_mib_counters(struct bcm_sysport_priv *priv)
 
 	netif_dbg(priv, hw, priv->netdev, "updated MIB counters\n");
 }
-
-/*static void bcm_sysport_reset_mib_counters(struct bcm_sysport_priv *priv)*/
-/*{*/
-	/*u32 reg;*/
-	/*int i;*/
-
-	/*for (i = 0; i < BCM_SYSPORT_STATS_LEN; i++) {*/
-		/*const struct bcm_sysport_stats *s;*/
-
-		/*s = &bcm_sysport_gstrings_stats[i];*/
-		/*switch (s->type) {*/
-		/*case BCM_SYSPORT_STAT_RXCHK:*/
-			/*[> RXCHK counters <]*/
-			/*rxchk_writel(priv, 0, s->reg_offset);*/
-			/*break;*/
-		/*case BCM_SYSPORT_STAT_RBUF:*/
-			/*[> RBUF counters <]*/
-			/*rbuf_writel(priv, 0, s->reg_offset);*/
-			/*break;*/
-		/*default:*/
-			/*break;*/
-		/*}*/
-	/*}*/
-
-	/*[> Other counters can be cleared by hardware <]*/
-	/*reg = MIB_RX_CNT_RST | MIB_RUNT_CNT_RST | MIB_TX_CNT_RST;*/
-	/*umac_writel(priv, reg, UMAC_MIB_CTRL);*/
-
-	/*netif_dbg(priv, hw, priv->netdev, "MIB counters resetted\n");*/
-/*}*/
 
 static void bcm_sysport_get_stats(struct net_device *dev,
 				  struct ethtool_stats *stats,
@@ -1083,7 +1054,10 @@ static void bcm_sysport_adj_link(struct net_device *dev)
 	if (!phydev->pause)
 		cmd_bits |= CMD_RX_PAUSE_IGNORE | CMD_TX_PAUSE_IGNORE;
 
-	if (changed) {
+	if (!changed)
+		return;
+
+	if (phydev->link) {
 		reg = umac_readl(priv, UMAC_CMD);
 		reg &= ~((CMD_SPEED_MASK << CMD_SPEED_SHIFT) |
 				CMD_HD_EN | CMD_RX_PAUSE_IGNORE |
@@ -1091,8 +1065,9 @@ static void bcm_sysport_adj_link(struct net_device *dev)
 		reg |= cmd_bits;
 		umac_writel(priv, reg, UMAC_CMD);
 
-		phy_print_status(priv->phydev);
 	}
+
+	phy_print_status(priv->phydev);
 }
 
 static int bcm_sysport_init_tx_ring(struct bcm_sysport_priv *priv,
@@ -1414,6 +1389,8 @@ static int bcm_sysport_open(struct net_device *dev)
 	unsigned int i;
 	int ret;
 
+	clk_prepare_enable(priv->clk);
+
 	/* Reset UniMAC */
 	umac_reset(priv);
 
@@ -1439,7 +1416,8 @@ static int bcm_sysport_open(struct net_device *dev)
 						priv->phy_interface);
 	if (!priv->phydev) {
 		netdev_err(dev, "could not attach to PHY\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto out_clk_disable;
 	}
 
 	/* Reset house keeping link status */
@@ -1519,6 +1497,8 @@ out_free_irq0:
 	free_irq(priv->irq0, dev);
 out_phy_disconnect:
 	phy_disconnect(priv->phydev);
+out_clk_disable:
+	clk_disable_unprepare(priv->clk);
 	return ret;
 }
 
@@ -1577,6 +1557,8 @@ static int bcm_sysport_stop(struct net_device *dev)
 
 	/* Disconnect from PHY */
 	phy_disconnect(priv->phydev);
+
+	clk_disable_unprepare(priv->clk);
 
 	return 0;
 }
@@ -1682,15 +1664,17 @@ static int bcm_sysport_probe(struct platform_device *pdev)
 	if (!ret)
 		device_set_wakeup_capable(&pdev->dev, 1);
 
+	priv->clk = devm_clk_get(&pdev->dev, "sw_sysport");
+	if (IS_ERR(priv->clk)) {
+		dev_warn(&pdev->dev, "failed to request clock\n");
+		priv->clk = NULL;
+	}
+
 	/* Set the needed headroom once and for all */
 	BUILD_BUG_ON(sizeof(struct tsb) != 8);
 	dev->needed_headroom += sizeof(struct tsb);
 
-	ret = register_netdev(dev);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to register net_device\n");
-		goto err;
-	}
+	clk_prepare_enable(priv->clk);
 
 	priv->rev = topctrl_readl(priv, REV_CNTL) & REV_MASK;
 	dev_info(&pdev->dev,
@@ -1698,6 +1682,15 @@ static int bcm_sysport_probe(struct platform_device *pdev)
 		" at 0x%p (irqs: %d, %d, TXQs: %d, RXQs: %d)\n",
 		(priv->rev >> 8) & 0xff, priv->rev & 0xff,
 		priv->base, priv->irq0, priv->irq1, txq, rxq);
+
+	clk_disable_unprepare(priv->clk);
+
+	ret = register_netdev(dev);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to register net_device\n");
+		goto err;
+	}
+
 
 	return 0;
 err:
@@ -1822,6 +1815,8 @@ static int bcm_sysport_suspend(struct device *d)
 	if (device_may_wakeup(d) && priv->wolopts)
 		ret = bcm_sysport_suspend_to_wol(priv);
 
+	clk_disable_unprepare(priv->clk);
+
 	return ret;
 }
 
@@ -1835,6 +1830,8 @@ static int bcm_sysport_resume(struct device *d)
 
 	if (!netif_running(dev))
 		return 0;
+
+	clk_prepare_enable(priv->clk);
 
 	/* We may have been suspended and never received a WOL event that
 	 * would turn off MPD detection, take care of that now
@@ -1914,6 +1911,7 @@ out_free_rx_ring:
 out_free_tx_rings:
 	for (i = 0; i < dev->num_tx_queues; i++)
 		bcm_sysport_fini_tx_ring(priv, i);
+	clk_disable_unprepare(priv->clk);
 	return ret;
 }
 #endif

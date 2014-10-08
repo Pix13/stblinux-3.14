@@ -35,6 +35,8 @@
 #include <linux/mmzone.h>
 #include <linux/vmalloc.h>
 #include <linux/memblock.h>
+#include <linux/device.h>
+#include <linux/bitmap.h>
 #include <linux/highmem.h>
 #include <linux/dma-contiguous.h>
 #include <asm/div64.h>
@@ -50,7 +52,6 @@ struct cma_root_dev {
 	struct cdev cdev;
 	struct device *dev;
 	struct cma_devs_list cma_devs;
-	struct mem_range *cached_region;
 };
 
 struct cma_pdev_data {
@@ -74,6 +75,11 @@ static struct cma_region_rsv_data cma_data __initdata = {
 	.prm_kern_rsv_mb = 256 << 20,
 	.prm_low_lim_mb = 32 << 20,
 	.prm_low_kern_rsv_pct = 20,
+};
+
+enum scan_bitmap_op {
+	GET_NUM_REGIONS = 0,
+	GET_REGION_INFO,
 };
 
 /*
@@ -294,15 +300,12 @@ void __init cma_reserve(void)
 			pr_err("cma_data.regions overflow\n");
 		else {
 			cma_data.regions[cma_data.nr_regions_valid].start =
-				base;
+				PFN_PHYS(tmp_cma_area->base_pfn);
 			cma_data.regions[cma_data.nr_regions_valid].size = size;
-			/*
-			 * Do a pre-allocation on lowmem regions during CMA
-			 * registration to help prevent allocation failures
-			 * when kernel memory gets fragmented.
-			 */
+
+			/* Pre-allocate all regions */
 			cma_data.regions[cma_data.nr_regions_valid].do_prealloc
-				= meminfo.bank[iter].highmem ? 0 : 1;
+				= 1;
 			cma_data.regions[cma_data.nr_regions_valid].cma_area =
 				tmp_cma_area;
 			cma_data.nr_regions_valid++;
@@ -351,7 +354,7 @@ void __init cma_register(void)
 /* CMA driver implementation */
 
 /* Mutex for serializing accesses to private variables */
-static DEFINE_MUTEX(cma_dev_mutex);
+static DEFINE_SPINLOCK(cma_dev_lock);
 static dev_t cma_dev_devno;
 static struct class *cma_dev_class;
 static struct cma_root_dev *cma_root_dev;
@@ -416,62 +419,6 @@ static int cma_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	return 0;
-}
-
-/*
- * Search through all reserved ranges to check if the page falls
- * completely within any of them.
- */
-static int cma_dev_is_page_reserved(struct page *page)
-{
-	const unsigned long pg_start = page_to_phys(page);
-	const unsigned long pg_end = pg_start + PAGE_SIZE;
-	struct list_head *dev_pos;
-	int match = 0;
-	unsigned long range_start;
-	unsigned long range_end;
-
-	mutex_lock(&cma_dev_mutex);
-
-	/*
-	 * The reserved regions tend to be larger than a page size, so optimize
-	 * repeated calls to cma_dev_is_page_reserved() by caching the region
-	 * which was determined to be a full-hit.
-	 */
-	if (cma_root_dev->cached_region) {
-		range_start = cma_root_dev->cached_region->base;
-		range_end = range_start + cma_root_dev->cached_region->size;
-		if (pg_start >= range_start && pg_end <= range_end)
-			match = 1;
-	}
-
-	if (match)
-		goto done;
-
-	list_for_each(dev_pos, &cma_root_dev->cma_devs.list) {
-		struct list_head *reg_pos;
-		struct cma_dev *curr_cma_dev;
-
-		curr_cma_dev = list_entry(dev_pos, struct cma_dev, list);
-		BUG_ON(curr_cma_dev == NULL);
-
-		list_for_each(reg_pos, &curr_cma_dev->regions.list) {
-			struct region_list *reg;
-			reg = list_entry(reg_pos, struct region_list, list);
-
-			range_start = reg->region.base;
-			range_end = range_start + reg->region.size;
-			if (pg_start >= range_start && pg_end <= range_end) {
-				cma_root_dev->cached_region = &reg->region;
-				match = 1;
-				break;
-			}
-		}
-	}
-
-done:
-	mutex_unlock(&cma_dev_mutex);
-	return match;
 }
 
 #define NUM_BUS_RANGES 10
@@ -541,11 +488,12 @@ struct cma_dev *cma_dev_get_cma_dev(int memc)
 {
 	struct list_head *pos;
 	struct cma_dev *cma_dev = NULL;
+	unsigned long flags;
 
 	if (!cma_root_dev)
 		return NULL;
 
-	mutex_lock(&cma_dev_mutex);
+	spin_lock_irqsave(&cma_dev_lock, flags);
 
 	list_for_each(pos, &cma_root_dev->cma_devs.list) {
 		struct cma_dev *curr_cma_dev;
@@ -557,7 +505,7 @@ struct cma_dev *cma_dev_get_cma_dev(int memc)
 		}
 	}
 
-	mutex_unlock(&cma_dev_mutex);
+	spin_unlock_irqrestore(&cma_dev_lock, flags);
 
 	dev_dbg(cma_root_dev->dev, "cma_dev index %d not in list\n", memc);
 	return cma_dev;
@@ -578,7 +526,6 @@ int cma_dev_get_mem(struct cma_dev *cma_dev, u64 *addr, u32 len,
 {
 	int status = 0;
 	struct page *page;
-	struct region_list *new_region;
 	struct device *dev = cma_dev->dev;
 
 	if ((len & ~PAGE_MASK) || (len == 0)) {
@@ -593,34 +540,14 @@ int cma_dev_get_mem(struct cma_dev *cma_dev, u64 *addr, u32 len,
 		goto done;
 	}
 
-	new_region = devm_kzalloc(dev, sizeof(*new_region), GFP_KERNEL);
-	if (new_region == NULL) {
-		dev_dbg(dev, "devm_kzalloc() failure\n");
-		status = -ENOMEM;
-		goto done;
-	}
-
 	page = dma_alloc_from_contiguous(dev, len >> PAGE_SHIFT,
 					 get_order(align));
 	if (page == NULL) {
 		status = -ENOMEM;
-		goto free_new_region;
+		goto done;
 	}
 
 	*addr = page_to_phys(page);
-
-	/* Accounting */
-	mutex_lock(&cma_dev_mutex);
-	new_region->region.base = *addr;
-	new_region->region.size = len;
-	list_add(&new_region->list, &cma_dev->regions.list);
-	cma_root_dev->cached_region = NULL;
-	mutex_unlock(&cma_dev_mutex);
-
-	goto done;
-
-free_new_region:
-	devm_kfree(dev, new_region);
 
 done:
 	return status;
@@ -638,11 +565,7 @@ EXPORT_SYMBOL(cma_dev_get_mem);
 int cma_dev_put_mem(struct cma_dev *cma_dev, u64 addr, u32 len)
 {
 	struct page *page = phys_to_page(addr);
-	struct list_head *pos;
-	int match = 0;
 	struct device *dev = cma_dev->dev;
-	struct region_list *region_entry = NULL;
-	int status = 0;
 
 	if (page == NULL) {
 		dev_dbg(cma_root_dev->dev, "bad addr (%llxh)\n", addr);
@@ -654,40 +577,61 @@ int cma_dev_put_mem(struct cma_dev *cma_dev, u64 addr, u32 len)
 		return -EINVAL;
 	}
 
-	/* Accounting - confirm address has been allocated */
-	mutex_lock(&cma_dev_mutex);
-	list_for_each(pos, &cma_dev->regions.list) {
-		struct mem_range *region;
+	if (!dma_release_from_contiguous(dev, page, len / PAGE_SIZE))
+		return -EIO;
 
-		region_entry = list_entry(pos, struct region_list, list);
-		region = &region_entry->region;
-
-		if ((region->base == addr) && (region->size == len)) {
-			match = 1;
-			break;
-		}
-	}
-
-	if (match == 0) {
-		dev_err(dev, "no region matched that address\n");
-		status = -EINVAL;
-		goto done;
-	}
-
-	if (!dma_release_from_contiguous(dev, page, len / PAGE_SIZE)) {
-		status = -EIO;
-		goto done;
-	}
-
-	cma_root_dev->cached_region = NULL;
-	list_del(pos);
-	devm_kfree(dev, region_entry);
-
-done:
-	mutex_unlock(&cma_dev_mutex);
-	return status;
+	return 0;
 }
 EXPORT_SYMBOL(cma_dev_put_mem);
+
+static int scan_alloc_bitmap(struct cma_dev *cma_dev, int op, int *region_count,
+			     int region_num, s32 *memc, u64 *addr,
+			     u32 *num_bytes)
+{
+	/* Get information about n-th contiguous chunk */
+	unsigned long i = 0, pos_head = 0, pos_tail;
+	int count = 0, head_found = 0;
+	struct cma *cma = dev_get_cma_area(cma_dev->dev);
+
+	if (!cma)
+		return -EFAULT;
+
+	/* Count the number of contiguous chunks */
+	do {
+		if (head_found) {
+			pos_tail = find_next_zero_bit(cma->bitmap, cma->count,
+						      i);
+
+			if (op == GET_NUM_REGIONS)
+				count++;
+			else if (op == GET_REGION_INFO) {
+				if (count == region_num) {
+					*memc = (s32)cma_dev->memc;
+					*addr = cma_dev->range.base +
+						(pos_head * PAGE_SIZE);
+					*num_bytes = (pos_tail - pos_head) *
+						PAGE_SIZE;
+					return 0;
+				} else
+					count++;
+			}
+
+			head_found = 0;
+			i = pos_tail + 1;
+
+		} else {
+			pos_head = find_next_bit(cma->bitmap, cma->count, i);
+			i = pos_head + 1;
+			head_found = 1;
+		}
+	} while (i < cma->count);
+
+	if (op == GET_NUM_REGIONS) {
+		*region_count = count;
+		return 0;
+	} else
+		return -EINVAL;
+}
 
 /**
  * cma_dev_get_num_regions() - Get number of allocated regions
@@ -696,13 +640,10 @@ EXPORT_SYMBOL(cma_dev_put_mem);
  */
 int cma_dev_get_num_regions(struct cma_dev *cma_dev)
 {
-	int count = 0;
-	struct list_head *pos;
-
-	list_for_each(pos, &cma_dev->regions.list)
-		count++;
-
-	return count;
+	int count;
+	int rc = scan_alloc_bitmap(cma_dev, GET_NUM_REGIONS, &count, 0, NULL,
+				   NULL, NULL);
+	return rc ? rc : count;
 }
 EXPORT_SYMBOL(cma_dev_get_num_regions);
 
@@ -716,92 +657,13 @@ EXPORT_SYMBOL(cma_dev_get_num_regions);
  * @num_bytes: Size of region in bytes
  */
 int cma_dev_get_region_info(struct cma_dev *cma_dev, int region_num,
-				   s32 *memc, u64 *addr, u32 *num_bytes)
+			    s32 *memc, u64 *addr, u32 *num_bytes)
 {
-	int status = -EINVAL;
-	struct list_head *pos;
-	int count = region_num;
-
-	list_for_each(pos, &cma_dev->regions.list) {
-		struct region_list *region;
-		if (count == 0) {
-			region = list_entry(pos, struct region_list, list);
-
-			*memc = (s32)cma_dev->memc;
-			*addr = region->region.base;
-			*num_bytes = region->region.size;
-
-			status = 0;
-
-			break;
-		} else
-			count--;
-	}
-
-	return status;
+	int rc = scan_alloc_bitmap(cma_dev, GET_REGION_INFO, NULL, region_num,
+				   memc, addr, num_bytes);
+	return rc;
 }
 EXPORT_SYMBOL(cma_dev_get_region_info);
-
-/**
- * Special handling for __get_user_pages() on CMA reserved memory:
- *
- * 1) Override the VM_IO | VM_PFNMAP sanity checks
- * 2) No cache flushes (this is explicitly under application control)
- * 3) vm_normal_page() does not work on these regions
- * 4) Don't need to worry about any kinds of faults; pages are always present
- *
- * The vanilla kernel behavior was to prohibit O_DIRECT operations on our
- * CMA regions, but direct I/O is absolutely required for PVR and video
- * playback from SATA/USB.
- */
-int cma_dev_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
-	unsigned long start, struct page **page)
-{
-	unsigned long pg = start & PAGE_MASK, pfn;
-	int ret = -EFAULT;
-	pgd_t *pgd;
-	pud_t *pud;
-	pmd_t *pmd;
-	pte_t *pte;
-	struct page *tmp_page;
-
-	pgd = pgd_offset(mm, pg);
-	BUG_ON(pgd_none(*pgd));
-	pud = pud_offset(pgd, pg);
-	BUG_ON(pud_none(*pud));
-	pmd = pmd_offset(pud, pg);
-	if (pmd_none(*pmd))
-		return ret;
-
-	pte = pte_offset_map(pmd, pg);
-	if (!pte)
-		return ret;
-
-	if (pte_none(*pte))
-		goto out;
-
-	pfn = pte_pfn(*pte);
-
-	tmp_page = pfn_to_page(pfn);
-	if (!tmp_page)
-		goto out;
-
-	if (get_pageblock_migratetype(tmp_page) != MIGRATE_CMA)
-		goto out;
-
-	if (!cma_dev_is_page_reserved(tmp_page))
-		goto out;
-
-	if (page) {
-		*page = tmp_page;
-		get_page(*page);
-	}
-	ret = 0;
-
-out:
-	pte_unmap(pte);
-	return ret;
-}
 
 static int pte_callback(pte_t *pte, unsigned long x, unsigned long y,
 			struct mm_walk *walk)
@@ -1032,6 +894,7 @@ static long cma_dev_ioctl(struct file *filp, unsigned int cmd,
 
 		p.addr = cma_dev->range.base;
 		p.num_bytes = cma_dev->range.size;
+		p.memc = (s32)cma_dev->memc;
 		p.status = 0;
 
 		ret = 0;
@@ -1080,6 +943,10 @@ static long cma_dev_ioctl(struct file *filp, unsigned int cmd,
 		} else
 			cma_root_dev->mmap_type = mmap_type;
 
+		break;
+	}
+	case CMA_DEV_IOC_VERSION: {
+		__put_user(CMA_DRIVER_VERSION, (__u32 __user *)arg);
 		break;
 	}
 	default: {
@@ -1143,7 +1010,6 @@ static int cma_drvr_test_cma_dev(struct device *dev)
 static int __init cma_drvr_config_platdev(struct platform_device *pdev,
 					struct cma_dev *cma_dev)
 {
-	int ret = 0;
 	struct device *dev = &pdev->dev;
 	struct cma_pdev_data *data =
 		(struct cma_pdev_data *)dev->platform_data;
@@ -1160,17 +1026,16 @@ static int __init cma_drvr_config_platdev(struct platform_device *pdev,
 
 	if (!data->cma_area) {
 		pr_err("null cma area\n");
-		goto done;
+		return -EINVAL;
 	}
 	dev_set_cma_area(dev, data->cma_area);
 
 	if (cma_drvr_test_cma_dev(dev)) {
 		dev_err(dev, "CMA testing failed!\n");
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
-done:
-	return ret;
+	return 0;
 }
 
 static int cma_drvr_init_root_dev(struct device *dev)
@@ -1211,7 +1076,6 @@ static int cma_drvr_init_root_dev(struct device *dev)
 		goto del_cdev;
 	}
 
-	my_cma_root_dev->cached_region = NULL;
 	my_cma_root_dev->dev = dev2;
 	cma_root_dev = my_cma_root_dev;
 
@@ -1263,8 +1127,6 @@ static int __init cma_drvr_probe(struct platform_device *pdev)
 	struct cma_pdev_data *data =
 		(struct cma_pdev_data *)dev->platform_data;
 
-	mutex_lock(&cma_dev_mutex);
-
 	/* Prepare a major number for the devices if not already done */
 	ret = cma_drvr_alloc_devno(dev);
 	if (ret)
@@ -1288,7 +1150,6 @@ static int __init cma_drvr_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_cma_dev;
 
-	INIT_LIST_HEAD(&cma_dev->regions.list);
 	cma_dev->dev = dev;
 
 	/*
@@ -1306,9 +1167,7 @@ static int __init cma_drvr_probe(struct platform_device *pdev)
 		 * device has been initialized at this point. An error will be
 		 * logged if there is a failure.
 		 */
-		mutex_unlock(&cma_dev_mutex);
 		cma_drvr_do_prealloc(dev, cma_dev);
-		mutex_lock(&cma_dev_mutex);
 	}
 
 	goto done;
@@ -1317,7 +1176,6 @@ free_cma_dev:
 	devm_kfree(dev, cma_dev);
 
 done:
-	mutex_unlock(&cma_dev_mutex);
 	return ret;
 }
 

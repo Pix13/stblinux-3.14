@@ -196,7 +196,6 @@ static void __init brcmstb_init_machine(void)
 	cma_register();
 	of_add_fixed_phys();
 	brcmstb_hook_fault_code();
-	brcmstb_clocks_init();
 	ret = brcmstb_pm_init();
 	if (ret)
 		pr_warn("PM: initialization failed with code %d\n", ret);
@@ -331,6 +330,12 @@ static int brcmstb_boot_secondary(unsigned int cpu,
 	return 0;
 }
 
+static void __init brcmstb_init_time(void)
+{
+	brcmstb_clocks_init();
+	clocksource_of_init();
+}
+
 struct smp_operations brcmstb_smp_ops __initdata = {
 	.smp_prepare_cpus	= brcmstb_cpu_ctrl_setup,
 	.smp_secondary_init	= brcmstb_secondary_init,
@@ -350,6 +355,7 @@ DT_MACHINE_START(BRCMSTB, "Broadcom STB (Flattened Device Tree)")
 	.init_machine	= brcmstb_init_machine,
 	.init_early	= brcmstb_init_early,
 	.init_irq	= brcmstb_init_irq,
+	.init_time	= brcmstb_init_time,
 #endif
 #ifdef CONFIG_SMP
 	.smp		= smp_ops(brcmstb_smp_ops),

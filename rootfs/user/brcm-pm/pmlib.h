@@ -66,13 +66,12 @@ struct brcm_pm_state
 	int tp1_status;		/* 1=on, 0=off */
 	int tp2_status;		/* 1=on, 0=off */
 	int tp3_status;		/* 1=on, 0=off */
-	int memc1_status;	/* 1=on, 0=off, 2=testmode */
 
 	int cpu_base;		/* current base frequency, in Hz */
 	char cpufreq_avail[CPUFREQ_AVAIL_MAXLEN];	/* available cpufreqs */
 	char cpufreq_gov[CPUFREQ_GOV_MAXLEN];		/* current cpufreq gov. name */
 
-	int ddr_timeout;	/* 0=no PM, >0 = timeout for self-refresh */
+	int srpd_status;	/* 0=no PM, >0 = timeout for self-refresh */
 };
 
 struct brcm_pm_cfg

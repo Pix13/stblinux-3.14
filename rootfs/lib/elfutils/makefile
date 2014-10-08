@@ -2,8 +2,8 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-CC			:= $(MACHINE)-linux-gcc
-STRIP			:= $(MACHINE)-linux-strip
+CC			:= $(CROSS_COMPILE)gcc
+STRIP			:= $(CROSS_COMPILE)strip
 CFLAGS			:= -Os
 
 ifeq ($(LIBCDIR),uClibc)
@@ -20,6 +20,10 @@ all:
 		--disable-nls --disable-werror; \
 	fi
 	make -f Makefile SUBDIRS=libelf
+
+.PHONY: clean distclean
+clean distclean::
+	[ ! -f Makefile ] || $(MAKE) -f Makefile $@
 
 .PHONY: romfs
 romfs:

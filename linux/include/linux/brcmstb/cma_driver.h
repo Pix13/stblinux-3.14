@@ -28,6 +28,9 @@
 #include <linux/dma-contiguous.h>
 #include <uapi/linux/brcmstb/cma_driver.h>
 
+/* Incremented when public API changes */
+#define CMA_DRIVER_VERSION  0
+
 struct mem_range {
 	u64 base;
 	u32 size;
@@ -42,7 +45,6 @@ struct cma_dev {
 	struct device *dev;
 	u32 cma_dev_index;
 	struct mem_range range; /* addresses that this cma_dev controls */
-	struct region_list regions;
 	struct list_head list;
 	int memc;
 };

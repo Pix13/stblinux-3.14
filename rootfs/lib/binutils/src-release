@@ -67,7 +67,7 @@ SUPPORT_FILES = list-of-support-files-for-tool-in-question
 # NOTE: No double quotes in the below.  It is used within shell script
 # as VER="$(VER)"
 VER = `	if grep 'AM_INIT_AUTOMAKE.*BFD_VERSION' $(TOOL)/configure.in >/dev/null 2>&1; then \
-	  bfd/configure --version | sed -n -e '1s,.* ,,p'; \
+	  bfdver=$$(bfd/configure --version | sed -n -e '1s,.* ,,p'); linarover=$$(sed < bfd/version.h -n 's/.*Linaro \([^"]*\)"/-\1/p'); echo -n $$bfdver; echo $$linarover; \
 	elif grep AM_INIT_AUTOMAKE $(TOOL)/configure.in >/dev/null 2>&1; then \
 	  sed < $(TOOL)/configure.in -n 's/AM_INIT_AUTOMAKE[^,]*, *\([^)]*\))/\1/p'; \
 	elif test -f $(TOOL)/common/create-version.sh; then \
@@ -258,6 +258,13 @@ gas.tar.bz2: $(DIST_SUPPORT) $(GAS_SUPPORT_DIRS) gas
 BINUTILS_SUPPORT_DIRS= bfd gas include libiberty opcodes ld elfcpp gold gprof intl setup.com makefile.vms cpu
 binutils.tar.bz2: $(DIST_SUPPORT) $(BINUTILS_SUPPORT_DIRS) binutils
 	$(MAKE) -f $(SELF) taz TOOL=binutils \
+		MD5PROG="$(MD5PROG)" \
+		SUPPORT_FILES="$(BINUTILS_SUPPORT_DIRS)"
+
+.PHONY: binutils-linaro.tar.bz2
+BINUTILS_SUPPORT_DIRS= bfd gas include libiberty opcodes ld elfcpp gold gprof intl setup.com makefile.vms cpu
+binutils-linaro.tar.bz2: $(DIST_SUPPORT) $(BINUTILS_SUPPORT_DIRS) binutils
+	$(MAKE) -f $(SELF) taz TOOL=binutils PACKAGE=binutils-linaro \
 		MD5PROG="$(MD5PROG)" \
 		SUPPORT_FILES="$(BINUTILS_SUPPORT_DIRS)"
 

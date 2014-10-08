@@ -1,5 +1,5 @@
 KERNEL_INCLUDE=$(ROOTDIR)/$(LINUXDIR)/include
-CC	:= $(MACHINE)-linux-gcc
+CC	:= $(CROSS_COMPILE)gcc
 
 export KERNEL_INCLUDE CC
 

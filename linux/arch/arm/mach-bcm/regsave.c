@@ -42,7 +42,7 @@ static int reg_save(void)
 
 	for (i = 0, total = 0; i < num_regmap_groups; i++)
 		total += rm_groups[i].count;
-	mem = kmalloc(total * sizeof(u32), GFP_KERNEL);
+	mem = kmalloc(total * sizeof(u32), GFP_ATOMIC);
 	if (!mem)
 		return -ENOMEM;
 

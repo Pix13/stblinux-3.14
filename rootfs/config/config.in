@@ -285,7 +285,6 @@ if [ "$CONFIG_USER_DHCPCD_DHCPCD" = "y" ]; then
 	bool '  dhcpcd link-local support'	CONFIG_USER_DHCPCD_LLIP
 fi
 bool 'dhcpcd-new (1.3.22-p14)'	CONFIG_USER_DHCPCD_NEW_DHCPCD
-bool 'dhcpd'			CONFIG_USER_DHCPD_DHCPD
 bool 'dhcpd(ISC)' 		CONFIG_USER_DHCP_ISC_SERVER_DHCPD
 bool 'dhclient(ISC)' 		CONFIG_USER_DHCP_ISC_CLIENT_DHCP
 bool 'dhcpcv6'			CONFIG_USER_DHCPCV6_DHCPCV6
@@ -592,6 +591,9 @@ dep_bool '  lircmd'		CONFIG_USER_LIRC_LIRCMD   $CONFIG_USER_LIRC
 dep_bool '  irexec'		CONFIG_USER_LIRC_IREXEC   $CONFIG_USER_LIRC
 dep_bool '  irw'		CONFIG_USER_LIRC_IRW      $CONFIG_USER_LIRC
 dep_bool '  mode2'		CONFIG_USER_LIRC_MODE2    $CONFIG_USER_LIRC
+
+comment 'I2C-Tools'
+bool 'i2c-tools'		CONFIG_USER_I2C_TOOLS
 
 comment 'Editors'
 bool 'vi (leevee)'		CONFIG_USER_LEVEE_VI

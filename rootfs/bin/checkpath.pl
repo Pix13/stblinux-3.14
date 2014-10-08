@@ -25,9 +25,9 @@ $toolchain =~ s/[\r\n]//g;
 my $path = $ENV{'PATH'};
 
 foreach my $x (split(/:/, $path)) {
-	if(   -e "$x/mipsel-linux-gcc"
-	   || -e "$x/mips-linux-gcc"
-	   || -e "$x/arm-linux-gcc") {
+	if(glob("$x/mipsel-linux-*gcc")
+	   || glob("$x/mips-linux-*gcc")
+	   || glob("$x/arm-linux-*gcc")) {
 		if($x =~ m/$toolchain/) {
 			# matches the recommended toolchain
 			if($add) {

@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Sat Apr  6 03:07:51 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 13:17:42 2014
+ *                 Full Compile MD5 Checksum a8ee62ccf9dde43435c825f266da463d
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              e373b364a1742e13a0f9eb15fd8aa94f
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -93,7 +95,7 @@
 /* GIO_AON :: IODIR_LO :: iodir [17:00] */
 #define BCHP_GIO_AON_IODIR_LO_iodir_MASK                           0x0003ffff
 #define BCHP_GIO_AON_IODIR_LO_iodir_SHIFT                          0
-#define BCHP_GIO_AON_IODIR_LO_iodir_DEFAULT                        0x00000000
+#define BCHP_GIO_AON_IODIR_LO_iodir_DEFAULT                        0x0003ffff
 
 /***************************************************************************
  *EC_LO - GENERAL PURPOSE I/O EDGE CONFIGURATION FOR GPIO[17:0]
@@ -189,7 +191,7 @@
 /* GIO_AON :: IODIR_EXT :: iodir [03:00] */
 #define BCHP_GIO_AON_IODIR_EXT_iodir_MASK                          0x0000000f
 #define BCHP_GIO_AON_IODIR_EXT_iodir_SHIFT                         0
-#define BCHP_GIO_AON_IODIR_EXT_iodir_DEFAULT                       0x00000000
+#define BCHP_GIO_AON_IODIR_EXT_iodir_DEFAULT                       0x0000000f
 
 /***************************************************************************
  *EC_EXT - GENERAL PURPOSE I/O EDGE CONFIGURATION FOR SGPIO[3:0]

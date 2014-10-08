@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Jul  2 03:12:33 2014
- *                 Full Compile MD5 Checksum 7dc2787604a7d66ecd88cf44bdf8b9f2
+ * Date:           Generated on              Wed Sep  3 14:59:57 2014
+ *                 Full Compile MD5 Checksum 10187d4079392bab2546025f43274d34
  *                   (minus title and desc)  
- *                 MD5 Checksum              fac21eb3a5c0bbaa870b50b1cab81ef9
+ *                 MD5 Checksum              c1587c5e16f21f52e852e7c7a65c7811
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008008
+ *                 Perl Interpreter          5.008005
  *                 Operating System          linux
  *
  * Revision History:
@@ -72,6 +72,14 @@
 #define BCHP_XPT_FE_TV_STATUS_2                  0x00a200b8 /* TV Status_2 */
 #define BCHP_XPT_FE_TV_STATUS_3                  0x00a200bc /* TV Status_3 */
 #define BCHP_XPT_FE_TV_STATUS_4                  0x00a200c0 /* TV Status_4 */
+#define BCHP_XPT_FE_IB0_CTRL                     0x00a20100 /* Data Transport Input Band 0 Control Register */
+#define BCHP_XPT_FE_IB0_SYNC_COUNT               0x00a20104 /* Data Transport Input Band 0 Sync counter Register */
+#define BCHP_XPT_FE_IB1_CTRL                     0x00a20108 /* Data Transport Input Band 1 Control Register */
+#define BCHP_XPT_FE_IB1_SYNC_COUNT               0x00a2010c /* Data Transport Input Band 1 Sync counter Register */
+#define BCHP_XPT_FE_IB2_CTRL                     0x00a20110 /* Data Transport Input Band 2 Control Register */
+#define BCHP_XPT_FE_IB2_SYNC_COUNT               0x00a20114 /* Data Transport Input Band 2 Sync counter Register */
+#define BCHP_XPT_FE_IB3_CTRL                     0x00a20118 /* Data Transport Input Band 3 Control Register */
+#define BCHP_XPT_FE_IB3_SYNC_COUNT               0x00a2011c /* Data Transport Input Band 3 Sync counter Register */
 #define BCHP_XPT_FE_IB10_CTRL                    0x00a20150 /* Data Transport Input Band 10 Control Register */
 #define BCHP_XPT_FE_IB10_SYNC_COUNT              0x00a20154 /* Data Transport Input Band 10 Sync counter Register */
 #define BCHP_XPT_FE_MINI_PID_PARSER0_CTRL1       0x00a20200 /* Data Transport Parser Band 0 Control Register */
@@ -1775,6 +1783,338 @@
 #define BCHP_XPT_FE_TV_STATUS_4_MTSIF_RX0_CRC_MASK                 0x000000ff
 #define BCHP_XPT_FE_TV_STATUS_4_MTSIF_RX0_CRC_SHIFT                0
 #define BCHP_XPT_FE_TV_STATUS_4_MTSIF_RX0_CRC_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB0_CTRL - Data Transport Input Band 0 Control Register
+ ***************************************************************************/
+/* XPT_FE :: IB0_CTRL :: reserved0 [31:24] */
+#define BCHP_XPT_FE_IB0_CTRL_reserved0_MASK                        0xff000000
+#define BCHP_XPT_FE_IB0_CTRL_reserved0_SHIFT                       24
+
+/* XPT_FE :: IB0_CTRL :: IB_PKT_LENGTH [23:16] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_PKT_LENGTH_MASK                    0x00ff0000
+#define BCHP_XPT_FE_IB0_CTRL_IB_PKT_LENGTH_SHIFT                   16
+#define BCHP_XPT_FE_IB0_CTRL_IB_PKT_LENGTH_DEFAULT                 0x000000bc
+
+/* XPT_FE :: IB0_CTRL :: reserved1 [15:11] */
+#define BCHP_XPT_FE_IB0_CTRL_reserved1_MASK                        0x0000f800
+#define BCHP_XPT_FE_IB0_CTRL_reserved1_SHIFT                       11
+
+/* XPT_FE :: IB0_CTRL :: IB_PARALLEL_INPUT_SEL [10:10] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_PARALLEL_INPUT_SEL_MASK            0x00000400
+#define BCHP_XPT_FE_IB0_CTRL_IB_PARALLEL_INPUT_SEL_SHIFT           10
+#define BCHP_XPT_FE_IB0_CTRL_IB_PARALLEL_INPUT_SEL_DEFAULT         0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_LSB_FIRST [09:09] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_LSB_FIRST_MASK                     0x00000200
+#define BCHP_XPT_FE_IB0_CTRL_IB_LSB_FIRST_SHIFT                    9
+#define BCHP_XPT_FE_IB0_CTRL_IB_LSB_FIRST_DEFAULT                  0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_FORCE_VALID [08:08] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_FORCE_VALID_MASK                   0x00000100
+#define BCHP_XPT_FE_IB0_CTRL_IB_FORCE_VALID_SHIFT                  8
+#define BCHP_XPT_FE_IB0_CTRL_IB_FORCE_VALID_DEFAULT                0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_USE_SYNC_AS_VALID [07:07] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_USE_SYNC_AS_VALID_MASK             0x00000080
+#define BCHP_XPT_FE_IB0_CTRL_IB_USE_SYNC_AS_VALID_SHIFT            7
+#define BCHP_XPT_FE_IB0_CTRL_IB_USE_SYNC_AS_VALID_DEFAULT          0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_SYNC_DETECT_EN [06:06] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_SYNC_DETECT_EN_MASK                0x00000040
+#define BCHP_XPT_FE_IB0_CTRL_IB_SYNC_DETECT_EN_SHIFT               6
+#define BCHP_XPT_FE_IB0_CTRL_IB_SYNC_DETECT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_ERROR_INPUT_EN [05:05] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_ERROR_INPUT_EN_MASK                0x00000020
+#define BCHP_XPT_FE_IB0_CTRL_IB_ERROR_INPUT_EN_SHIFT               5
+#define BCHP_XPT_FE_IB0_CTRL_IB_ERROR_INPUT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_ERROR_POL_SEL [04:04] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_ERROR_POL_SEL_MASK                 0x00000010
+#define BCHP_XPT_FE_IB0_CTRL_IB_ERROR_POL_SEL_SHIFT                4
+#define BCHP_XPT_FE_IB0_CTRL_IB_ERROR_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_VALID_POL_SEL [03:03] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_VALID_POL_SEL_MASK                 0x00000008
+#define BCHP_XPT_FE_IB0_CTRL_IB_VALID_POL_SEL_SHIFT                3
+#define BCHP_XPT_FE_IB0_CTRL_IB_VALID_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_DATA_POL_SEL [02:02] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_DATA_POL_SEL_MASK                  0x00000004
+#define BCHP_XPT_FE_IB0_CTRL_IB_DATA_POL_SEL_SHIFT                 2
+#define BCHP_XPT_FE_IB0_CTRL_IB_DATA_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_SYNC_POL_SEL [01:01] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_SYNC_POL_SEL_MASK                  0x00000002
+#define BCHP_XPT_FE_IB0_CTRL_IB_SYNC_POL_SEL_SHIFT                 1
+#define BCHP_XPT_FE_IB0_CTRL_IB_SYNC_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB0_CTRL :: IB_CLOCK_POL_SEL [00:00] */
+#define BCHP_XPT_FE_IB0_CTRL_IB_CLOCK_POL_SEL_MASK                 0x00000001
+#define BCHP_XPT_FE_IB0_CTRL_IB_CLOCK_POL_SEL_SHIFT                0
+#define BCHP_XPT_FE_IB0_CTRL_IB_CLOCK_POL_SEL_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB0_SYNC_COUNT - Data Transport Input Band 0 Sync counter Register
+ ***************************************************************************/
+/* XPT_FE :: IB0_SYNC_COUNT :: reserved0 [31:08] */
+#define BCHP_XPT_FE_IB0_SYNC_COUNT_reserved0_MASK                  0xffffff00
+#define BCHP_XPT_FE_IB0_SYNC_COUNT_reserved0_SHIFT                 8
+
+/* XPT_FE :: IB0_SYNC_COUNT :: SYNC_COUNT [07:00] */
+#define BCHP_XPT_FE_IB0_SYNC_COUNT_SYNC_COUNT_MASK                 0x000000ff
+#define BCHP_XPT_FE_IB0_SYNC_COUNT_SYNC_COUNT_SHIFT                0
+#define BCHP_XPT_FE_IB0_SYNC_COUNT_SYNC_COUNT_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB1_CTRL - Data Transport Input Band 1 Control Register
+ ***************************************************************************/
+/* XPT_FE :: IB1_CTRL :: reserved0 [31:24] */
+#define BCHP_XPT_FE_IB1_CTRL_reserved0_MASK                        0xff000000
+#define BCHP_XPT_FE_IB1_CTRL_reserved0_SHIFT                       24
+
+/* XPT_FE :: IB1_CTRL :: IB_PKT_LENGTH [23:16] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_PKT_LENGTH_MASK                    0x00ff0000
+#define BCHP_XPT_FE_IB1_CTRL_IB_PKT_LENGTH_SHIFT                   16
+#define BCHP_XPT_FE_IB1_CTRL_IB_PKT_LENGTH_DEFAULT                 0x000000bc
+
+/* XPT_FE :: IB1_CTRL :: reserved1 [15:11] */
+#define BCHP_XPT_FE_IB1_CTRL_reserved1_MASK                        0x0000f800
+#define BCHP_XPT_FE_IB1_CTRL_reserved1_SHIFT                       11
+
+/* XPT_FE :: IB1_CTRL :: IB_PARALLEL_INPUT_SEL [10:10] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_PARALLEL_INPUT_SEL_MASK            0x00000400
+#define BCHP_XPT_FE_IB1_CTRL_IB_PARALLEL_INPUT_SEL_SHIFT           10
+#define BCHP_XPT_FE_IB1_CTRL_IB_PARALLEL_INPUT_SEL_DEFAULT         0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_LSB_FIRST [09:09] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_LSB_FIRST_MASK                     0x00000200
+#define BCHP_XPT_FE_IB1_CTRL_IB_LSB_FIRST_SHIFT                    9
+#define BCHP_XPT_FE_IB1_CTRL_IB_LSB_FIRST_DEFAULT                  0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_FORCE_VALID [08:08] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_FORCE_VALID_MASK                   0x00000100
+#define BCHP_XPT_FE_IB1_CTRL_IB_FORCE_VALID_SHIFT                  8
+#define BCHP_XPT_FE_IB1_CTRL_IB_FORCE_VALID_DEFAULT                0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_USE_SYNC_AS_VALID [07:07] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_USE_SYNC_AS_VALID_MASK             0x00000080
+#define BCHP_XPT_FE_IB1_CTRL_IB_USE_SYNC_AS_VALID_SHIFT            7
+#define BCHP_XPT_FE_IB1_CTRL_IB_USE_SYNC_AS_VALID_DEFAULT          0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_SYNC_DETECT_EN [06:06] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_SYNC_DETECT_EN_MASK                0x00000040
+#define BCHP_XPT_FE_IB1_CTRL_IB_SYNC_DETECT_EN_SHIFT               6
+#define BCHP_XPT_FE_IB1_CTRL_IB_SYNC_DETECT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_ERROR_INPUT_EN [05:05] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_ERROR_INPUT_EN_MASK                0x00000020
+#define BCHP_XPT_FE_IB1_CTRL_IB_ERROR_INPUT_EN_SHIFT               5
+#define BCHP_XPT_FE_IB1_CTRL_IB_ERROR_INPUT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_ERROR_POL_SEL [04:04] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_ERROR_POL_SEL_MASK                 0x00000010
+#define BCHP_XPT_FE_IB1_CTRL_IB_ERROR_POL_SEL_SHIFT                4
+#define BCHP_XPT_FE_IB1_CTRL_IB_ERROR_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_VALID_POL_SEL [03:03] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_VALID_POL_SEL_MASK                 0x00000008
+#define BCHP_XPT_FE_IB1_CTRL_IB_VALID_POL_SEL_SHIFT                3
+#define BCHP_XPT_FE_IB1_CTRL_IB_VALID_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_DATA_POL_SEL [02:02] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_DATA_POL_SEL_MASK                  0x00000004
+#define BCHP_XPT_FE_IB1_CTRL_IB_DATA_POL_SEL_SHIFT                 2
+#define BCHP_XPT_FE_IB1_CTRL_IB_DATA_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_SYNC_POL_SEL [01:01] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_SYNC_POL_SEL_MASK                  0x00000002
+#define BCHP_XPT_FE_IB1_CTRL_IB_SYNC_POL_SEL_SHIFT                 1
+#define BCHP_XPT_FE_IB1_CTRL_IB_SYNC_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB1_CTRL :: IB_CLOCK_POL_SEL [00:00] */
+#define BCHP_XPT_FE_IB1_CTRL_IB_CLOCK_POL_SEL_MASK                 0x00000001
+#define BCHP_XPT_FE_IB1_CTRL_IB_CLOCK_POL_SEL_SHIFT                0
+#define BCHP_XPT_FE_IB1_CTRL_IB_CLOCK_POL_SEL_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB1_SYNC_COUNT - Data Transport Input Band 1 Sync counter Register
+ ***************************************************************************/
+/* XPT_FE :: IB1_SYNC_COUNT :: reserved0 [31:08] */
+#define BCHP_XPT_FE_IB1_SYNC_COUNT_reserved0_MASK                  0xffffff00
+#define BCHP_XPT_FE_IB1_SYNC_COUNT_reserved0_SHIFT                 8
+
+/* XPT_FE :: IB1_SYNC_COUNT :: SYNC_COUNT [07:00] */
+#define BCHP_XPT_FE_IB1_SYNC_COUNT_SYNC_COUNT_MASK                 0x000000ff
+#define BCHP_XPT_FE_IB1_SYNC_COUNT_SYNC_COUNT_SHIFT                0
+#define BCHP_XPT_FE_IB1_SYNC_COUNT_SYNC_COUNT_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB2_CTRL - Data Transport Input Band 2 Control Register
+ ***************************************************************************/
+/* XPT_FE :: IB2_CTRL :: reserved0 [31:24] */
+#define BCHP_XPT_FE_IB2_CTRL_reserved0_MASK                        0xff000000
+#define BCHP_XPT_FE_IB2_CTRL_reserved0_SHIFT                       24
+
+/* XPT_FE :: IB2_CTRL :: IB_PKT_LENGTH [23:16] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_PKT_LENGTH_MASK                    0x00ff0000
+#define BCHP_XPT_FE_IB2_CTRL_IB_PKT_LENGTH_SHIFT                   16
+#define BCHP_XPT_FE_IB2_CTRL_IB_PKT_LENGTH_DEFAULT                 0x000000bc
+
+/* XPT_FE :: IB2_CTRL :: reserved1 [15:11] */
+#define BCHP_XPT_FE_IB2_CTRL_reserved1_MASK                        0x0000f800
+#define BCHP_XPT_FE_IB2_CTRL_reserved1_SHIFT                       11
+
+/* XPT_FE :: IB2_CTRL :: IB_PARALLEL_INPUT_SEL [10:10] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_PARALLEL_INPUT_SEL_MASK            0x00000400
+#define BCHP_XPT_FE_IB2_CTRL_IB_PARALLEL_INPUT_SEL_SHIFT           10
+#define BCHP_XPT_FE_IB2_CTRL_IB_PARALLEL_INPUT_SEL_DEFAULT         0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_LSB_FIRST [09:09] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_LSB_FIRST_MASK                     0x00000200
+#define BCHP_XPT_FE_IB2_CTRL_IB_LSB_FIRST_SHIFT                    9
+#define BCHP_XPT_FE_IB2_CTRL_IB_LSB_FIRST_DEFAULT                  0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_FORCE_VALID [08:08] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_FORCE_VALID_MASK                   0x00000100
+#define BCHP_XPT_FE_IB2_CTRL_IB_FORCE_VALID_SHIFT                  8
+#define BCHP_XPT_FE_IB2_CTRL_IB_FORCE_VALID_DEFAULT                0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_USE_SYNC_AS_VALID [07:07] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_USE_SYNC_AS_VALID_MASK             0x00000080
+#define BCHP_XPT_FE_IB2_CTRL_IB_USE_SYNC_AS_VALID_SHIFT            7
+#define BCHP_XPT_FE_IB2_CTRL_IB_USE_SYNC_AS_VALID_DEFAULT          0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_SYNC_DETECT_EN [06:06] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_SYNC_DETECT_EN_MASK                0x00000040
+#define BCHP_XPT_FE_IB2_CTRL_IB_SYNC_DETECT_EN_SHIFT               6
+#define BCHP_XPT_FE_IB2_CTRL_IB_SYNC_DETECT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_ERROR_INPUT_EN [05:05] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_ERROR_INPUT_EN_MASK                0x00000020
+#define BCHP_XPT_FE_IB2_CTRL_IB_ERROR_INPUT_EN_SHIFT               5
+#define BCHP_XPT_FE_IB2_CTRL_IB_ERROR_INPUT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_ERROR_POL_SEL [04:04] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_ERROR_POL_SEL_MASK                 0x00000010
+#define BCHP_XPT_FE_IB2_CTRL_IB_ERROR_POL_SEL_SHIFT                4
+#define BCHP_XPT_FE_IB2_CTRL_IB_ERROR_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_VALID_POL_SEL [03:03] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_VALID_POL_SEL_MASK                 0x00000008
+#define BCHP_XPT_FE_IB2_CTRL_IB_VALID_POL_SEL_SHIFT                3
+#define BCHP_XPT_FE_IB2_CTRL_IB_VALID_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_DATA_POL_SEL [02:02] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_DATA_POL_SEL_MASK                  0x00000004
+#define BCHP_XPT_FE_IB2_CTRL_IB_DATA_POL_SEL_SHIFT                 2
+#define BCHP_XPT_FE_IB2_CTRL_IB_DATA_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_SYNC_POL_SEL [01:01] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_SYNC_POL_SEL_MASK                  0x00000002
+#define BCHP_XPT_FE_IB2_CTRL_IB_SYNC_POL_SEL_SHIFT                 1
+#define BCHP_XPT_FE_IB2_CTRL_IB_SYNC_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB2_CTRL :: IB_CLOCK_POL_SEL [00:00] */
+#define BCHP_XPT_FE_IB2_CTRL_IB_CLOCK_POL_SEL_MASK                 0x00000001
+#define BCHP_XPT_FE_IB2_CTRL_IB_CLOCK_POL_SEL_SHIFT                0
+#define BCHP_XPT_FE_IB2_CTRL_IB_CLOCK_POL_SEL_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB2_SYNC_COUNT - Data Transport Input Band 2 Sync counter Register
+ ***************************************************************************/
+/* XPT_FE :: IB2_SYNC_COUNT :: reserved0 [31:08] */
+#define BCHP_XPT_FE_IB2_SYNC_COUNT_reserved0_MASK                  0xffffff00
+#define BCHP_XPT_FE_IB2_SYNC_COUNT_reserved0_SHIFT                 8
+
+/* XPT_FE :: IB2_SYNC_COUNT :: SYNC_COUNT [07:00] */
+#define BCHP_XPT_FE_IB2_SYNC_COUNT_SYNC_COUNT_MASK                 0x000000ff
+#define BCHP_XPT_FE_IB2_SYNC_COUNT_SYNC_COUNT_SHIFT                0
+#define BCHP_XPT_FE_IB2_SYNC_COUNT_SYNC_COUNT_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB3_CTRL - Data Transport Input Band 3 Control Register
+ ***************************************************************************/
+/* XPT_FE :: IB3_CTRL :: reserved0 [31:24] */
+#define BCHP_XPT_FE_IB3_CTRL_reserved0_MASK                        0xff000000
+#define BCHP_XPT_FE_IB3_CTRL_reserved0_SHIFT                       24
+
+/* XPT_FE :: IB3_CTRL :: IB_PKT_LENGTH [23:16] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_PKT_LENGTH_MASK                    0x00ff0000
+#define BCHP_XPT_FE_IB3_CTRL_IB_PKT_LENGTH_SHIFT                   16
+#define BCHP_XPT_FE_IB3_CTRL_IB_PKT_LENGTH_DEFAULT                 0x000000bc
+
+/* XPT_FE :: IB3_CTRL :: reserved1 [15:11] */
+#define BCHP_XPT_FE_IB3_CTRL_reserved1_MASK                        0x0000f800
+#define BCHP_XPT_FE_IB3_CTRL_reserved1_SHIFT                       11
+
+/* XPT_FE :: IB3_CTRL :: IB_PARALLEL_INPUT_SEL [10:10] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_PARALLEL_INPUT_SEL_MASK            0x00000400
+#define BCHP_XPT_FE_IB3_CTRL_IB_PARALLEL_INPUT_SEL_SHIFT           10
+#define BCHP_XPT_FE_IB3_CTRL_IB_PARALLEL_INPUT_SEL_DEFAULT         0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_LSB_FIRST [09:09] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_LSB_FIRST_MASK                     0x00000200
+#define BCHP_XPT_FE_IB3_CTRL_IB_LSB_FIRST_SHIFT                    9
+#define BCHP_XPT_FE_IB3_CTRL_IB_LSB_FIRST_DEFAULT                  0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_FORCE_VALID [08:08] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_FORCE_VALID_MASK                   0x00000100
+#define BCHP_XPT_FE_IB3_CTRL_IB_FORCE_VALID_SHIFT                  8
+#define BCHP_XPT_FE_IB3_CTRL_IB_FORCE_VALID_DEFAULT                0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_USE_SYNC_AS_VALID [07:07] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_USE_SYNC_AS_VALID_MASK             0x00000080
+#define BCHP_XPT_FE_IB3_CTRL_IB_USE_SYNC_AS_VALID_SHIFT            7
+#define BCHP_XPT_FE_IB3_CTRL_IB_USE_SYNC_AS_VALID_DEFAULT          0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_SYNC_DETECT_EN [06:06] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_SYNC_DETECT_EN_MASK                0x00000040
+#define BCHP_XPT_FE_IB3_CTRL_IB_SYNC_DETECT_EN_SHIFT               6
+#define BCHP_XPT_FE_IB3_CTRL_IB_SYNC_DETECT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_ERROR_INPUT_EN [05:05] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_ERROR_INPUT_EN_MASK                0x00000020
+#define BCHP_XPT_FE_IB3_CTRL_IB_ERROR_INPUT_EN_SHIFT               5
+#define BCHP_XPT_FE_IB3_CTRL_IB_ERROR_INPUT_EN_DEFAULT             0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_ERROR_POL_SEL [04:04] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_ERROR_POL_SEL_MASK                 0x00000010
+#define BCHP_XPT_FE_IB3_CTRL_IB_ERROR_POL_SEL_SHIFT                4
+#define BCHP_XPT_FE_IB3_CTRL_IB_ERROR_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_VALID_POL_SEL [03:03] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_VALID_POL_SEL_MASK                 0x00000008
+#define BCHP_XPT_FE_IB3_CTRL_IB_VALID_POL_SEL_SHIFT                3
+#define BCHP_XPT_FE_IB3_CTRL_IB_VALID_POL_SEL_DEFAULT              0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_DATA_POL_SEL [02:02] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_DATA_POL_SEL_MASK                  0x00000004
+#define BCHP_XPT_FE_IB3_CTRL_IB_DATA_POL_SEL_SHIFT                 2
+#define BCHP_XPT_FE_IB3_CTRL_IB_DATA_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_SYNC_POL_SEL [01:01] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_SYNC_POL_SEL_MASK                  0x00000002
+#define BCHP_XPT_FE_IB3_CTRL_IB_SYNC_POL_SEL_SHIFT                 1
+#define BCHP_XPT_FE_IB3_CTRL_IB_SYNC_POL_SEL_DEFAULT               0x00000000
+
+/* XPT_FE :: IB3_CTRL :: IB_CLOCK_POL_SEL [00:00] */
+#define BCHP_XPT_FE_IB3_CTRL_IB_CLOCK_POL_SEL_MASK                 0x00000001
+#define BCHP_XPT_FE_IB3_CTRL_IB_CLOCK_POL_SEL_SHIFT                0
+#define BCHP_XPT_FE_IB3_CTRL_IB_CLOCK_POL_SEL_DEFAULT              0x00000000
+
+/***************************************************************************
+ *IB3_SYNC_COUNT - Data Transport Input Band 3 Sync counter Register
+ ***************************************************************************/
+/* XPT_FE :: IB3_SYNC_COUNT :: reserved0 [31:08] */
+#define BCHP_XPT_FE_IB3_SYNC_COUNT_reserved0_MASK                  0xffffff00
+#define BCHP_XPT_FE_IB3_SYNC_COUNT_reserved0_SHIFT                 8
+
+/* XPT_FE :: IB3_SYNC_COUNT :: SYNC_COUNT [07:00] */
+#define BCHP_XPT_FE_IB3_SYNC_COUNT_SYNC_COUNT_MASK                 0x000000ff
+#define BCHP_XPT_FE_IB3_SYNC_COUNT_SYNC_COUNT_SHIFT                0
+#define BCHP_XPT_FE_IB3_SYNC_COUNT_SYNC_COUNT_DEFAULT              0x00000000
 
 /***************************************************************************
  *IB10_CTRL - Data Transport Input Band 10 Control Register

@@ -213,7 +213,7 @@ static int __init ic_open_devs(void)
 
 	/* bring loopback an DSA enabled devices up first */
 	for_each_netdev(&init_net, dev) {
-		if (!(dev->flags & IFF_LOOPBACK) && !dev->dsa_ptr)
+		if (!(dev->flags & IFF_LOOPBACK) && !netdev_uses_dsa(dev))
 			continue;
 		if (dev_change_flags(dev, dev->flags | IFF_UP) < 0)
 			pr_err("IP-Config: Failed to open %s\n", dev->name);
@@ -309,7 +309,7 @@ static void __init ic_close_devs(void)
 		next = d->next;
 		dev = d->dev;
 		/* Only allow bringing down non-DSA enabled devices */
-		if (dev != ic_dev && (dev->dsa_ptr == NULL)) {
+		if (dev != ic_dev && !netdev_uses_dsa(dev)) {
 			DBG(("IP-Config: Downing %s\n", dev->name));
 			dev_change_flags(dev, d->flags);
 		}

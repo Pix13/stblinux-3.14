@@ -3844,7 +3844,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 
       value = (symbol_got_offset (input_bfd, h, r_symndx)
 	       + globals->root.sgot->output_section->vma
-	       + globals->root.sgot->output_section->output_offset);
+	       + globals->root.sgot->output_offset);
 
       value = _bfd_aarch64_elf_resolve_relocation (bfd_r_type, place, value,
 						   0, weak_undef_p);
@@ -3873,10 +3873,9 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
     case BFD_RELOC_AARCH64_TLSDESC_LDR:
       if (globals->root.sgot == NULL)
 	return bfd_reloc_notsupported;
-
       value = (symbol_tlsdesc_got_offset (input_bfd, h, r_symndx)
 	       + globals->root.sgotplt->output_section->vma
-	       + globals->root.sgotplt->output_section->output_offset
+	       + globals->root.sgotplt->output_offset
 	       + globals->sgotplt_jump_table_size);
 
       value = _bfd_aarch64_elf_resolve_relocation (bfd_r_type, place, value,
@@ -3958,7 +3957,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
 	     ldr xd, [x0, #:tlsdesc_lo12:var] => ldr x0, [x0, #:gottprel_lo12:var]
 	   */
 	  insn = bfd_getl32 (contents + rel->r_offset);
-	  insn &= 0xfffffff0;
+	  insn &= 0xffffffe0;
 	  bfd_putl32 (insn, contents + rel->r_offset);
 	  return bfd_reloc_continue;
 	}
@@ -4160,15 +4159,7 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 					 rel, 1, relend, howto, 0, contents);
 
       if (info->relocatable)
-	{
-	  /* This is a relocatable link.  We don't have to change
-	     anything, unless the reloc is against a section symbol,
-	     in which case we have to adjust according to where the
-	     section symbol winds up in the output section.  */
-	  if (sym != NULL && ELF_ST_TYPE (sym->st_info) == STT_SECTION)
-	    rel->r_addend += sec->output_offset;
-	  continue;
-	}
+	continue;
 
       if (h != NULL)
 	name = h->root.root.string;
@@ -5525,17 +5516,6 @@ elfNN_aarch64_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSE
     }
 }
 
-/* Set the right machine number for an AArch64 ELF file.  */
-
-static bfd_boolean
-elfNN_aarch64_section_flags (flagword *flags, const Elf_Internal_Shdr *hdr)
-{
-  if (hdr->sh_type == SHT_NOTE)
-    *flags |= SEC_LINK_ONCE | SEC_LINK_DUPLICATES_SAME_CONTENTS;
-
-  return TRUE;
-}
-
 /* Handle an AArch64 specific section when reading an object file.  This is
    called when bfd_section_from_shdr finds a section with an unknown
    type.  */
@@ -6652,7 +6632,7 @@ elfNN_aarch64_create_small_pltn_entry (struct elf_link_hash_entry *h,
 
   plt_entry = plt->contents + h->plt.offset;
   plt_entry_address = plt->output_section->vma
-    + plt->output_section->output_offset + h->plt.offset;
+    + plt->output_offset + h->plt.offset;
   gotplt_entry_address = gotplt->output_section->vma +
     gotplt->output_offset + got_offset;
 
@@ -6959,7 +6939,7 @@ elfNN_aarch64_init_small_plt0_entry (bfd *output_bfd ATTRIBUTE_UNUSED,
 		  + GOT_ENTRY_SIZE * 2);
 
   plt_base = htab->root.splt->output_section->vma +
-    htab->root.splt->output_section->output_offset;
+    htab->root.splt->output_offset;
 
   /* Fill in the top 21 bits for this: ADRP x16, PLT_GOT + n * 8.
      ADRP:   ((PG(S+A)-PG(P)) >> 12) & 0x1fffff */
@@ -7019,7 +6999,7 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 	      break;
 
 	    case DT_PLTRELSZ:
-	      s = htab->root.srelplt->output_section;
+	      s = htab->root.srelplt;
 	      dyn.d_un.d_val = s->size;
 	      break;
 
@@ -7033,7 +7013,7 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 		 about changing the DT_RELA entry.  */
 	      if (htab->root.srelplt != NULL)
 		{
-		  s = htab->root.srelplt->output_section;
+		  s = htab->root.srelplt;
 		  dyn.d_un.d_val -= s->size;
 		}
 	      break;
@@ -7315,9 +7295,6 @@ const struct elf_size_info elfNN_aarch64_size_info =
 #define elf_backend_reloc_type_class		\
   elfNN_aarch64_reloc_type_class
 
-#define elf_backend_section_flags		\
-  elfNN_aarch64_section_flags
-
 #define elf_backend_section_from_shdr		\
   elfNN_aarch64_section_from_shdr
 
@@ -7335,6 +7312,7 @@ const struct elf_size_info elfNN_aarch64_size_info =
 #define elf_backend_may_use_rel_p      0
 #define elf_backend_may_use_rela_p     1
 #define elf_backend_default_use_rela_p 1
+#define elf_backend_rela_normal        1
 #define elf_backend_got_header_size (GOT_ENTRY_SIZE * 3)
 #define elf_backend_default_execstack  0
 

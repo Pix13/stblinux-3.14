@@ -28,9 +28,62 @@
 
 #include "sdhci-pltfm.h"
 
+#define SDIO_CFG_REG(x, y)	(x + BCHP_SDIO_0_CFG_##y -	\
+				BCHP_SDIO_0_CFG_REG_START)
 
 static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
 };
+
+
+#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7145B0) ||		\
+	defined(CONFIG_BCM7250B0) || defined(CONFIG_BCM7364A0) ||	\
+	defined(CONFIG_BCM7366B0) || defined(CONFIG_BCM7439B0) ||	\
+	defined(CONFIG_BCM7445D0)
+static int sdhci_override_caps(struct platform_device *pdev,
+			uint32_t cap0_setbits,
+			uint32_t cap0_clearbits,
+			uint32_t cap1_setbits,
+			uint32_t cap1_clearbits)
+{
+	uint32_t val;
+	struct resource *iomem;
+	uintptr_t cfg_base;
+	struct sdhci_host *host = platform_get_drvdata(pdev);
+
+	/*
+	 * The CAP's override bits in the CFG registers default to all
+	 * zeros so start by getting the correct settings from the HOST
+	 * CAPS registers and then modify the requested bits and write
+	 * them to the override CFG registers.
+	 */
+	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!iomem)
+		return -EINVAL;
+	cfg_base = iomem->start;
+	val = sdhci_readl(host, SDHCI_CAPABILITIES);
+	val &= ~cap0_clearbits;
+	val |= cap0_setbits;
+	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG0), val);
+	val = sdhci_readl(host, SDHCI_CAPABILITIES_1);
+	val &= ~cap1_clearbits;
+	val |= cap1_setbits;
+	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG1), val);
+	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG_OVERRIDE),
+		BCHP_SDIO_0_CFG_CAP_REG_OVERRIDE_CAP_REG_OVERRIDE_MASK);
+	return 0;
+}
+
+static int sdhci_fix_caps(struct platform_device *pdev)
+{
+	/* Disable SDR50 support because tuning is broken. */
+	return sdhci_override_caps(pdev, 0, 0, 0, SDHCI_SUPPORT_SDR50);
+}
+#else
+static int sdhci_fix_caps(struct platform_device *pdev)
+{
+	return 0;
+}
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -69,22 +122,29 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 	struct device_node *dn = pdev->dev.of_node;
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
+	struct clk *clk;
 	int res;
 
+	clk = of_clk_get_by_name(dn, "sw_sdio");
+	if (IS_ERR(clk)) {
+		dev_err(&pdev->dev, "Clock not found in Device Tree\n");
+		clk = NULL;
+	}
+	res = clk_prepare_enable(clk);
+	if (res)
+		return res;
 	res = sdhci_pltfm_register(pdev, &sdhci_brcmstb_pdata, 0);
 	if (res)
 		return res;
+
+	res = sdhci_fix_caps(pdev);
+	if (res) {
+		sdhci_pltfm_unregister(pdev);
+		return res;
+	}
 	host = platform_get_drvdata(pdev);
 	pltfm_host = sdhci_priv(host);
-
-	pltfm_host->clk = of_clk_get_by_name(dn, "sw_sdio");
-	if (IS_ERR(pltfm_host->clk)) {
-		dev_err(&pdev->dev, "Clock not found in Device Tree\n");
-		pltfm_host->clk = NULL;
-	}
-	res = clk_prepare_enable(pltfm_host->clk);
-	if (res)
-		sdhci_pltfm_unregister(pdev);
+	pltfm_host->clk = clk;
 	return res;
 }
 

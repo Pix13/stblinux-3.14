@@ -2,8 +2,8 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-CC			:= $(MACHINE)-linux-gcc
-STRIP			:= $(MACHINE)-linux-strip
+CC			:= $(CROSS_COMPILE)gcc
+STRIP			:= $(CROSS_COMPILE)strip
 CFLAGS			:= -Os
 
 export CC CFLAGS
@@ -19,6 +19,10 @@ all::
 			bash_cv_sys_named_pipes=present || exit 1 ; \
 	fi
 	$(MAKE) -j1 -C build
+
+.PHONY: clean
+clean::
+	[ ! -f build/Makefile ] || $(MAKE) -C build clean
 
 .PHONY: distclean
 distclean::

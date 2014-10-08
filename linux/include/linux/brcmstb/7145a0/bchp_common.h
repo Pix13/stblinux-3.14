@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Wed May  8 03:08:53 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 13:17:00 2014
+ *                 Full Compile MD5 Checksum a8ee62ccf9dde43435c825f266da463d
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              e373b364a1742e13a0f9eb15fd8aa94f
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -1283,12 +1285,6 @@
 #define BCHP_DPE_MPEG_DFAP_REG_END                         0x0130034c
 #define BCHP_DPE_HW_DFAP_REG_START                         0x01300400
 #define BCHP_DPE_HW_DFAP_REG_END                           0x01300f3c
-#define BCHP_NATC_REG_DFAP_REG_START                       0x01301000
-#define BCHP_NATC_REG_DFAP_REG_END                         0x01301164
-#define BCHP_NATC_SMEM_DFAP_REG_START                      0x01307000
-#define BCHP_NATC_SMEM_DFAP_REG_END                        0x01307ffc
-#define BCHP_NATC_MEM_DFAP_REG_START                       0x01308000
-#define BCHP_NATC_MEM_DFAP_REG_END                         0x0130fffc
 #define BCHP_FFE_N_0_DFAP_REG_START                        0x01350000
 #define BCHP_FFE_N_0_DFAP_REG_END                          0x013503fc
 #define BCHP_FFE_P_0_DFAP_REG_START                        0x01351000
@@ -1301,18 +1297,6 @@
 #define BCHP_FFE_P_1_DFAP_REG_END                          0x013717fc
 #define BCHP_FFE_I_1_DFAP_REG_START                        0x01374000
 #define BCHP_FFE_I_1_DFAP_REG_END                          0x01377ffc
-#define BCHP_FFE_N_2_DFAP_REG_START                        0x01390000
-#define BCHP_FFE_N_2_DFAP_REG_END                          0x013903fc
-#define BCHP_FFE_P_2_DFAP_REG_START                        0x01391000
-#define BCHP_FFE_P_2_DFAP_REG_END                          0x013917fc
-#define BCHP_FFE_I_2_DFAP_REG_START                        0x01394000
-#define BCHP_FFE_I_2_DFAP_REG_END                          0x01397ffc
-#define BCHP_FFE_N_3_DFAP_REG_START                        0x013b0000
-#define BCHP_FFE_N_3_DFAP_REG_END                          0x013b03fc
-#define BCHP_FFE_P_3_DFAP_REG_START                        0x013b1000
-#define BCHP_FFE_P_3_DFAP_REG_END                          0x013b17fc
-#define BCHP_FFE_I_3_DFAP_REG_START                        0x013b4000
-#define BCHP_FFE_I_3_DFAP_REG_END                          0x013b7ffc
 #define BCHP_DOWNSTREAM_0_REG_START                        0x01400000
 #define BCHP_DOWNSTREAM_0_REG_END                          0x01405b7f
 #define BCHP_DOWNSTREAM_1_REG_START                        0x01600000
@@ -1322,7 +1306,7 @@
 #define BCHP_DOWNSTREAM_3_REG_START                        0x01a00000
 #define BCHP_DOWNSTREAM_3_REG_END                          0x01a05b7f
 #define BCHP_APM_BASE_APM_REG_START                        0x01c00000
-#define BCHP_APM_BASE_APM_REG_END                          0x01c00170
+#define BCHP_APM_BASE_APM_REG_END                          0x01c001f8
 #define BCHP_APM_PCM_APM_REG_START                         0x01c00200
 #define BCHP_APM_PCM_APM_REG_END                           0x01c0027c
 #define BCHP_HVG_BASE_APM_REG_START                        0x01c00300
@@ -1358,7 +1342,7 @@
 #define BCHP_BMU_SMEM_BMU_REG_START                        0x01c01400
 #define BCHP_BMU_SMEM_BMU_REG_END                          0x01c015fc
 #define BCHP_BMU_LS_BMU_REG_START                          0x01c01800
-#define BCHP_BMU_LS_BMU_REG_END                            0x01c01908
+#define BCHP_BMU_LS_BMU_REG_END                            0x01c0191c
 #define BCHP_BMU_CP_BMU_REG_START                          0x01c01c00
 #define BCHP_BMU_CP_BMU_REG_END                            0x01c01d0c
 #define BCHP_PICO_IMEM_PICO_REG_START                      0x01c10000
@@ -1731,6 +1715,8 @@
 #define BCHP_INT_EXT_PER_REG_END                           0x03c00358
 #define BCHP_Dbg_PER_REG_START                             0x03c003e0
 #define BCHP_Dbg_PER_REG_END                               0x03c003f4
+#define BCHP_PER_SEC_TOP_PER_REG_START                     0x03c00400
+#define BCHP_PER_SEC_TOP_PER_REG_END                       0x03c00420
 #define BCHP_UART0_PER_REG_START                           0x03c00500
 #define BCHP_UART0_PER_REG_END                             0x03c00514
 #define BCHP_UART1_PER_REG_START                           0x03c00520
@@ -3043,10 +3029,6 @@
 #define BCHP_BSP_GLB_CONTROL_REG_END                       0x2032b0b0
 #define BCHP_BSP_PKL_REG_START                             0x2032b300
 #define BCHP_BSP_PKL_REG_END                               0x2032b37c
-#define BCHP_BSP_INST_PATCH_CTRL_REG_START                 0x2032b400
-#define BCHP_BSP_INST_PATCH_CTRL_REG_END                   0x2032b408
-#define BCHP_BSP_BOOT_PATCH_CTRL_REG_START                 0x2032b410
-#define BCHP_BSP_BOOT_PATCH_CTRL_REG_END                   0x2032b418
 #define BCHP_BSP_CONTROL_INTR2_REG_START                   0x2032b800
 #define BCHP_BSP_CONTROL_INTR2_REG_END                     0x2032b82c
 #define BCHP_BSP_VISTA_GENACC_REG_START                    0x2032b900
@@ -5397,7 +5379,7 @@
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_SHIFT 0
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Hard_left 2147483647
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Middle 0
-#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Hard_right 2147483648
+#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_48_EXT_V1_PAN_Hard_right -2147483648
 
 /***************************************************************************
  *AC3_PLUS_UPS_WORD_49 - AC3 Plus User Parameters Structure Word 49 - EXT_V2_LEVEL
@@ -5416,7 +5398,7 @@
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_SHIFT 0
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Hard_left 2147483647
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Middle 0
-#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Hard_right 2147483648
+#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_50_EXT_V2_PAN_Hard_right -2147483648
 
 /***************************************************************************
  *AC3_PLUS_UPS_WORD_51 - AC3 Plus User Parameters Structure Word 51 - EXT_GM_LEVEL
@@ -5435,7 +5417,7 @@
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_SHIFT 0
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Hard_left 2147483647
 #define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Middle 0
-#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Hard_right 2147483648
+#define BCHP_RAAGA_REGSET_DSP_CFG_AC3_PLUS_UPS_WORD_52_EXT_GM_PAN_Hard_right -2147483648
 
 /***************************************************************************
  *AAC_UPS_WORD_00 - AAC User Parameters Structure Word 0 - XPT_FORMAT
@@ -5664,7 +5646,7 @@
  *EOP_ID_256 - EOP_ID
  ***************************************************************************/
 /* RDC :: EOP_ID_256 :: eop_id [255:00] */
-#define BCHP_RDC_EOP_ID_256_eop_id_MASK                            0x0000000000000000000000000000000000000000000000000000000000000000
+#define BCHP_RDC_EOP_ID_256_eop_id_MASK                            0x00000000000000000000000000000000000000000000000000000000ffffffff
 #define BCHP_RDC_EOP_ID_256_eop_id_SHIFT                           0
 #define BCHP_RDC_EOP_ID_256_eop_id_vnet_f_scl_0                    0
 #define BCHP_RDC_EOP_ID_256_eop_id_vnet_f_scl_1                    1

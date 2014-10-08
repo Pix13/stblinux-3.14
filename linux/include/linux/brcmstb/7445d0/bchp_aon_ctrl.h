@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Oct 23 03:22:46 2013
- *                 Full Compile MD5 Checksum 04357d64d93017c4cfc4adffa17a9c98
+ * Date:           Generated on              Wed Sep  3 11:52:55 2014
+ *                 Full Compile MD5 Checksum 4a20c0e31b928020bbfa96c583b9e661
  *                   (minus title and desc)  
- *                 MD5 Checksum              80a33a953974f005342f663a773c35db
+ *                 MD5 Checksum              077c6f684bcabb645ae9da4069fea8e4
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008008
+ *                 Perl Interpreter          5.008005
  *                 Operating System          linux
  *
  * Revision History:
@@ -111,9 +111,18 @@
 /***************************************************************************
  *PM_CTRL - Control register for Power Controller
  ***************************************************************************/
-/* AON_CTRL :: PM_CTRL :: reserved0 [31:08] */
-#define BCHP_AON_CTRL_PM_CTRL_reserved0_MASK                       0xffffff00
-#define BCHP_AON_CTRL_PM_CTRL_reserved0_SHIFT                      8
+/* AON_CTRL :: PM_CTRL :: reserved0 [31:21] */
+#define BCHP_AON_CTRL_PM_CTRL_reserved0_MASK                       0xffe00000
+#define BCHP_AON_CTRL_PM_CTRL_reserved0_SHIFT                      21
+
+/* AON_CTRL :: PM_CTRL :: pm_dphy_standby_clear [20:20] */
+#define BCHP_AON_CTRL_PM_CTRL_pm_dphy_standby_clear_MASK           0x00100000
+#define BCHP_AON_CTRL_PM_CTRL_pm_dphy_standby_clear_SHIFT          20
+#define BCHP_AON_CTRL_PM_CTRL_pm_dphy_standby_clear_DEFAULT        0x00000000
+
+/* AON_CTRL :: PM_CTRL :: reserved1 [19:08] */
+#define BCHP_AON_CTRL_PM_CTRL_reserved1_MASK                       0x000fff00
+#define BCHP_AON_CTRL_PM_CTRL_reserved1_SHIFT                      8
 
 /* AON_CTRL :: PM_CTRL :: min_s3_width_timer_bypass [07:07] */
 #define BCHP_AON_CTRL_PM_CTRL_min_s3_width_timer_bypass_MASK       0x00000080
@@ -1279,10 +1288,10 @@
 #define BCHP_AON_CTRL_RESET_HISTORY_aux_chip_edge_reset_1_SHIFT    18
 #define BCHP_AON_CTRL_RESET_HISTORY_aux_chip_edge_reset_1_DEFAULT  0x00000000
 
-/* AON_CTRL :: RESET_HISTORY :: aux_chip_edge_reset_0 [17:17] */
-#define BCHP_AON_CTRL_RESET_HISTORY_aux_chip_edge_reset_0_MASK     0x00020000
-#define BCHP_AON_CTRL_RESET_HISTORY_aux_chip_edge_reset_0_SHIFT    17
-#define BCHP_AON_CTRL_RESET_HISTORY_aux_chip_edge_reset_0_DEFAULT  0x00000000
+/* AON_CTRL :: RESET_HISTORY :: gen_watchdog_1_reset [17:17] */
+#define BCHP_AON_CTRL_RESET_HISTORY_gen_watchdog_1_reset_MASK      0x00020000
+#define BCHP_AON_CTRL_RESET_HISTORY_gen_watchdog_1_reset_SHIFT     17
+#define BCHP_AON_CTRL_RESET_HISTORY_gen_watchdog_1_reset_DEFAULT   0x00000000
 
 /* AON_CTRL :: RESET_HISTORY :: scpu_ejtag_reset [16:16] */
 #define BCHP_AON_CTRL_RESET_HISTORY_scpu_ejtag_reset_MASK          0x00010000
@@ -1412,10 +1421,32 @@
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_select_current_gisb_control_SHIFT 7
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_select_current_gisb_control_DEFAULT 0x00000000
 
-/* AON_CTRL :: ANA_XTAL_CONTROL :: osc_cml_sel_pd [06:03] */
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_MASK         0x00000078
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_SHIFT        3
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_DEFAULT      0x00000000
+/* union - case bus [06:03] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bus :: osc_cml_sel_pd [06:03] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_MASK     0x00000078
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_SHIFT    3
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_DEFAULT  0x00000000
+
+/* union - case bit_blast [06:03] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_pcie0 [06:06] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie0_MASK 0x00000040
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie0_SHIFT 6
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie0_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_moca [05:05] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_moca_MASK 0x00000020
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_moca_SHIFT 5
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_moca_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_usb30 [04:04] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_usb30_MASK 0x00000010
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_usb30_SHIFT 4
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_usb30_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_sata_pcie1 [03:03] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_sata_pcie1_MASK 0x00000008
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_sata_pcie1_SHIFT 3
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_sata_pcie1_DEFAULT 0x00000000
 
 /* AON_CTRL :: ANA_XTAL_CONTROL :: osc_d2cbias_gisb_control [02:00] */
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_d2cbias_gisb_control_MASK 0x00000007

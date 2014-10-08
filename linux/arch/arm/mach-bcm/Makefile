@@ -14,7 +14,7 @@ obj-$(CONFIG_ARCH_BCM_MOBILE)	:= board_bcm281xx.o bcm_kona_smc.o bcm_kona_smc_as
 plus_sec := $(call as-instr,.arch_extension sec,+sec)
 AFLAGS_bcm_kona_smc_asm.o	:=-Wa,-march=armv7-a$(plus_sec)
 
-obj-$(CONFIG_ARCH_BRCMSTB)	:= brcmstb.o cma_driver.o wktmr-brcmstb.o gisb-brcmstb.o
+obj-$(CONFIG_ARCH_BRCMSTB)	:= brcmstb.o cma_driver.o wktmr-brcmstb.o gisb-brcmstb.o srpd-brcmstb.o
 obj-$(CONFIG_SMP)		+= headsmp-brcmstb.o
 obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug-brcmstb.o
 obj-$(CONFIG_PCI)		+= pci-brcmstb.o

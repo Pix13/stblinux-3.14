@@ -30,6 +30,9 @@ config ARM_VIC_NR
 	  The maximum number of VICs available in the system, for
 	  power management.
 
+config BCM7120_L2_IRQ
+	bool
+
 config DW_APB_ICTL
 	bool
 	select IRQ_DOMAIN

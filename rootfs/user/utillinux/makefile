@@ -2,8 +2,8 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-CC			:= $(MACHINE)-linux-gcc
-STRIP			:= $(MACHINE)-linux-strip
+CC			:= $(CROSS_COMPILE)gcc
+STRIP			:= $(CROSS_COMPILE)strip
 
 CFLAGS			:= -include locale.h
 
@@ -16,6 +16,10 @@ all::
 			|| exit 1 ; \
 	fi
 	$(MAKE) -f Makefile SUBDIRS="fdisk"
+
+.PHONY: clean distclean
+clean distclean::
+	[ ! -f Makefile ] || $(MAKE) -f Makefile $@
 
 .PHONY: romfs
 romfs::

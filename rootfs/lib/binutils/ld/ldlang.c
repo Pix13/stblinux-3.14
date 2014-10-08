@@ -1238,7 +1238,14 @@ lang_init (void)
 void
 lang_finish (void)
 {
+  /* Some targets require access to the linker hash table during the
+     _bfd_write_contents call in bfd_close, so it can't be freed
+     before bfd_close.  It can't be freed after bfd_close either,
+     since bfd_alloc memory holding side data structures disappears
+     (PR17047).  So don't free it.
+
   bfd_link_hash_table_free (link_info.output_bfd, link_info.hash);
+  */
   bfd_hash_table_free (&lang_definedness_table);
   output_section_statement_table_free ();
 }
@@ -2738,9 +2745,7 @@ load_symbols (lang_input_statement_type *entry,
       break;
 
     case bfd_object:
-#ifdef ENABLE_PLUGINS
       if (!entry->flags.reload)
-#endif
 	ldlang_add_file (entry);
       if (trace_files || verbose)
 	info_msg ("%I\n", entry);
@@ -3216,38 +3221,32 @@ open_input_bfds (lang_statement_union_type *s, enum open_bfd_mode mode)
 	    {
 	      lang_statement_union_type **os_tail;
 	      lang_statement_list_type add;
+	      bfd *abfd;
 
 	      s->input_statement.target = current_target;
 
 	      /* If we are being called from within a group, and this
 		 is an archive which has already been searched, then
 		 force it to be researched unless the whole archive
-		 has been loaded already.  Do the same for a rescan.  */
+		 has been loaded already.  Do the same for a rescan.
+		 Likewise reload --as-needed shared libs.  */
 	      if (mode != OPEN_BFD_NORMAL
 #ifdef ENABLE_PLUGINS
 		  && ((mode & OPEN_BFD_RESCAN) == 0
 		      || plugin_insert == NULL)
 #endif
-		  && !s->input_statement.flags.whole_archive
 		  && s->input_statement.flags.loaded
-		  && s->input_statement.the_bfd != NULL
-		  && bfd_check_format (s->input_statement.the_bfd,
-				       bfd_archive))
-		s->input_statement.flags.loaded = FALSE;
-#ifdef ENABLE_PLUGINS
-	      /* When rescanning, reload --as-needed shared libs.  */
-	      else if ((mode & OPEN_BFD_RESCAN) != 0
-		       && plugin_insert == NULL
-		       && s->input_statement.flags.loaded
-		       && s->input_statement.flags.add_DT_NEEDED_for_regular
-		       && s->input_statement.the_bfd != NULL
-		       && ((s->input_statement.the_bfd->flags) & DYNAMIC) != 0
-		       && plugin_should_reload (s->input_statement.the_bfd))
+		  && (abfd = s->input_statement.the_bfd) != NULL
+		  && ((bfd_get_format (abfd) == bfd_archive
+		       && !s->input_statement.flags.whole_archive)
+		      || (bfd_get_format (abfd) == bfd_object
+			  && ((abfd->flags) & DYNAMIC) != 0
+			  && s->input_statement.flags.add_DT_NEEDED_for_regular
+			  && plugin_should_reload (abfd))))
 		{
 		  s->input_statement.flags.loaded = FALSE;
 		  s->input_statement.flags.reload = TRUE;
 		}
-#endif
 
 	      os_tail = lang_output_section_statement.tail;
 	      lang_list_init (&add);

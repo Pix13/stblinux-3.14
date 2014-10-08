@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Sat Jun 21 03:10:18 2014
- *                 Full Compile MD5 Checksum 2d7cd2763f1ef55897eaef5ea8fc6daa
+ * Date:           Generated on              Sun Sep 14 03:14:46 2014
+ *                 Full Compile MD5 Checksum ef22086ebd4065e4fea50dbc64f17e5e
  *                   (minus title and desc)  
- *                 MD5 Checksum              ad87f49099acb161d3ffa5d223fcb978
+ *                 MD5 Checksum              39fcae49037a6337517df43bfc24b21f
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -514,7 +514,7 @@
 /* CLKGEN :: DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3 :: MDIV_CH3 [08:01] */
 #define BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_MASK 0x000001fe
 #define BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_SHIFT 1
-#define BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_DEFAULT 0x0000000c
+#define BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_DEFAULT 0x0000000e
 
 /* CLKGEN :: DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3 :: CLOCK_DIS_CH3 [00:00] */
 #define BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_CLOCK_DIS_CH3_MASK 0x00000001
@@ -2014,12 +2014,12 @@
 /* CLKGEN :: PLL_LC_PLL_DIV :: PDIV [13:10] */
 #define BCHP_CLKGEN_PLL_LC_PLL_DIV_PDIV_MASK                       0x00003c00
 #define BCHP_CLKGEN_PLL_LC_PLL_DIV_PDIV_SHIFT                      10
-#define BCHP_CLKGEN_PLL_LC_PLL_DIV_PDIV_DEFAULT                    0x00000002
+#define BCHP_CLKGEN_PLL_LC_PLL_DIV_PDIV_DEFAULT                    0x00000001
 
 /* CLKGEN :: PLL_LC_PLL_DIV :: NDIV_INT [09:00] */
 #define BCHP_CLKGEN_PLL_LC_PLL_DIV_NDIV_INT_MASK                   0x000003ff
 #define BCHP_CLKGEN_PLL_LC_PLL_DIV_NDIV_INT_SHIFT                  0
-#define BCHP_CLKGEN_PLL_LC_PLL_DIV_NDIV_INT_DEFAULT                0x00000064
+#define BCHP_CLKGEN_PLL_LC_PLL_DIV_NDIV_INT_DEFAULT                0x00000032
 
 /***************************************************************************
  *PLL_LC_PLL_GAIN - PLL GAIN
@@ -2738,7 +2738,7 @@
 /* CLKGEN :: PLL_RDP_PLL_CHANNEL_CTRL_CH_3 :: MDIV_CH3 [08:01] */
 #define BCHP_CLKGEN_PLL_RDP_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_MASK    0x000001fe
 #define BCHP_CLKGEN_PLL_RDP_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_SHIFT   1
-#define BCHP_CLKGEN_PLL_RDP_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_DEFAULT 0x00000008
+#define BCHP_CLKGEN_PLL_RDP_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_DEFAULT 0x0000000a
 
 /* CLKGEN :: PLL_RDP_PLL_CHANNEL_CTRL_CH_3 :: CLOCK_DIS_CH3 [00:00] */
 #define BCHP_CLKGEN_PLL_RDP_PLL_CHANNEL_CTRL_CH_3_CLOCK_DIS_CH3_MASK 0x00000001

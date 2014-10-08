@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Sat Apr  6 03:07:49 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 13:17:40 2014
+ *                 Full Compile MD5 Checksum a8ee62ccf9dde43435c825f266da463d
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              e373b364a1742e13a0f9eb15fd8aa94f
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -117,20 +119,20 @@
 #define BCHP_AON_PM_L2_CPU_STATUS_CAP_SHIFT                        9
 #define BCHP_AON_PM_L2_CPU_STATUS_CAP_DEFAULT                      0x00000000
 
-/* AON_PM_L2 :: CPU_STATUS :: WOL_GENET2 [08:08] */
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET2_MASK                  0x00000100
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET2_SHIFT                 8
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET2_DEFAULT               0x00000000
+/* AON_PM_L2 :: CPU_STATUS :: WOL_UNIMAC2 [08:08] */
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC2_MASK                 0x00000100
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC2_SHIFT                8
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC2_DEFAULT              0x00000000
 
-/* AON_PM_L2 :: CPU_STATUS :: WOL_GENET1 [07:07] */
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET1_MASK                  0x00000080
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET1_SHIFT                 7
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET1_DEFAULT               0x00000000
+/* AON_PM_L2 :: CPU_STATUS :: WOL_UNIMAC1 [07:07] */
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC1_MASK                 0x00000080
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC1_SHIFT                7
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC1_DEFAULT              0x00000000
 
-/* AON_PM_L2 :: CPU_STATUS :: WOL_GENET0 [06:06] */
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET0_MASK                  0x00000040
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET0_SHIFT                 6
-#define BCHP_AON_PM_L2_CPU_STATUS_WOL_GENET0_DEFAULT               0x00000000
+/* AON_PM_L2 :: CPU_STATUS :: WOL_UNIMAC0 [06:06] */
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC0_MASK                 0x00000040
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC0_SHIFT                6
+#define BCHP_AON_PM_L2_CPU_STATUS_WOL_UNIMAC0_DEFAULT              0x00000000
 
 /* AON_PM_L2 :: CPU_STATUS :: GPIO [05:05] */
 #define BCHP_AON_PM_L2_CPU_STATUS_GPIO_MASK                        0x00000020
@@ -224,20 +226,20 @@
 #define BCHP_AON_PM_L2_CPU_SET_CAP_SHIFT                           9
 #define BCHP_AON_PM_L2_CPU_SET_CAP_DEFAULT                         0x00000000
 
-/* AON_PM_L2 :: CPU_SET :: WOL_GENET2 [08:08] */
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET2_MASK                     0x00000100
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET2_SHIFT                    8
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET2_DEFAULT                  0x00000000
+/* AON_PM_L2 :: CPU_SET :: WOL_UNIMAC2 [08:08] */
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC2_MASK                    0x00000100
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC2_SHIFT                   8
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC2_DEFAULT                 0x00000000
 
-/* AON_PM_L2 :: CPU_SET :: WOL_GENET1 [07:07] */
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET1_MASK                     0x00000080
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET1_SHIFT                    7
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET1_DEFAULT                  0x00000000
+/* AON_PM_L2 :: CPU_SET :: WOL_UNIMAC1 [07:07] */
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC1_MASK                    0x00000080
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC1_SHIFT                   7
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC1_DEFAULT                 0x00000000
 
-/* AON_PM_L2 :: CPU_SET :: WOL_GENET0 [06:06] */
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET0_MASK                     0x00000040
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET0_SHIFT                    6
-#define BCHP_AON_PM_L2_CPU_SET_WOL_GENET0_DEFAULT                  0x00000000
+/* AON_PM_L2 :: CPU_SET :: WOL_UNIMAC0 [06:06] */
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC0_MASK                    0x00000040
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC0_SHIFT                   6
+#define BCHP_AON_PM_L2_CPU_SET_WOL_UNIMAC0_DEFAULT                 0x00000000
 
 /* AON_PM_L2 :: CPU_SET :: GPIO [05:05] */
 #define BCHP_AON_PM_L2_CPU_SET_GPIO_MASK                           0x00000020
@@ -331,20 +333,20 @@
 #define BCHP_AON_PM_L2_CPU_CLEAR_CAP_SHIFT                         9
 #define BCHP_AON_PM_L2_CPU_CLEAR_CAP_DEFAULT                       0x00000000
 
-/* AON_PM_L2 :: CPU_CLEAR :: WOL_GENET2 [08:08] */
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET2_MASK                   0x00000100
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET2_SHIFT                  8
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET2_DEFAULT                0x00000000
+/* AON_PM_L2 :: CPU_CLEAR :: WOL_UNIMAC2 [08:08] */
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC2_MASK                  0x00000100
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC2_SHIFT                 8
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC2_DEFAULT               0x00000000
 
-/* AON_PM_L2 :: CPU_CLEAR :: WOL_GENET1 [07:07] */
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET1_MASK                   0x00000080
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET1_SHIFT                  7
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET1_DEFAULT                0x00000000
+/* AON_PM_L2 :: CPU_CLEAR :: WOL_UNIMAC1 [07:07] */
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC1_MASK                  0x00000080
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC1_SHIFT                 7
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC1_DEFAULT               0x00000000
 
-/* AON_PM_L2 :: CPU_CLEAR :: WOL_GENET0 [06:06] */
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET0_MASK                   0x00000040
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET0_SHIFT                  6
-#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_GENET0_DEFAULT                0x00000000
+/* AON_PM_L2 :: CPU_CLEAR :: WOL_UNIMAC0 [06:06] */
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC0_MASK                  0x00000040
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC0_SHIFT                 6
+#define BCHP_AON_PM_L2_CPU_CLEAR_WOL_UNIMAC0_DEFAULT               0x00000000
 
 /* AON_PM_L2 :: CPU_CLEAR :: GPIO [05:05] */
 #define BCHP_AON_PM_L2_CPU_CLEAR_GPIO_MASK                         0x00000020
@@ -759,20 +761,20 @@
 #define BCHP_AON_PM_L2_PCI_STATUS_CAP_SHIFT                        9
 #define BCHP_AON_PM_L2_PCI_STATUS_CAP_DEFAULT                      0x00000000
 
-/* AON_PM_L2 :: PCI_STATUS :: WOL_GENET2 [08:08] */
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET2_MASK                  0x00000100
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET2_SHIFT                 8
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET2_DEFAULT               0x00000000
+/* AON_PM_L2 :: PCI_STATUS :: WOL_UNIMAC2 [08:08] */
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC2_MASK                 0x00000100
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC2_SHIFT                8
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC2_DEFAULT              0x00000000
 
-/* AON_PM_L2 :: PCI_STATUS :: WOL_GENET1 [07:07] */
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET1_MASK                  0x00000080
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET1_SHIFT                 7
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET1_DEFAULT               0x00000000
+/* AON_PM_L2 :: PCI_STATUS :: WOL_UNIMAC1 [07:07] */
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC1_MASK                 0x00000080
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC1_SHIFT                7
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC1_DEFAULT              0x00000000
 
-/* AON_PM_L2 :: PCI_STATUS :: WOL_GENET0 [06:06] */
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET0_MASK                  0x00000040
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET0_SHIFT                 6
-#define BCHP_AON_PM_L2_PCI_STATUS_WOL_GENET0_DEFAULT               0x00000000
+/* AON_PM_L2 :: PCI_STATUS :: WOL_UNIMAC0 [06:06] */
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC0_MASK                 0x00000040
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC0_SHIFT                6
+#define BCHP_AON_PM_L2_PCI_STATUS_WOL_UNIMAC0_DEFAULT              0x00000000
 
 /* AON_PM_L2 :: PCI_STATUS :: GPIO [05:05] */
 #define BCHP_AON_PM_L2_PCI_STATUS_GPIO_MASK                        0x00000020
@@ -866,20 +868,20 @@
 #define BCHP_AON_PM_L2_PCI_SET_CAP_SHIFT                           9
 #define BCHP_AON_PM_L2_PCI_SET_CAP_DEFAULT                         0x00000000
 
-/* AON_PM_L2 :: PCI_SET :: WOL_GENET2 [08:08] */
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET2_MASK                     0x00000100
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET2_SHIFT                    8
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET2_DEFAULT                  0x00000000
+/* AON_PM_L2 :: PCI_SET :: WOL_UNIMAC2 [08:08] */
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC2_MASK                    0x00000100
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC2_SHIFT                   8
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC2_DEFAULT                 0x00000000
 
-/* AON_PM_L2 :: PCI_SET :: WOL_GENET1 [07:07] */
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET1_MASK                     0x00000080
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET1_SHIFT                    7
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET1_DEFAULT                  0x00000000
+/* AON_PM_L2 :: PCI_SET :: WOL_UNIMAC1 [07:07] */
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC1_MASK                    0x00000080
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC1_SHIFT                   7
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC1_DEFAULT                 0x00000000
 
-/* AON_PM_L2 :: PCI_SET :: WOL_GENET0 [06:06] */
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET0_MASK                     0x00000040
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET0_SHIFT                    6
-#define BCHP_AON_PM_L2_PCI_SET_WOL_GENET0_DEFAULT                  0x00000000
+/* AON_PM_L2 :: PCI_SET :: WOL_UNIMAC0 [06:06] */
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC0_MASK                    0x00000040
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC0_SHIFT                   6
+#define BCHP_AON_PM_L2_PCI_SET_WOL_UNIMAC0_DEFAULT                 0x00000000
 
 /* AON_PM_L2 :: PCI_SET :: GPIO [05:05] */
 #define BCHP_AON_PM_L2_PCI_SET_GPIO_MASK                           0x00000020
@@ -973,20 +975,20 @@
 #define BCHP_AON_PM_L2_PCI_CLEAR_CAP_SHIFT                         9
 #define BCHP_AON_PM_L2_PCI_CLEAR_CAP_DEFAULT                       0x00000000
 
-/* AON_PM_L2 :: PCI_CLEAR :: WOL_GENET2 [08:08] */
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET2_MASK                   0x00000100
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET2_SHIFT                  8
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET2_DEFAULT                0x00000000
+/* AON_PM_L2 :: PCI_CLEAR :: WOL_UNIMAC2 [08:08] */
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC2_MASK                  0x00000100
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC2_SHIFT                 8
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC2_DEFAULT               0x00000000
 
-/* AON_PM_L2 :: PCI_CLEAR :: WOL_GENET1 [07:07] */
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET1_MASK                   0x00000080
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET1_SHIFT                  7
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET1_DEFAULT                0x00000000
+/* AON_PM_L2 :: PCI_CLEAR :: WOL_UNIMAC1 [07:07] */
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC1_MASK                  0x00000080
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC1_SHIFT                 7
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC1_DEFAULT               0x00000000
 
-/* AON_PM_L2 :: PCI_CLEAR :: WOL_GENET0 [06:06] */
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET0_MASK                   0x00000040
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET0_SHIFT                  6
-#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_GENET0_DEFAULT                0x00000000
+/* AON_PM_L2 :: PCI_CLEAR :: WOL_UNIMAC0 [06:06] */
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC0_MASK                  0x00000040
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC0_SHIFT                 6
+#define BCHP_AON_PM_L2_PCI_CLEAR_WOL_UNIMAC0_DEFAULT               0x00000000
 
 /* AON_PM_L2 :: PCI_CLEAR :: GPIO [05:05] */
 #define BCHP_AON_PM_L2_PCI_CLEAR_GPIO_MASK                         0x00000020

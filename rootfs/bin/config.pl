@@ -46,16 +46,12 @@ my $eglibc_defaults = "defaults/config.eglibc";
 my $uclibc_defaults = "defaults/config.uClibc";
 my $busybox_defaults = "defaults/config.busybox";
 my $vendor_defaults = "defaults/config.vendor";
-my $arch_defaults_common = "defaults/config.arch-common";
-my $arch_defaults_le = "defaults/config.arch-le";
-my $arch_defaults_be = "defaults/config.arch-be";
-my $arch_defaults_arm = "defaults/config.arch-arm";
+my $arch_defaults = "defaults/config.arch.sample";
 my $linux_defaults = "";
 my $linux_new_defaults = "";
 
 my $LINUXDIR = "linux";
 
-my $ARCH;
 my $linux_config = "$LINUXDIR/.config";
 my $eglibc_config = "lib/eglibc/build/option-groups.config";
 my $uclibc_config = "lib/uClibc/.config";
@@ -63,8 +59,10 @@ my $busybox_config = "user/busybox/.config";
 my $vendor_config = "config/.config";
 my $arch_config = "config.arch";
 my %arch_config_options = (
-	"ARCHSPECIFIC" => "",
-	"LIBCDIR" => "eglibc",
+	"LIBCDIR"         => "eglibc",
+	"MACHINE"         => "",
+	"ARCH"            => "",
+	"CROSS_COMPILE"   => "",
 );
 
 my @patchlist = ("lttng", "android", "newubi");
@@ -242,14 +240,14 @@ sub get_tgt($)
 	if(-d "$LINUXDIR/include/linux/brcmstb/${chip}") {
 		$linux_defaults = "$LINUXDIR/arch/arm/configs/brcmstb_defconfig";
 		$linux_new_defaults = "$LINUXDIR/arch/arm/configs/brcmstb_new_defconfig";
-		$ARCH = "arm";
+		$arch_config_options{"ARCH"} = "arm";
 		return;
 	}
 	$linux_defaults = "$LINUXDIR/arch/mips/configs/bcm${chip}_defconfig";
 	if(-e $linux_defaults) {
 		$linux_new_defaults = $linux_defaults;
 		$linux_new_defaults =~ s/defconfig$/new_defconfig/;
-		$ARCH = "mips";
+		$arch_config_options{"ARCH"} = "mips";
 		return;
 	}
 
@@ -383,27 +381,18 @@ sub gen_arch_config($)
 {
 	my $arch = shift;
 	my $out = "";
-	my $arch_defaults = $arch eq "arm" ? $arch_defaults_arm :
-		($be ? $arch_defaults_be : $arch_defaults_le);
 
 	unlink($arch_config);
-	open(IN_ARCH, "<$arch_defaults") or
+	open(IN, "<$arch_defaults") or
 		die "can't open $arch_defaults: $!";
-	while(<IN_ARCH>) {
-		$arch_config_options{"ARCHSPECIFIC"} .= $_;
-	}
-	chomp $arch_config_options{"ARCHSPECIFIC"};
-	close(IN_ARCH);
-	open(IN_COMMON, "<$arch_defaults_common") or
-		die "can't open $arch_defaults_common: $!";
-	while(<IN_COMMON>) {
+	while(<IN>) {
 		foreach my $key (keys %arch_config_options) {
 			my $searchstr = "\@CONFIG_PL_$key\@";
 			s/$searchstr/$arch_config_options{$key}/;
 		}
 		$out .= $_;
 	}
-	close(IN_COMMON);
+	close(IN);
 	open(OUT, ">$arch_config") or
 		die "can't open $arch_config: $!";
 	print OUT "$out";
@@ -451,7 +440,7 @@ sub cmd_defaults($)
 	}
 
 	unlink($linux_config);
-	system("make -C $LINUXDIR ARCH=$ARCH " . basename($linux_defaults));
+	system(qq(make -C $LINUXDIR ARCH=$arch_config_options{"ARCH"} ) . basename($linux_defaults));
 
 	read_cfg($linux_config, \%linux);
 	read_cfg($eglibc_defaults, \%eglibc);
@@ -473,7 +462,7 @@ sub cmd_defaults($)
 
 	# set architecture (only for uClibc)
 
-	if($ARCH eq "arm") {
+	if($arch_config_options{"ARCH"} eq "arm") {
 		my %uclibc_o;
 
 		read_cfg("defaults/override.uClibc-arm", \%uclibc_o);
@@ -495,6 +484,10 @@ sub cmd_defaults($)
 
 	if (defined($linux{"CONFIG_PM"})) {
 		$vendor{"CONFIG_USER_BRCM_PM"} = "y";
+	}
+
+	if (defined($linux{"CONFIG_I2C"})) {
+		$vendor{"CONFIG_USER_I2C_TOOLS"} = "y";
 	}
 
 	# set default modifiers for each chip
@@ -780,8 +773,6 @@ sub cmd_defaults($)
 
 	# overrides based on endian/arch setting
 
-	my $MACHINE;
-
 	if($be == 0) {
 		$linux{"CONFIG_CPU_LITTLE_ENDIAN"} = "y";
 		$linux{"CONFIG_CPU_BIG_ENDIAN"} = "n";
@@ -790,7 +781,7 @@ sub cmd_defaults($)
 		$uclibc{"ARCH_WANTS_LITTLE_ENDIAN"} = "y";
 		$uclibc{"ARCH_BIG_ENDIAN"} = "n";
 		$uclibc{"ARCH_WANTS_BIG_ENDIAN"} = "n";
-		$MACHINE = $ARCH eq "arm" ? "arm" : "mipsel";
+		$arch_config_options{"MACHINE"} = $arch_config_options{"ARCH"} eq "arm" ? "arm" : "mipsel";
 	} else {
 		$linux{"CONFIG_CPU_LITTLE_ENDIAN"} = "n";
 		$linux{"CONFIG_CPU_BIG_ENDIAN"} = "y";
@@ -799,22 +790,37 @@ sub cmd_defaults($)
 		$uclibc{"ARCH_WANTS_LITTLE_ENDIAN"} = "n";
 		$uclibc{"ARCH_BIG_ENDIAN"} = "y";
 		$uclibc{"ARCH_WANTS_BIG_ENDIAN"} = "y";
-		$MACHINE = $ARCH eq "arm" ? "armeb" : "mips";
+		$arch_config_options{"MACHINE"} = $arch_config_options{"ARCH"} eq "arm" ? "armeb" : "mips";
 	}
 
-	my $pfx = '"'.$MACHINE.'-linux-"';
-	$uclibc{"CROSS_COMPILER_PREFIX"} = $pfx;
-	$busybox{"CONFIG_CROSS_COMPILER_PREFIX"} = $pfx;
-	$linux{"CONFIG_CROSS_COMPILE"} = $pfx;
+	$arch_config_options{"CROSS_COMPILE"} = qq($arch_config_options{"MACHINE"}-linux-);
+	if($arch_config_options{"LIBCDIR"} eq "uClibc") {
+		if($arch_config_options{"ARCH"} eq "arm") {
+			$arch_config_options{"CROSS_COMPILE"} .= "uclibceabi-";
+		} else {
+			$arch_config_options{"CROSS_COMPILE"} .= "uclibc-"
+		}
+	} else {  # (e)glibc
+		if($arch_config_options{"ARCH"} eq "arm") {
+			$arch_config_options{"CROSS_COMPILE"} .= "gnueabihf-";
+		} else {
+			$arch_config_options{"CROSS_COMPILE"} .= "gnu-";
+		}
+	}
+	$uclibc{"CROSS_COMPILER_PREFIX"} = '"'.$arch_config_options{"CROSS_COMPILE"}.'"';
+	$busybox{"CONFIG_CROSS_COMPILER_PREFIX"} = '"'.$arch_config_options{"CROSS_COMPILE"}.'"';
+	$linux{"CONFIG_CROSS_COMPILE"} = '"'.$arch_config_options{"CROSS_COMPILE"}.'"';
+
+	gen_arch_config($arch_config_options{"ARCH"});
 
 	# misc
 
 	$busybox{"CONFIG_PREFIX"} = "\"$topdir/romfs\"";
 
-	my $CC = "$MACHINE-linux-gcc";
+	my $CC = qq($arch_config_options{"CROSS_COMPILE"}gcc);
 	my $sysroot = `$CC --print-sysroot`;
 	if(WEXITSTATUS($?) != 0) {
-		die "can't invoke $CC to find sysroot";
+		die "can't invoke $CC to find sysroot (bad toolchain in PATH?)";
 	}
 	$sysroot =~ s/\s//g;
 	$busybox{"CONFIG_SYSROOT"} = "\"$sysroot\"";
@@ -863,7 +869,7 @@ sub cmd_defaults($)
 	close(F);
 
 	open(F, ">.arch") or die "can't write .arch: $!";
-	print F "$ARCH\n";
+	print F qq($arch_config_options{"ARCH"}\n);
 	close(F);
 
 	# write out the new configuration
@@ -874,10 +880,8 @@ sub cmd_defaults($)
 	write_cfg($vendor_defaults, $vendor_config, \%vendor);
 
 	# fix up the kernel defconfig (due to CONFIG_BCM* munging)
-	system("make -C $LINUXDIR ARCH=$ARCH " . basename($linux_new_defaults));
+	system(qq(make -C $LINUXDIR ARCH=$arch_config_options{"ARCH"} ) . basename($linux_new_defaults));
 	unlink($linux_new_defaults);
-
-	gen_arch_config($ARCH);
 }
 
 sub cmd_save_defaults()

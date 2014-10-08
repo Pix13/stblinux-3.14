@@ -184,7 +184,29 @@ done:
 	return status;
 }
 
-static int brcm_sata3_init(struct device *dev, void __iomem *addr)
+static void clk_cfg(struct platform_device *brcm_pdev, int enable)
+{
+	int status = 0;
+	struct sata_brcm_pdata *brcm_pdata = brcm_pdev->dev.platform_data;
+
+	if (!brcm_pdata->sata_clk) {
+		brcm_pdata->sata_clk = clk_get(&brcm_pdev->dev, "sw_sata3");
+		if (IS_ERR(brcm_pdata->sata_clk)) {
+			brcm_pdata->sata_clk = NULL;
+			pr_debug("failed to get sata clock\n");
+			return;
+		}
+	}
+
+	if (enable) {
+		status = clk_prepare_enable(brcm_pdata->sata_clk);
+		if (status)
+			pr_err("sata clk enable failed\n");
+	} else
+		clk_disable_unprepare(brcm_pdata->sata_clk);
+}
+
+static int brcm_sata3_cfg(struct device *dev, void __iomem *addr, int init)
 {
 	int status = 0;
 	int i;
@@ -199,15 +221,23 @@ static int brcm_sata3_init(struct device *dev, void __iomem *addr)
 		goto done;
 	}
 
+	if (init)
+		clk_cfg(brcm_pdev, 1);
+
 	brcm_pdata = brcm_pdev->dev.platform_data;
 	ports = fls(readl(addr + HOST_PORTS_IMPL));
 
-	status = brcm_sata3_init_config(addr, ahci_pdev, brcm_pdata);
-	if (status)
-		goto done;
+	if (init) {
+		status = brcm_sata3_init_config(addr, ahci_pdev, brcm_pdata);
+		if (status)
+			goto done;
+	}
 
 	for (i = 0; i < ports; i++)
-		brcm_sata3_phy_init(brcm_pdata, i);
+		brcm_sata3_phy_cfg(brcm_pdata, i, init);
+
+	if (!init)
+		clk_cfg(brcm_pdev, 0);
 
 done:
 	return status;
@@ -215,7 +245,7 @@ done:
 
 static int brcm_ahci_init(struct device *dev, void __iomem *addr)
 {
-	return brcm_sata3_init(dev, addr);
+	return brcm_sata3_cfg(dev, addr, 1);
 }
 
 static void brcm_ahci_exit(struct device *dev)
@@ -224,7 +254,11 @@ static void brcm_ahci_exit(struct device *dev)
 
 static int brcm_ahci_suspend(struct device *dev)
 {
-	return 0;
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	void __iomem *addr = hpriv->mmio;
+
+	return brcm_sata3_cfg(dev, addr, 0);
 }
 
 static int brcm_ahci_resume(struct device *dev)
@@ -233,7 +267,7 @@ static int brcm_ahci_resume(struct device *dev)
 	struct ahci_host_priv *hpriv = host->private_data;
 	void __iomem *addr = hpriv->mmio;
 
-	return brcm_sata3_init(dev, addr);
+	return brcm_sata3_cfg(dev, addr, 1);
 }
 
 static int brcm_ahci_parse_dt_prop_u32(struct device_node *of_node,

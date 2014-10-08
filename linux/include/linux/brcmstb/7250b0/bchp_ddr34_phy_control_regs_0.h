@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Thu May  8 18:43:45 2014
- *                 Full Compile MD5 Checksum 38a69701e4a8587ad79f065a389355cd
+ * Date:           Generated on              Sat Sep 13 03:11:30 2014
+ *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
  *                   (minus title and desc)  
- *                 MD5 Checksum              9624d46404976e509a15e5a9755e7873
+ *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008005
+ *                 Perl Interpreter          5.008008
  *                 Operating System          linux
  *
  * Revision History:
@@ -139,7 +139,7 @@
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_ALERT_CLEAR 0x00906170 /* DDR4 Alert status clear register */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_ALERT_STATUS 0x00906174 /* DDR4 Alert status register */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_ALERT_DFI  0x00906178 /* DDR4 Alert DFI BL mask */
-#define BCHP_DDR34_PHY_CONTROL_REGS_0_CA_PLAYBACK_CONTROL 0x0090617c /* GDDR5 CA playback control register */
+#define BCHP_DDR34_PHY_CONTROL_REGS_0_CA_PLAYBACK_CONTROL 0x0090617c /* LPDDR3 and GDDR5 CA playback control register */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_CA_PLAYBACK_STATUS0 0x00906180 /* LPDDR3 and GDDR5 CA playback status register0 (for BL0 and BL1) */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_CA_PLAYBACK_STATUS1 0x00906184 /* LPDDR3 and GDDR5 CA playback status register1 (for BL2 and BL3) */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_WRITE_LEVELING_CONTROL 0x00906188 /* Write leveling control register */
@@ -211,7 +211,7 @@
 /* DDR34_PHY_CONTROL_REGS_0 :: REVISION :: MINOR [07:00] */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_REVISION_MINOR_MASK          0x000000ff
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_REVISION_MINOR_SHIFT         0
-#define BCHP_DDR34_PHY_CONTROL_REGS_0_REVISION_MINOR_DEFAULT       0x00000001
+#define BCHP_DDR34_PHY_CONTROL_REGS_0_REVISION_MINOR_DEFAULT       0x00000002
 
 /***************************************************************************
  *PLL_STATUS - PHY PLL status register
@@ -3242,7 +3242,7 @@
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_ALERT_DFI_MASK_DEFAULT       0x00000000
 
 /***************************************************************************
- *CA_PLAYBACK_CONTROL - GDDR5 CA playback control register
+ *CA_PLAYBACK_CONTROL - LPDDR3 and GDDR5 CA playback control register
  ***************************************************************************/
 /* DDR34_PHY_CONTROL_REGS_0 :: CA_PLAYBACK_CONTROL :: reserved0 [31:12] */
 #define BCHP_DDR34_PHY_CONTROL_REGS_0_CA_PLAYBACK_CONTROL_reserved0_MASK 0xfffff000

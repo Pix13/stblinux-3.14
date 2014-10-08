@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Sat Apr 20 03:07:25 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Thu Sep  4 04:55:31 2014
+ *                 Full Compile MD5 Checksum 2eaa9317512328c8756d93904a25ac95
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              c0047f47b6dd0f59933c5894611e993f
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008008
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -231,16 +233,10 @@
 #define BCHP_BSP_GLB_CONTROL_REG_END                       0x0032d0b0
 #define BCHP_BSP_PKL_REG_START                             0x0032d300
 #define BCHP_BSP_PKL_REG_END                               0x0032d37c
-#define BCHP_BSP_INST_PATCH_CTRL_REG_START                 0x0032d400
-#define BCHP_BSP_INST_PATCH_CTRL_REG_END                   0x0032d408
-#define BCHP_BSP_BOOT_PATCH_CTRL_REG_START                 0x0032d410
-#define BCHP_BSP_BOOT_PATCH_CTRL_REG_END                   0x0032d418
 #define BCHP_BSP_CONTROL_INTR2_REG_START                   0x0032d800
 #define BCHP_BSP_CONTROL_INTR2_REG_END                     0x0032d82c
 #define BCHP_BSP_VISTA_GENACC_REG_START                    0x0032d900
 #define BCHP_BSP_VISTA_GENACC_REG_END                      0x0032d9fc
-#define BCHP_BSP_VISTA_GENACC2_REG_START                   0x0032da00
-#define BCHP_BSP_VISTA_GENACC2_REG_END                     0x0032dafc
 #define BCHP_BSP_OTP_SCRATCH_REG_START                     0x0032e000
 #define BCHP_BSP_OTP_SCRATCH_REG_END                       0x0032fffc
 #define BCHP_XPT_SECURITY_REG_START                        0x00360000

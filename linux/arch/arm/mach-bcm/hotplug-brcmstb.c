@@ -84,6 +84,10 @@ static int per_cpu_sw_state_rd(u32 cpu)
 	return per_cpu(per_cpu_sw_state, cpu);
 }
 
+/*
+ * BIG WARNING: this function is copy-and-paste inlined into brcmstb_cpu_die(),
+ * to prevent touching the stack there.
+ */
 static void per_cpu_sw_state_wr(u32 cpu, int val)
 {
 	per_cpu(per_cpu_sw_state, cpu) = val;
@@ -162,6 +166,9 @@ static void cpu_set_boot_addr(u32 cpu, unsigned long boot_addr)
 
 void brcmstb_cpu_boot(u32 cpu)
 {
+	/* Mark this CPU as "up" */
+	per_cpu_sw_state_wr(cpu, 1);
+
 	pr_info("SMP: Booting CPU%d...\n", cpu);
 
 	/*
@@ -209,8 +216,6 @@ void brcmstb_cpu_power_on(u32 cpu)
 		if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_PWR_ON_STATE_MASK))
 			panic("ZONE_PWR_ON_STATE_MASK set timeout");
 	}
-
-	per_cpu_sw_state_wr(cpu, 1);
 }
 
 int brcmstb_cpu_get_power_state(u32 cpu)
@@ -233,7 +238,16 @@ void __ref brcmstb_cpu_die(u32 cpu)
 	isb();
 	dsb();
 
-	per_cpu_sw_state_wr(cpu, 0);
+	/*
+	 * NOTE: Inlined version of per_cpu_sw_state_wr(). The barriers and
+	 * sev() are superfluous.
+	 *
+	 * FIXME: See SWLINUX-3349. Apparently this call site must not touch
+	 * the stack, as this sometimes returns stale data, causing a
+	 * return-to-garbage error.
+	 */
+	per_cpu(per_cpu_sw_state, cpu) = 0;
+	sync_cache_w(SHIFT_PERCPU_PTR(&per_cpu_sw_state, per_cpu_offset(cpu)));
 
 	/* Sit and wait to die */
 	wfi();
@@ -265,16 +279,6 @@ int brcmstb_cpu_kill(u32 cpu)
 		;
 
 	if (USE_MANUAL_MODE) {
-		/*
-		 * FIXME: See HW7445-1743
-		 * We are often trying to yank the CPU power before it is
-		 * actually ready. We suspect this is (at least partly) because
-		 * we aren't polling the STANDBYWFI signal to ensure that the
-		 * CPU we just killed has fully quiesced. This is a magic
-		 * number delay determined experimentally.
-		 */
-		mdelay(50);
-
 		pr_info("SMP: Using manual power-off sequence\n");
 
 		pwr_ctrl_set(cpu, ZONE_MANUAL_CONTROL_MASK, -1);

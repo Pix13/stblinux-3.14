@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Sun Apr 21 11:21:07 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 11:25:45 2014
+ *                 Full Compile MD5 Checksum 4593e257971177815cc4a01913c4bcb6
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              eacd1ac88c53d22793d18644f3aae7d3
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008005
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -2072,8 +2074,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_DEFAULT          0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_GPIO_001         0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_EMAC0_MII_TX_ERR 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_ENET0_ACTIVITY   2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_ENET2_LINK       3
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_GPHY_ACTIVITY    2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_EMAC1_MII_TX_ERR 4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_TP_OUT_13        6
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_001_PM_GPIO_001      7
@@ -2084,8 +2085,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_DEFAULT          0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_GPIO_000         0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_EMAC0_MII_RX_ERR 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_ENET0_LINK       2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_ENET2_ACTIVITY   3
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_GPHY_LINK        2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_EMAC1_MII_RX_ERR 4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_TP_OUT_12        5
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_5_gpio_000_PM_GPIO_000      6
@@ -2234,7 +2234,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_GPIO_017         0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_EMAC0_MII_CRS    1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_RMX_DATA0        2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_ENET1_ACTIVITY   3
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_MOCA_ACTIVITY    3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_EMAC1_MII_CRS    4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_017_PM_GPIO_017      5
 
@@ -2245,7 +2245,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_GPIO_016         0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_EMAC0_IRQ        1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_RMX_CLK0         2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_ENET1_LINK       3
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_MOCA_LINK        3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_EMAC1_IRQ        4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_016_PM_GPIO_016      5
 
@@ -2257,7 +2257,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_015_EMAC0_MDC        1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_015_SPI_S_MISO       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_015_EMAC1_MDC        3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_015_PM_GPIO_015      4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_015_PM_GPIO_015      5
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_7 :: gpio_014 [19:16] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_014_MASK             0x000f0000
@@ -2267,7 +2267,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_014_EMAC0_MDIO       1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_014_SPI_S_SS0B       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_014_EMAC1_MDIO       3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_014_PM_GPIO_014      4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_014_PM_GPIO_014      5
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_7 :: gpio_013 [15:12] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_7_gpio_013_MASK             0x0000f000
@@ -2342,7 +2342,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_SHIFT            20
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_DEFAULT          0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_GPIO_023         0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_MTSIF0_VALID     1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_PPKT_VALID       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_UART_RTS_0       3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_023_PM_GPIO_023      4
@@ -2395,7 +2394,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_GPIO_018         0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_EMAC0_MII_COL    1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_RMX_SYNC0        2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_ENET1_LINK       3
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_MOCA_LINK        3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_EMAC1_MII_COL    4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_8_gpio_018_PM_GPIO_018      5
 
@@ -2786,7 +2785,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_SHIFT           24
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_GPIO_064        0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_MTSIF1_VALID    1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_EMAC1_RXD_02    2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_PKT_VALID1      3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_13_gpio_064_ALT_TP_IN_24    4
@@ -2872,9 +2870,9 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_PKT_SYNC0       1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_PWM_1           2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_UART_TXD_2      3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_ENET0_ACTIVITY  4
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_ALT_TP_OUT_09   5
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_PM_GPIO_073     6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_GPHY_ACTIVITY   4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_ALT_TP_OUT_09   6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_073_PM_GPIO_073     7
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_14 :: gpio_072 [27:24] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_MASK            0x0f000000
@@ -2884,9 +2882,9 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_PKT_DATA0       1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_PWM_0           2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_UART_RXD_2      3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_ENET0_LINK      4
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_ALT_TP_IN_31    5
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_PM_GPIO_072     6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_GPHY_LINK       4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_ALT_TP_IN_31    6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_072_PM_GPIO_072     7
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_14 :: gpio_071 [23:20] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_MASK            0x00f00000
@@ -2895,8 +2893,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_GPIO_071        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_PKT_CLK0        1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_IR_IN1          2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_ENET1_LINK      3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_ENET2_LINK      4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_MOCA_LINK       3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_ALT_TP_IN_30    5
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_14_gpio_071_PM_GPIO_071     6
 
@@ -3031,8 +3028,8 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_PKT_VALID0      1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_PWM_3           2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_SPI_S_MISO      4
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_ALT_TP_OUT_10   5
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_PM_GPIO_075     6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_ALT_TP_OUT_10   6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_075_PM_GPIO_075     7
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_15 :: gpio_074 [03:00] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_MASK            0x0000000f
@@ -3042,9 +3039,8 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_PKT_ERROR0      1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_PWM_2           2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_SPI_M_SS2B      3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_ENET2_ACTIVITY  4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_SPI_S_SS0B      5
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_PM_GPIO_074     6
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_15_gpio_074_PM_GPIO_074     7
 
 /***************************************************************************
  *PIN_MUX_CTRL_16 - Pinmux control register 16
@@ -3151,6 +3147,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_097_RMX_SYNC0       3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_097_SD_CARD1_VOLT   4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_097_AUD_FS_CLK1     5
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_097_PKT_SYNC2       6
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_097_TP_OUT_05       7
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_097_PM_GPIO_097     8
 
@@ -3174,6 +3171,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_095_LED_LD_9        2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_095_RMX_CLK0        3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_095_SD_CARD1_LED    4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_095_PKT_ERROR2      5
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_17 :: gpio_094 [19:16] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_17_gpio_094_MASK            0x000f0000
@@ -3268,6 +3266,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_103_GPIO_103        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_103_IR_INT          1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_103_SC_CLK_OUT      2
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_103_PKT_VALID2      4
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_18 :: gpio_102 [19:16] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_102_MASK            0x000f0000
@@ -3302,6 +3301,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_100_LED_LD_14       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_100_RMX_DATA1       3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_100_SD_CARD1_WPROT  4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_100_PKT_DATA2       5
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_100_TP_OUT_08       6
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_100_PM_GPIO_100     7
 
@@ -3314,6 +3314,7 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_099_LED_LD_13       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_099_RMX_CLK1        3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_099_SD_CARD1_PRES   4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_099_PKT_CLK2        5
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_099_TP_OUT_07       6
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_18_gpio_099_PM_GPIO_099     7
 
@@ -3353,9 +3354,8 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_GPIO_111        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_SD_CARD1_CLK_IN 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_ENET0_ACTIVITY  2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_ENET1_ACTIVITY  3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_ENET2_ACTIVITY  4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_GPHY_ACTIVITY   2
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_MOCA_ACTIVITY   3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_EMAC1_IRQ       5
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_111_PM_GPIO_111     6
 
@@ -3365,9 +3365,8 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_GPIO_110        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_SD_CARD0_CLK_IN 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_ENET0_LINK      2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_ENET1_LINK      3
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_ENET2_LINK      4
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_GPHY_LINK       2
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_MOCA_LINK       3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_19_gpio_110_PM_GPIO_110     5
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_19 :: gpio_109 [15:12] */
@@ -3413,9 +3412,21 @@
 /***************************************************************************
  *PIN_MUX_CTRL_20 - Pinmux control register 20
  ***************************************************************************/
-/* SUN_TOP_CTRL :: PIN_MUX_CTRL_20 :: reserved0 [31:16] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_reserved0_MASK           0xffff0000
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_reserved0_SHIFT          16
+/* SUN_TOP_CTRL :: PIN_MUX_CTRL_20 :: reserved0 [31:24] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_reserved0_MASK           0xff000000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_reserved0_SHIFT          24
+
+/* SUN_TOP_CTRL :: PIN_MUX_CTRL_20 :: bsc_s_sda [23:20] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_sda_MASK           0x00f00000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_sda_SHIFT          20
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_sda_DEFAULT        0x00000000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_sda_BSC_S_SDA      0
+
+/* SUN_TOP_CTRL :: PIN_MUX_CTRL_20 :: bsc_s_scl [19:16] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_scl_MASK           0x000f0000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_scl_SHIFT          16
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_scl_DEFAULT        0x00000000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_bsc_s_scl_BSC_S_SCL      0
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_20 :: sgpio_05 [15:12] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_20_sgpio_05_MASK            0x0000f000
@@ -3956,21 +3967,21 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_reserved0_MASK        0x3c000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_reserved0_SHIFT       26
 
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_4 :: pcie0_clkreqb_pad_ctrl [25:24] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_clkreqb_pad_ctrl_MASK 0x03000000
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_clkreqb_pad_ctrl_SHIFT 24
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_clkreqb_pad_ctrl_DEFAULT 0x00000002
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_clkreqb_pad_ctrl_PULL_NONE 0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_clkreqb_pad_ctrl_PULL_DOWN 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_clkreqb_pad_ctrl_PULL_UP 2
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_4 :: pcie_clkreqb_pad_ctrl [25:24] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_clkreqb_pad_ctrl_MASK 0x03000000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_clkreqb_pad_ctrl_SHIFT 24
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_clkreqb_pad_ctrl_DEFAULT 0x00000002
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_clkreqb_pad_ctrl_PULL_NONE 0
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_clkreqb_pad_ctrl_PULL_DOWN 1
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_clkreqb_pad_ctrl_PULL_UP 2
 
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_4 :: pcie0_rstb_pad_ctrl [23:22] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_rstb_pad_ctrl_MASK 0x00c00000
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_rstb_pad_ctrl_SHIFT 22
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_rstb_pad_ctrl_DEFAULT 0x00000001
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_rstb_pad_ctrl_PULL_NONE 0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_rstb_pad_ctrl_PULL_DOWN 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie0_rstb_pad_ctrl_PULL_UP 2
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_4 :: pcie_rstb_pad_ctrl [23:22] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_rstb_pad_ctrl_MASK 0x00c00000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_rstb_pad_ctrl_SHIFT 22
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_rstb_pad_ctrl_DEFAULT 0x00000001
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_rstb_pad_ctrl_PULL_NONE 0
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_rstb_pad_ctrl_PULL_DOWN 1
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_pcie_rstb_pad_ctrl_PULL_UP 2
 
 /* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_4 :: emmc1_clk_pad_ctrl [21:20] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_4_emmc1_clk_pad_ctrl_MASK 0x00300000
@@ -4091,21 +4102,21 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_reserved0_MASK        0x03ff0000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_reserved0_SHIFT       16
 
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_5 :: pcie1_sata_clkreqb_pad_ctrl [15:14] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_clkreqb_pad_ctrl_MASK 0x0000c000
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_clkreqb_pad_ctrl_SHIFT 14
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_clkreqb_pad_ctrl_DEFAULT 0x00000002
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_clkreqb_pad_ctrl_PULL_NONE 0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_clkreqb_pad_ctrl_PULL_DOWN 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_clkreqb_pad_ctrl_PULL_UP 2
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_5 :: pcie1_clkreqb_pad_ctrl [15:14] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_clkreqb_pad_ctrl_MASK 0x0000c000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_clkreqb_pad_ctrl_SHIFT 14
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_clkreqb_pad_ctrl_DEFAULT 0x00000002
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_clkreqb_pad_ctrl_PULL_NONE 0
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_clkreqb_pad_ctrl_PULL_DOWN 1
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_clkreqb_pad_ctrl_PULL_UP 2
 
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_5 :: pcie1_sata_rstb_pad_ctrl [13:12] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_rstb_pad_ctrl_MASK 0x00003000
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_rstb_pad_ctrl_SHIFT 12
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_rstb_pad_ctrl_DEFAULT 0x00000001
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_rstb_pad_ctrl_PULL_NONE 0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_rstb_pad_ctrl_PULL_DOWN 1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_sata_rstb_pad_ctrl_PULL_UP 2
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_5 :: pcie1_rstb_pad_ctrl [13:12] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_rstb_pad_ctrl_MASK 0x00003000
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_rstb_pad_ctrl_SHIFT 12
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_rstb_pad_ctrl_DEFAULT 0x00000001
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_rstb_pad_ctrl_PULL_NONE 0
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_rstb_pad_ctrl_PULL_DOWN 1
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_pcie1_rstb_pad_ctrl_PULL_UP 2
 
 /* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_5 :: reserved1 [11:00] */
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_5_reserved1_MASK        0x00000fff
@@ -5097,20 +5108,20 @@
 /***************************************************************************
  *PIN_MUX_PAD_CTRL_15 - Pad pull-up/pull-down control register 15
  ***************************************************************************/
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_15 :: reserved0 [31:06] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved0_MASK       0xffffffc0
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved0_SHIFT      6
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_15 :: reserved0 [31:10] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved0_MASK       0xfffffc00
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved0_SHIFT      10
 
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_15 :: spare_pad_ctrl_15 [05:04] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_MASK 0x00000030
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_SHIFT 4
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_15 :: spare_pad_ctrl_15 [09:08] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_MASK 0x00000300
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_SHIFT 8
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_DEFAULT 0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_PULL_NONE 0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_PULL_DOWN 1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_spare_pad_ctrl_15_PULL_UP 2
 
-/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_15 :: reserved1 [03:00] */
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved1_MASK       0x0000000f
+/* SUN_TOP_CTRL :: PIN_MUX_PAD_CTRL_15 :: reserved1 [07:00] */
+#define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved1_MASK       0x000000ff
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_PAD_CTRL_15_reserved1_SHIFT      0
 
 /***************************************************************************

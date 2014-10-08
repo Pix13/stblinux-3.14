@@ -1,6 +1,50 @@
-2013-12-20  Rob Savoye  <rob.savoye@linaro.org>
+2014-07-08  Jiong Wang  <jiong.wang@arm.com>
 
-      Linaro 2013.12 released.
+	* gas/arm/ldconst.s: Add test cases for symbol literal.
+	* gas/arm/ldconst.d: Likewise.
+	* gas/arm/vldconst.s: Add test cases for vldr.
+	* gas/arm/thumb2_vpool.s: Likewise.
+	* gas/arm/vldconst.d: New pattern for little-endian.
+	* gas/arm/thumb2_vpool.d: Likewise.
+	* gas/arm/vldconst_be.d: New pattern for big-endian.
+	* gas/arm/thumb2_vpool_be.d: Likewise.
+
+	* gas/arm/armv8-a+crypto.d: Skip for non-ELF targets.
+	* gas/arm/armv8-a+fp.d: Likewise.
+	* gas/arm/armv8-a+simd.d: Likewise.
+	* gas/arm/armv8-a-barrier-thumb.d: Likewise.
+	* gas/arm/bl-local-2.d: Likewise.
+	* gas/arm/ldgesb-bad.d: Likewise.
+	* gas/arm/ldgesh-bad.d: Likewise.
+	* gas/arm/thumb2_pool.d: Likewise.
+	* gas/arm/thumb2_pool.s: Likewise.
+
+2014-06-17  Jiong Wang  <jiong.wang@arm.com>
+
+	* gas/arm/armv8-a-it-bad.s: New check for deprecated sp_inc/dec within
+	IT block for ARMv8.
+	* gas/arm/armv8-a-it-bad.l: Likewise.
+
+2014-06-16  Jiong Wang  <jiong.wang@arm.com>
+
+	* gas/aarch64/diagnostic.s: Add new test patterns.
+	* gas/aarch64/diagnostic.l: Update expected diagnostic output.
+
+2014-03-12  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/16688
+	* gas/aarch64/litpool.s: New test case.
+	* gas/aarch64/litpool.d: Expected disassembly.
+
+2014-04-23  Will Newton  <will.newton@linaro.org>
+
+	* gas/arm/mapmisc.d: Check literal pool mapping with
+	a trailing .align statement.
+	* gas/arm/mapmisc.s: Likewise.
+
+2014-01-17  Will Newton  <will.newton@linaro.org>
+
+	* gas/arm/armv8-a+fp.d: Correct encoding of vcvta.s32.f64.
 
 2013-03-11  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 

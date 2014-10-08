@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Thu May  8 18:43:52 2014
- *                 Full Compile MD5 Checksum 38a69701e4a8587ad79f065a389355cd
+ * Date:           Generated on              Sat Sep 13 03:11:33 2014
+ *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
  *                   (minus title and desc)  
- *                 MD5 Checksum              9624d46404976e509a15e5a9755e7873
+ *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008005
+ *                 Perl Interpreter          5.008008
  *                 Operating System          linux
  *
  * Revision History:
@@ -76,7 +76,7 @@
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_DMP 0x00906874 /* Read channel DM-P VDL control register */
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_DMN 0x00906878 /* Read channel DM-N VDL control register */
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EDCP 0x0090687c /* Read channel EDC-P VDL control register */
-#define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EDCN 0x00906880 /* Read channel EDC-N VDL control register */
+#define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EDCN 0x00906880 /* Read channel EDC-P VDL control register */
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EN_CS0 0x00906884 /* Read channel CS_N[0] read enable VDL control register */
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EN_CS1 0x00906888 /* Read channel CS_N[1] read enable VDL control register (used for reads when only cs1_n is active) */
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EN_CRC 0x0090688c /* Read channel GDDR5 CRC read enable VDL control register */
@@ -1237,7 +1237,7 @@
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EDCP_VDL_STEP_DEFAULT 0x00000000
 
 /***************************************************************************
- *VDL_CONTROL_RD_EDCN - Read channel EDC-N VDL control register
+ *VDL_CONTROL_RD_EDCN - Read channel EDC-P VDL control register
  ***************************************************************************/
 /* DDR34_PHY_BYTE_LANE_2_0 :: VDL_CONTROL_RD_EDCN :: BUSY [31:31] */
 #define BCHP_DDR34_PHY_BYTE_LANE_2_0_VDL_CONTROL_RD_EDCN_BUSY_MASK 0x80000000

@@ -39,7 +39,8 @@
 #define CMA_DEV_IOC_GETREGINFO	_IOWR(CMA_DEV_MAGIC, 5, int)
 #define CMA_DEV_IOC_GET_PG_PROT	_IOWR(CMA_DEV_MAGIC, 6, int)
 #define CMA_DEV_IOC_SET_PG_PROT	_IOWR(CMA_DEV_MAGIC, 7, int)
-#define CMA_DEV_IOC_MAXNR	7
+#define CMA_DEV_IOC_VERSION	_IOR(CMA_DEV_MAGIC, 8, __u32)
+#define CMA_DEV_IOC_MAXNR	8
 
 struct ioc_params {
 	__u32 cma_dev_index;	/* [in] region */

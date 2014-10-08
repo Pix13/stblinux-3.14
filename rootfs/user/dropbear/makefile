@@ -2,8 +2,8 @@ include $(ROOTDIR)/config.arch
 
 BOGUS_TARGETS		:= FORCE makefile $(ROOTDIR)/config.arch
 
-CC			:= $(MACHINE)-linux-gcc
-STRIP			:= $(MACHINE)-linux-strip
+CC			:= $(CROSS_COMPILE)gcc
+STRIP			:= $(CROSS_COMPILE)strip
 CFLAGS			:= -Os
 SHELL			:= bash
 VPATH			:= $(GCCSYSROOT)/lib:$(VPATH)
@@ -19,6 +19,10 @@ all::
 			--with-zlib=$(ROOTDIR)/lib/zlib || exit 1 ; \
 	fi
 	$(MAKE) -f Makefile PROGRAMS="dropbear dbclient dropbearkey scp"
+
+.PHONY: clean distclean
+clean distclean::
+	[ ! -f Makefile ] || $(MAKE) -f Makefile $@
 
 .PHONY: romfs
 romfs::

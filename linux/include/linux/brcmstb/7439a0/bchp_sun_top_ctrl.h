@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Tue Apr 16 03:26:52 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 14:30:57 2014
+ *                 Full Compile MD5 Checksum edbc259d5ef948d04693ec04bc4d44b4
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              de2524c7728bb833dc65ac44b70daaa5
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -2081,7 +2083,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_4_gpio_017_GPIO_017         0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_4_gpio_017_EBI_ADDR_11      1
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_4_gpio_017_MTSIF_ATS_INC    2
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_4_gpio_017_TSIO_VCTRL       3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_4_gpio_017_PM_GPIO_017      4
 
 /* SUN_TOP_CTRL :: PIN_MUX_CTRL_4 :: gpio_016 [23:20] */
@@ -2679,7 +2680,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_GPIO_074        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_MTSIF0_DATA5    1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_PKT_ERROR3      2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_UART_RXD_2      3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_ALT_TP_IN_14    4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_074_PM_GPIO_074     5
@@ -2690,7 +2690,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_GPIO_073        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_MTSIF0_DATA4    1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_PKT_SYNC3       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_UART_TXD_1      3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_ALT_TP_OUT_14   4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_073_PM_GPIO_073     5
@@ -2701,7 +2700,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_GPIO_072        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_MTSIF0_DATA3    1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_PKT_DATA3       2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_UART_RXD_1      3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_EXT_IRQB_5      4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_072_ALT_TP_IN_13    5
@@ -2713,7 +2711,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_GPIO_071        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_MTSIF0_DATA2    1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_PKT_CLK3        2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_UART_RTS_1      3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_EXT_IRQB_4      4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_11_gpio_071_PM_GPIO_071     5
@@ -2849,7 +2846,6 @@
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_DEFAULT         0x00000000
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_GPIO_075        0
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_MTSIF0_DATA6    1
-#define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_PKT_VALID3      2
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_UART_TXD_2      3
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_ALT_TP_OUT_15   4
 #define BCHP_SUN_TOP_CTRL_PIN_MUX_CTRL_12_gpio_075_PM_GPIO_075     5

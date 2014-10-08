@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Fri Oct 25 17:33:26 2013
- *                 Full Compile MD5 Checksum 8344a9003ae3c954c1e4a33b9128d4d6
+ * Date:           Generated on              Wed Sep  3 12:36:41 2014
+ *                 Full Compile MD5 Checksum 1e5d73e2e037f01f6ffd5061d00a97a7
  *                   (minus title and desc)  
- *                 MD5 Checksum              383dbfcd91460427fa61afa66d6c98f8
+ *                 MD5 Checksum              c8f174845d8a27ef5365467f1c7a712b
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -152,7 +152,7 @@
 #define BCHP_HIF_CPUBIUCTRL_CPU_DEFEATURE_KEY_REG 0x204a25a4 /* CPU Defeature Key Register */
 #define BCHP_HIF_CPUBIUCTRL_CPU_DEBUGROMADDR_REG 0x204a25a8 /* CPU Debug ROM Address Register */
 #define BCHP_HIF_CPUBIUCTRL_CPU_DEBUGSELFADDR_REG 0x204a25ac /* CPU Debug SELF Address Register */
-#define BCHP_HIF_CPUBIUCTRL_CPU_DEBUG_TRACECTRL_REG 0x204a25b0 /* CPU Debug Trace Control Registeer */
+#define BCHP_HIF_CPUBIUCTRL_CPU_DEBUG_TRACECTRL_REG 0x204a25b0 /* CPU Debug Trace Control Register */
 #define BCHP_HIF_CPUBIUCTRL_CPU_AXICONFIG_REG    0x204a25b4 /* CPU AXI Config Register */
 #define BCHP_HIF_CPUBIUCTRL_CPU_REVISION_REG     0x204a25b8 /* CPU Revision Register */
 #define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CFGWINDOW0  0x204a25bc /* UBUS CFG Window0 Register */
@@ -747,10 +747,10 @@
 #define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_reserved0_MASK         0xfffffe00
 #define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_reserved0_SHIFT        9
 
-/* HIF_CPUBIUCTRL :: RAC_CONFIG1_REG :: RAC_TAG_ERROR_EN [08:08] */
-#define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TAG_ERROR_EN_MASK  0x00000100
-#define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TAG_ERROR_EN_SHIFT 8
-#define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TAG_ERROR_EN_DEFAULT 0x00000000
+/* HIF_CPUBIUCTRL :: RAC_CONFIG1_REG :: RAC_TBD_CTRL8 [08:08] */
+#define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TBD_CTRL8_MASK     0x00000100
+#define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TBD_CTRL8_SHIFT    8
+#define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TBD_CTRL8_DEFAULT  0x00000000
 
 /* HIF_CPUBIUCTRL :: RAC_CONFIG1_REG :: RAC_TBD_CTRL7to6 [07:06] */
 #define BCHP_HIF_CPUBIUCTRL_RAC_CONFIG1_REG_RAC_TBD_CTRL7to6_MASK  0x000000c0
@@ -3273,7 +3273,7 @@
 #define BCHP_HIF_CPUBIUCTRL_CPU_DEBUGSELFADDR_REG_DBGSELFADDRV_DEFAULT 0x00000000
 
 /***************************************************************************
- *CPU_DEBUG_TRACECTRL_REG - CPU Debug Trace Control Registeer
+ *CPU_DEBUG_TRACECTRL_REG - CPU Debug Trace Control Register
  ***************************************************************************/
 /* HIF_CPUBIUCTRL :: CPU_DEBUG_TRACECTRL_REG :: reserved0 [31:05] */
 #define BCHP_HIF_CPUBIUCTRL_CPU_DEBUG_TRACECTRL_REG_reserved0_MASK 0xffffffe0
@@ -3395,9 +3395,24 @@
 /***************************************************************************
  *CPU_UBUS_CONFIG - UBUS Configuration Register
  ***************************************************************************/
-/* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: reserved0 [31:05] */
-#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_reserved0_MASK         0xffffffe0
-#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_reserved0_SHIFT        5
+/* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: reserved0 [31:08] */
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_reserved0_MASK         0xffffff00
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_reserved0_SHIFT        8
+
+/* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: Uniq_pid_enable [07:07] */
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Uniq_pid_enable_MASK   0x00000080
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Uniq_pid_enable_SHIFT  7
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Uniq_pid_enable_DEFAULT 0x00000000
+
+/* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: Ubus_Dev_fast_wr [06:06] */
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Ubus_Dev_fast_wr_MASK  0x00000040
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Ubus_Dev_fast_wr_SHIFT 6
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Ubus_Dev_fast_wr_DEFAULT 0x00000000
+
+/* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: Ubus_Dev_fast_rd [05:05] */
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Ubus_Dev_fast_rd_MASK  0x00000020
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Ubus_Dev_fast_rd_SHIFT 5
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_Ubus_Dev_fast_rd_DEFAULT 0x00000000
 
 /* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: wr_with_ack_enable [04:04] */
 #define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_wr_with_ack_enable_MASK 0x00000010
@@ -3407,7 +3422,7 @@
 /* HIF_CPUBIUCTRL :: CPU_UBUS_CONFIG :: cd_ctrl [03:00] */
 #define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_cd_ctrl_MASK           0x0000000f
 #define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_cd_ctrl_SHIFT          0
-#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_cd_ctrl_DEFAULT        0x00000000
+#define BCHP_HIF_CPUBIUCTRL_CPU_UBUS_CONFIG_cd_ctrl_DEFAULT        0x00000004
 
 /***************************************************************************
  *CPU_SCRATCH_REG - Scratch Register

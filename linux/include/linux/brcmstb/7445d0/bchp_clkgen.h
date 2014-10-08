@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Oct 23 03:22:45 2013
- *                 Full Compile MD5 Checksum 04357d64d93017c4cfc4adffa17a9c98
+ * Date:           Generated on              Wed Sep  3 11:52:54 2014
+ *                 Full Compile MD5 Checksum 4a20c0e31b928020bbfa96c583b9e661
  *                   (minus title and desc)  
- *                 MD5 Checksum              80a33a953974f005342f663a773c35db
+ *                 MD5 Checksum              077c6f684bcabb645ae9da4069fea8e4
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008008
+ *                 Perl Interpreter          5.008005
  *                 Operating System          linux
  *
  * Revision History:
@@ -484,6 +484,10 @@
 #define BCHP_CLKGEN_XPT_PLL_CTRL_WRAPPER_CONTROL 0x004e06e0 /* XPT_PLL_CTRL_WRAPPER control */
 #define BCHP_CLKGEN_CPU_PLL_CTRL_WRAPPER_CONTROL 0x004e06e4 /* CPU_PLL_CTRL_WRAPPER control */
 #define BCHP_CLKGEN_SCB_PLL_CTRL_WRAPPER_CONTROL 0x004e06e8 /* SCB_PLL_CTRL_WRAPPER control */
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL 0x004e06ec /* SC0_PLL_CTRL_WRAPPER control */
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL 0x004e06f0 /* SC1_PLL_CTRL_WRAPPER control */
+#define BCHP_CLKGEN_PLL_SC0_PLL_LDO_PWRON        0x004e06f4 /* LDO Power on */
+#define BCHP_CLKGEN_PLL_SC1_PLL_LDO_PWRON        0x004e06f8 /* LDO Power on */
 
 /***************************************************************************
  *PLL_CPU_PLL_CHANNEL_CTRL_CH_0 - PLL CHANNEL control CH 0
@@ -1314,12 +1318,12 @@
 /* CLKGEN :: PLL_LC_PLL_GAIN :: LOOP_GAIN_PROPORTIONAL_IN_PHASE [06:03] */
 #define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_MASK 0x00000078
 #define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_SHIFT 3
-#define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_DEFAULT 0x00000006
+#define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_PROPORTIONAL_IN_PHASE_DEFAULT 0x00000005
 
 /* CLKGEN :: PLL_LC_PLL_GAIN :: LOOP_GAIN_INTEGRATOR_IN_PHASE [02:00] */
 #define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_INTEGRATOR_IN_PHASE_MASK 0x00000007
 #define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_INTEGRATOR_IN_PHASE_SHIFT 0
-#define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_INTEGRATOR_IN_PHASE_DEFAULT 0x00000002
+#define BCHP_CLKGEN_PLL_LC_PLL_GAIN_LOOP_GAIN_INTEGRATOR_IN_PHASE_DEFAULT 0x00000003
 
 /***************************************************************************
  *PLL_LC_PLL_HOLD_CH_ALL - Hold PLL all channels
@@ -1429,7 +1433,7 @@
 /* CLKGEN :: PLL_LC_PLL_MISC :: BOOST_BIAS_CIRCUIT [00:00] */
 #define BCHP_CLKGEN_PLL_LC_PLL_MISC_BOOST_BIAS_CIRCUIT_MASK        0x00000001
 #define BCHP_CLKGEN_PLL_LC_PLL_MISC_BOOST_BIAS_CIRCUIT_SHIFT       0
-#define BCHP_CLKGEN_PLL_LC_PLL_MISC_BOOST_BIAS_CIRCUIT_DEFAULT     0x00000000
+#define BCHP_CLKGEN_PLL_LC_PLL_MISC_BOOST_BIAS_CIRCUIT_DEFAULT     0x00000001
 
 /***************************************************************************
  *PLL_LC_PLL_MISC2 - Mscellaneous control bus continued.
@@ -1650,7 +1654,7 @@
 /* CLKGEN :: PLL_MOCA_PLL_CHANNEL_CTRL_CH_3 :: MDIV_CH3 [08:01] */
 #define BCHP_CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_MASK   0x000001fe
 #define BCHP_CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_SHIFT  1
-#define BCHP_CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_DEFAULT 0x00000009
+#define BCHP_CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_DEFAULT 0x00000008
 
 /* CLKGEN :: PLL_MOCA_PLL_CHANNEL_CTRL_CH_3 :: CLOCK_DIS_CH3 [00:00] */
 #define BCHP_CLKGEN_PLL_MOCA_PLL_CHANNEL_CTRL_CH_3_CLOCK_DIS_CH3_MASK 0x00000001
@@ -2813,10 +2817,15 @@
 /***************************************************************************
  *PLL_SC0_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_SC0_PLL_MISC2 :: PLLRESERVED0 [31:00] */
-#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_PLLRESERVED0_MASK            0xffffffff
-#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_PLLRESERVED0_SHIFT           0
+/* CLKGEN :: PLL_SC0_PLL_MISC2 :: PLLRESERVED0 [31:02] */
+#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_PLLRESERVED0_MASK            0xfffffffc
+#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_PLLRESERVED0_SHIFT           2
 #define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_PLLRESERVED0_DEFAULT         0x00000000
+
+/* CLKGEN :: PLL_SC0_PLL_MISC2 :: LDO [01:00] */
+#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_LDO_MASK                     0x00000003
+#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_LDO_SHIFT                    0
+#define BCHP_CLKGEN_PLL_SC0_PLL_MISC2_LDO_DEFAULT                  0x00000001
 
 /***************************************************************************
  *PLL_SC0_PLL_PWRON - Poweron
@@ -3056,10 +3065,15 @@
 /***************************************************************************
  *PLL_SC1_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_SC1_PLL_MISC2 :: PLLRESERVED0 [31:00] */
-#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_PLLRESERVED0_MASK            0xffffffff
-#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_PLLRESERVED0_SHIFT           0
+/* CLKGEN :: PLL_SC1_PLL_MISC2 :: PLLRESERVED0 [31:02] */
+#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_PLLRESERVED0_MASK            0xfffffffc
+#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_PLLRESERVED0_SHIFT           2
 #define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_PLLRESERVED0_DEFAULT         0x00000000
+
+/* CLKGEN :: PLL_SC1_PLL_MISC2 :: LDO [01:00] */
+#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_LDO_MASK                     0x00000003
+#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_LDO_SHIFT                    0
+#define BCHP_CLKGEN_PLL_SC1_PLL_MISC2_LDO_DEFAULT                  0x00000001
 
 /***************************************************************************
  *PLL_SC1_PLL_PWRON - Poweron
@@ -7395,9 +7409,19 @@
 /***************************************************************************
  *PM_PLL_LDO_POWERUP - Power management LDO PLL
  ***************************************************************************/
-/* CLKGEN :: PM_PLL_LDO_POWERUP :: reserved0 [31:08] */
-#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_reserved0_MASK              0xffffff00
-#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_reserved0_SHIFT             8
+/* CLKGEN :: PM_PLL_LDO_POWERUP :: reserved0 [31:10] */
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_reserved0_MASK              0xfffffc00
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_reserved0_SHIFT             10
+
+/* CLKGEN :: PM_PLL_LDO_POWERUP :: ISO_CLOCK_PLL_SC1 [09:09] */
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_SC1_MASK      0x00000200
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_SC1_SHIFT     9
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_SC1_DEFAULT   0x00000000
+
+/* CLKGEN :: PM_PLL_LDO_POWERUP :: ISO_CLOCK_PLL_SC0 [08:08] */
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_SC0_MASK      0x00000100
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_SC0_SHIFT     8
+#define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_SC0_DEFAULT   0x00000000
 
 /* CLKGEN :: PM_PLL_LDO_POWERUP :: ISO_CLOCK_PLL_VCXO2 [07:07] */
 #define BCHP_CLKGEN_PM_PLL_LDO_POWERUP_ISO_CLOCK_PLL_VCXO2_MASK    0x00000080
@@ -9344,6 +9368,64 @@
 #define BCHP_CLKGEN_SCB_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_MASK 0x00000001
 #define BCHP_CLKGEN_SCB_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_SHIFT 0
 #define BCHP_CLKGEN_SCB_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_DEFAULT 0x00000000
+
+/***************************************************************************
+ *SC0_PLL_CTRL_WRAPPER_CONTROL - SC0_PLL_CTRL_WRAPPER control
+ ***************************************************************************/
+/* CLKGEN :: SC0_PLL_CTRL_WRAPPER_CONTROL :: reserved0 [31:02] */
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_reserved0_MASK    0xfffffffc
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_reserved0_SHIFT   2
+
+/* CLKGEN :: SC0_PLL_CTRL_WRAPPER_CONTROL :: PWRDN_PLL_REQ [01:01] */
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_PWRDN_PLL_REQ_MASK 0x00000002
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_PWRDN_PLL_REQ_SHIFT 1
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_PWRDN_PLL_REQ_DEFAULT 0x00000000
+
+/* CLKGEN :: SC0_PLL_CTRL_WRAPPER_CONTROL :: SW_SM_OVERRIDE [00:00] */
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_MASK 0x00000001
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_SHIFT 0
+#define BCHP_CLKGEN_SC0_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_DEFAULT 0x00000000
+
+/***************************************************************************
+ *SC1_PLL_CTRL_WRAPPER_CONTROL - SC1_PLL_CTRL_WRAPPER control
+ ***************************************************************************/
+/* CLKGEN :: SC1_PLL_CTRL_WRAPPER_CONTROL :: reserved0 [31:02] */
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_reserved0_MASK    0xfffffffc
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_reserved0_SHIFT   2
+
+/* CLKGEN :: SC1_PLL_CTRL_WRAPPER_CONTROL :: PWRDN_PLL_REQ [01:01] */
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_PWRDN_PLL_REQ_MASK 0x00000002
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_PWRDN_PLL_REQ_SHIFT 1
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_PWRDN_PLL_REQ_DEFAULT 0x00000000
+
+/* CLKGEN :: SC1_PLL_CTRL_WRAPPER_CONTROL :: SW_SM_OVERRIDE [00:00] */
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_MASK 0x00000001
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_SHIFT 0
+#define BCHP_CLKGEN_SC1_PLL_CTRL_WRAPPER_CONTROL_SW_SM_OVERRIDE_DEFAULT 0x00000000
+
+/***************************************************************************
+ *PLL_SC0_PLL_LDO_PWRON - LDO Power on
+ ***************************************************************************/
+/* CLKGEN :: PLL_SC0_PLL_LDO_PWRON :: reserved0 [31:01] */
+#define BCHP_CLKGEN_PLL_SC0_PLL_LDO_PWRON_reserved0_MASK           0xfffffffe
+#define BCHP_CLKGEN_PLL_SC0_PLL_LDO_PWRON_reserved0_SHIFT          1
+
+/* CLKGEN :: PLL_SC0_PLL_LDO_PWRON :: LDO_PWRON_PLL [00:00] */
+#define BCHP_CLKGEN_PLL_SC0_PLL_LDO_PWRON_LDO_PWRON_PLL_MASK       0x00000001
+#define BCHP_CLKGEN_PLL_SC0_PLL_LDO_PWRON_LDO_PWRON_PLL_SHIFT      0
+#define BCHP_CLKGEN_PLL_SC0_PLL_LDO_PWRON_LDO_PWRON_PLL_DEFAULT    0x00000001
+
+/***************************************************************************
+ *PLL_SC1_PLL_LDO_PWRON - LDO Power on
+ ***************************************************************************/
+/* CLKGEN :: PLL_SC1_PLL_LDO_PWRON :: reserved0 [31:01] */
+#define BCHP_CLKGEN_PLL_SC1_PLL_LDO_PWRON_reserved0_MASK           0xfffffffe
+#define BCHP_CLKGEN_PLL_SC1_PLL_LDO_PWRON_reserved0_SHIFT          1
+
+/* CLKGEN :: PLL_SC1_PLL_LDO_PWRON :: LDO_PWRON_PLL [00:00] */
+#define BCHP_CLKGEN_PLL_SC1_PLL_LDO_PWRON_LDO_PWRON_PLL_MASK       0x00000001
+#define BCHP_CLKGEN_PLL_SC1_PLL_LDO_PWRON_LDO_PWRON_PLL_SHIFT      0
+#define BCHP_CLKGEN_PLL_SC1_PLL_LDO_PWRON_LDO_PWRON_PLL_DEFAULT    0x00000001
 
 #endif /* #ifndef BCHP_CLKGEN_H__ */
 

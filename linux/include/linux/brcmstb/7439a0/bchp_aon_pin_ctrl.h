@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Tue Apr 16 03:26:51 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Wed Sep  3 14:30:55 2014
+ *                 Full Compile MD5 Checksum edbc259d5ef948d04693ec04bc4d44b4
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              de2524c7728bb833dc65ac44b70daaa5
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008005
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -115,7 +117,6 @@
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_02_ENET1_LINK    1
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_02_AUD_FS_CLK1   2
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_02_VEC_VSYNC     3
-#define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_02_TSIO_VCTRL    4
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_02_ENET0_ACTIVITY 5
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_02_TP_OUT_02     6
 
@@ -140,7 +141,6 @@
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_00_PWM1          2
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_00_RGMII_B_MDC   3
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_00_SPI_M_SS2B    4
-#define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_00_TSIO_VCTRL    5
 #define BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_0_aon_gpio_00_TP_OUT_00     6
 
 /***************************************************************************
