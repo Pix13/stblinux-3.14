@@ -294,15 +294,6 @@
 #include <linux/brcmstb/7364a0/bchp_memc_ddr_0.h>
 #include <linux/brcmstb/7364a0/bchp_moca_hostmisc.h>
 #include <linux/brcmstb/7364a0/bchp_nand.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_dma.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_ext_cfg.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_intr2.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_misc.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_misc_perst.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_rc_cfg_pcie.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_rc_cfg_type1.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_rc_cfg_vendor.h>
-#include <linux/brcmstb/7364a0/bchp_pcie_0_rgr1.h>
 #include <linux/brcmstb/7364a0/bchp_sdio_0_cfg.h>
 #include <linux/brcmstb/7364a0/bchp_shimphy_addr_cntl_0.h>
 #include <linux/brcmstb/7364a0/bchp_sun_top_ctrl.h>

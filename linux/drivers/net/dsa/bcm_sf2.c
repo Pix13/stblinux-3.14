@@ -159,18 +159,23 @@ static void bcm_sf2_recalc_clock(struct dsa_switch *ds)
 	unsigned int ports_active;
 	/* Frequenty in Mhz */
 	const unsigned long rate_table[] = {
-		77000000,
-		82500000,
-		89375000,
-		96250000,
+		59220000,
+		60820000,
+		62500000,
+		62500000,
 	};
 
 	ports_active = bcm_sf2_num_active_ports(ds);
-	if (ports_active == 0 || ports_active > ARRAY_SIZE(rate_table) ||
-	    !priv->clk_mdiv)
+	if (ports_active == 0 || !priv->clk_mdiv)
 		return;
 
-	new_rate = rate_table[ports_active - 1];
+	/* If we overflow our table, just use the recommended operational
+	 * frequency
+	 */
+	if (ports_active > ARRAY_SIZE(rate_table))
+		new_rate = 90000000;
+	else
+		new_rate = rate_table[ports_active - 1];
 	clk_set_rate(priv->clk_mdiv, new_rate);
 }
 
@@ -310,6 +315,10 @@ static int bcm_sf2_port_setup(struct dsa_switch *ds, int port,
 	s8 cpu_port = ds->dst[ds->index].cpu_port;
 	u32 reg;
 
+	priv->port_sts[port].enabled = true;
+
+	bcm_sf2_recalc_clock(ds);
+
 	/* Clear the memory power down */
 	reg = core_readl(priv, CORE_MEM_PSM_VDD_CTRL);
 	reg &= ~P_TXQ_PSM_VDD(port);
@@ -340,10 +349,6 @@ static int bcm_sf2_port_setup(struct dsa_switch *ds, int port,
 	/* If EEE was enabled, restore it */
 	if (priv->port_sts[port].eee.eee_enabled)
 		bcm_sf2_eee_enable_set(ds, port, true);
-
-	priv->port_sts[port].enabled = true;
-
-	bcm_sf2_recalc_clock(ds);
 
 	return 0;
 }

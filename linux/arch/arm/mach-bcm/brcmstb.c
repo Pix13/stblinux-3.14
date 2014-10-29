@@ -59,7 +59,7 @@ static const char *brcmstb_match[] __initconst = {
 #if defined(CONFIG_BRCMSTB)
 /*
  * HACK: The following drivers are still using BDEV macros:
- * - PCIe (bridge setup)
+ * - XPT DMA
  *
  * Once these drivers have migrated over to using 'of_iomap()' and standard
  * register accessors, we can eliminate this static mapping.
@@ -96,6 +96,14 @@ static int of_add_one_fixed_phy(struct device_node *np)
 
 	status.link = 1;
 	status.duplex = be32_to_cpu(fixed_link[1]);
+	/* Force full-duplex settings here, since BOLT v0.86 would set MoCA
+	 * links to half-duplex, and that might cause packet losses since the
+	 * link between GENET or SWITCH and MoCA's ECL is full-duplex.
+	 *
+	 * BOLT does not support configuring the duplex type, so we can safely
+	 * override this to DUPLEX_FULL.
+	 */
+	status.duplex = DUPLEX_FULL;
 	status.speed = be32_to_cpu(fixed_link[2]);
 	status.pause = be32_to_cpu(fixed_link[3]);
 	status.asym_pause = be32_to_cpu(fixed_link[4]);
@@ -110,9 +118,6 @@ static int of_add_one_fixed_phy(struct device_node *np)
 static int __init of_add_fixed_phys(void)
 {
 	struct device_node *np, *child, *port;
-	struct fixed_phy_status status = {};
-	unsigned int i = 0;
-	u32 phy_type;
 
 	for_each_compatible_node(np, NULL, "brcm,bcm7445-switch-v4.0") {
 		for_each_child_of_node(np, child) {
@@ -127,40 +132,9 @@ static int __init of_add_fixed_phys(void)
 	for_each_compatible_node(np, NULL, "brcm,systemport-v1.00")
 		of_add_one_fixed_phy(np);
 
-	/* For compatibility with the old DT binding, we just match
-	 * against our specific Ethernet driver compatible property
-	 * and we just parse the speed settings for the fixed-PHY
-	 */
-	for_each_compatible_node(np, NULL, "brcm,genet-v4") {
-		status.link = 1;
-		status.duplex = DUPLEX_FULL;
-		status.pause = 0;
-		status.asym_pause = 0;
-
-		/* Look for the old binding, identified by the 'phy-type'
-		 * property existence
-		 */
-		if (!of_property_read_u32(np, "phy-type", &phy_type)) {
-			/* Do not register a fixed PHY for internal PHYs */
-			if (phy_type == BRCM_PHY_TYPE_INT)
-				continue;
-
-			if (!of_property_read_u32(np, "phy-speed",
-						&status.speed)) {
-				/* Convention with the old (inflexible) binding
-				 * is 0 -> MoCA, 1 -> anything else
-				 */
-				if (phy_type == BRCM_PHY_TYPE_MOCA)
-					i = 0;
-				else
-					i = 1;
-				fixed_phy_add(PHY_POLL, i, &status);
-			}
-		} else {
-			/* Or try the new, standard 'fixed-link' binding */
-			of_add_one_fixed_phy(np);
-		}
-	}
+	/* GENET uses the 'fixed-link' property */
+	for_each_compatible_node(np, NULL, "brcm,genet-v4")
+		of_add_one_fixed_phy(np);
 
 	return 0;
 }
@@ -288,6 +262,12 @@ void brcmstb_mega_barrier(void)
 }
 EXPORT_SYMBOL(brcmstb_mega_barrier);
 #endif /* CONFIG_BRCMSTB_USE_MEGA_BARRIER */
+
+static void __init brcmstb_init_time(void)
+{
+	brcmstb_clocks_init();
+	clocksource_of_init();
+}
 #endif /* CONFIG_BRCMSTB */
 
 /***********************************************************************
@@ -328,12 +308,6 @@ static int brcmstb_boot_secondary(unsigned int cpu,
 	spin_unlock(&boot_lock);
 
 	return 0;
-}
-
-static void __init brcmstb_init_time(void)
-{
-	brcmstb_clocks_init();
-	clocksource_of_init();
 }
 
 struct smp_operations brcmstb_smp_ops __initdata = {

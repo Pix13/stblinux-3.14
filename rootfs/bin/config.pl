@@ -65,7 +65,7 @@ my %arch_config_options = (
 	"CROSS_COMPILE"   => "",
 );
 
-my @patchlist = ("lttng", "android", "newubi");
+my @patchlist = ("lttng", "newubi");
 my %use_patch = ( );
 
 my %defsuf = (
@@ -507,7 +507,6 @@ sub cmd_defaults($)
 	my %implies = ('pal' => 'small-nonet-nousb-nohdd',
 		       'ikos' => 'small-kdebug-nousb-nomtd-nohdd',
 		       'kgdb' => 'kdebug',
-		       'android' => 'ipv6',
 	    );
 
 	# Munge the '%implies' hash so that its values become array refs.
@@ -700,11 +699,12 @@ sub cmd_defaults($)
 		} elsif($mod eq "android") {
 
 			# Enable Android
+			if (! -e "$LINUXDIR/Documentation/android.txt") {
+				print "Not an android kernel. ";
+				print "Build android targets only with the android kernel repo.\n";
+				die("");
+			}
 
-			$use_patch{'android'} = 1;
-
-			read_cfg("defaults/override.linux-android", \%linux_o);
-			override_cfg(\%linux, \%linux_o);
 		} elsif($mod eq "newubi") {
 
 			# UBI/UBIFS backport from the mainline MTD tree

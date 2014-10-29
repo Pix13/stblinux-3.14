@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Sep 10 03:17:21 2014
- *                 Full Compile MD5 Checksum bfac34df160f8054857a7ea0bbd94466
+ * Date:           Generated on              Sun Oct 19 03:14:20 2014
+ *                 Full Compile MD5 Checksum d1baa5f0ed598f24342ba4ac189a74f9
  *                   (minus title and desc)  
- *                 MD5 Checksum              bc531cb90a66d368cc07fecf313dea26
+ *                 MD5 Checksum              305baf671474fef408540184d05e24f5
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -65,8 +65,8 @@
  ***************************************************************************/
 #define BCHP_PHYSICAL_OFFSET                               0xf0000000
 #define BCHP_REGISTER_START                                0x00000000 /* HEVD_OL_CPU_REGS_0 is first */
-#define BCHP_REGISTER_END                                  0x01280000 /* MEMC_SENTINEL_0_2 is last */
-#define BCHP_REGISTER_SIZE                                 0x004a0000 /* Number of registers */
+#define BCHP_REGISTER_END                                  0x01200000 /* MEMC_SENTINEL_0_1 is last */
+#define BCHP_REGISTER_SIZE                                 0x00480000 /* Number of registers */
 
 /****************************************************************************
  * Core instance register start address.
@@ -443,8 +443,6 @@
 #define BCHP_S_MEMC_0_REG_END                              0x003bc784
 #define BCHP_S_MEMC_1_REG_START                            0x003cc000
 #define BCHP_S_MEMC_1_REG_END                              0x003cc784
-#define BCHP_S_MEMC_2_REG_START                            0x003dc000
-#define BCHP_S_MEMC_2_REG_END                              0x003dc784
 #define BCHP_SDIO_0_HOST_REG_START                         0x003e0000
 #define BCHP_SDIO_0_HOST_REG_END                           0x003e00fc
 #define BCHP_SDIO_0_CFG_REG_START                          0x003e0100
@@ -2491,52 +2489,6 @@
 #define BCHP_DPFE_EDIS_1_1_REG_END                         0x011a2960
 #define BCHP_MEMC_SENTINEL_0_1_REG_START                   0x011c0000
 #define BCHP_MEMC_SENTINEL_0_1_REG_END                     0x011ffffc
-#define BCHP_MEMC_GEN_2_REG_START                          0x01200000
-#define BCHP_MEMC_GEN_2_REG_END                            0x012007fc
-#define BCHP_MEMC_EDIS_2_0_REG_START                       0x01200800
-#define BCHP_MEMC_EDIS_2_0_REG_END                         0x012008fc
-#define BCHP_MEMC_EDIS_2_1_REG_START                       0x01200a00
-#define BCHP_MEMC_EDIS_2_1_REG_END                         0x01200afc
-#define BCHP_MEMC_ARC_2_REG_START                          0x01200c00
-#define BCHP_MEMC_ARC_2_REG_END                            0x01200f74
-#define BCHP_MEMC_ARB_2_REG_START                          0x01201000
-#define BCHP_MEMC_ARB_2_REG_END                            0x012014d0
-#define BCHP_MEMC_DDR_2_REG_START                          0x01202000
-#define BCHP_MEMC_DDR_2_REG_END                            0x012027fc
-#define BCHP_MEMC_L2_2_0_REG_START                         0x01203000
-#define BCHP_MEMC_L2_2_0_REG_END                           0x01203044
-#define BCHP_MEMC_L2_2_1_REG_START                         0x01203200
-#define BCHP_MEMC_L2_2_1_REG_END                           0x01203244
-#define BCHP_MEMC_L2_2_2_REG_START                         0x01203400
-#define BCHP_MEMC_L2_2_2_REG_END                           0x01203444
-#define BCHP_MEMC_TRACELOG_0_2_REG_START                   0x01203800
-#define BCHP_MEMC_TRACELOG_0_2_REG_END                     0x012039fc
-#define BCHP_MEMC_RGRB_2_REG_START                         0x01204000
-#define BCHP_MEMC_RGRB_2_REG_END                           0x01204010
-#define BCHP_MEMC_MISC_2_REG_START                         0x01205000
-#define BCHP_MEMC_MISC_2_REG_END                           0x01205010
-#define BCHP_SHIMPHY_ADDR_CNTL_2_REG_START                 0x01208000
-#define BCHP_SHIMPHY_ADDR_CNTL_2_REG_END                   0x012080e4
-#define BCHP_DDR34_PHY_CONTROL_REGS_2_REG_START            0x01220000
-#define BCHP_DDR34_PHY_CONTROL_REGS_2_REG_END              0x01220218
-#define BCHP_DDR34_PHY_BYTE_LANE_0_2_REG_START             0x01220400
-#define BCHP_DDR34_PHY_BYTE_LANE_0_2_REG_END               0x01220518
-#define BCHP_DDR34_PHY_BYTE_LANE_1_2_REG_START             0x01220600
-#define BCHP_DDR34_PHY_BYTE_LANE_1_2_REG_END               0x01220718
-#define BCHP_DDR34_PHY_BYTE_LANE_2_2_REG_START             0x01220800
-#define BCHP_DDR34_PHY_BYTE_LANE_2_2_REG_END               0x01220918
-#define BCHP_DDR34_PHY_BYTE_LANE_3_2_REG_START             0x01220a00
-#define BCHP_DDR34_PHY_BYTE_LANE_3_2_REG_END               0x01220b18
-#define BCHP_DDR34_PHY_ECC_LANE_2_REG_START                0x01220c00
-#define BCHP_DDR34_PHY_ECC_LANE_2_REG_END                  0x01220d18
-#define BCHP_DPFE_CONTROLLER_2_REG_START                   0x01222000
-#define BCHP_DPFE_CONTROLLER_2_REG_END                     0x01222050
-#define BCHP_DPFE_EDIS_2_0_REG_START                       0x01222400
-#define BCHP_DPFE_EDIS_2_0_REG_END                         0x01222560
-#define BCHP_DPFE_EDIS_2_1_REG_START                       0x01222800
-#define BCHP_DPFE_EDIS_2_1_REG_END                         0x01222960
-#define BCHP_MEMC_SENTINEL_0_2_REG_START                   0x01240000
-#define BCHP_MEMC_SENTINEL_0_2_REG_END                     0x0127fffc
 
 
 /***************************************************************************

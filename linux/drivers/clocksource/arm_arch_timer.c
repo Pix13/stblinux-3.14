@@ -263,7 +263,13 @@ static void __arch_timer_setup(unsigned type,
 	clk->features = CLOCK_EVT_FEAT_ONESHOT;
 
 	if (type == ARCH_CP15_TIMER) {
+#ifndef CONFIG_BRCMSTB
+		/* Our Brahma B15 local timer is kept running during WFI, and
+		 * we rely on this "Cortex A15 oddity" for high-resolution
+		 * timers to be available.
+		 */
 		clk->features |= CLOCK_EVT_FEAT_C3STOP;
+#endif
 		clk->name = "arch_sys_timer";
 		clk->rating = 450;
 		clk->cpumask = cpumask_of(smp_processor_id());

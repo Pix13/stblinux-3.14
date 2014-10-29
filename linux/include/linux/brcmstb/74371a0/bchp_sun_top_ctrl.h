@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Tue Sep 23 03:16:01 2014
- *                 Full Compile MD5 Checksum 10286fa42cc96ac09acff850b78bff11
+ * Date:           Generated on              Sat Oct 25 03:10:01 2014
+ *                 Full Compile MD5 Checksum 00ab4e036e73f1457c251a48ed5348d8
  *                   (minus title and desc)  
- *                 MD5 Checksum              ce337eadb7e967dd87c606b1a7500a2c
+ *                 MD5 Checksum              b6027e72d46753350fa78c0acea226e2
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -167,18 +167,48 @@
 /***************************************************************************
  *CHIP_FAMILY_ID - Chip family ID
  ***************************************************************************/
-/* SUN_TOP_CTRL :: CHIP_FAMILY_ID :: chip_family_id [31:00] */
-#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_family_id_MASK       0xffffffff
-#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_family_id_SHIFT      0
-#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_family_id_DEFAULT    0x07437100
+/* SUN_TOP_CTRL :: CHIP_FAMILY_ID :: spare [31:28] */
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_spare_MASK                0xf0000000
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_spare_SHIFT               28
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_spare_DEFAULT             0x00000000
+
+/* SUN_TOP_CTRL :: CHIP_FAMILY_ID :: chip_id [27:08] */
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_id_MASK              0x0fffff00
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_id_SHIFT             8
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_id_DEFAULT           0x00074371
+
+/* SUN_TOP_CTRL :: CHIP_FAMILY_ID :: major_rev_id [07:04] */
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_major_rev_id_MASK         0x000000f0
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_major_rev_id_SHIFT        4
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_major_rev_id_DEFAULT      0x00000000
+
+/* SUN_TOP_CTRL :: CHIP_FAMILY_ID :: minor_rev_id [03:00] */
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_minor_rev_id_MASK         0x0000000f
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_minor_rev_id_SHIFT        0
+#define BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_minor_rev_id_DEFAULT      0x00000000
 
 /***************************************************************************
  *PRODUCT_ID - Product Revision ID
  ***************************************************************************/
-/* SUN_TOP_CTRL :: PRODUCT_ID :: product_id [31:00] */
-#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_product_id_MASK               0xffffffff
-#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_product_id_SHIFT              0
-#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_product_id_DEFAULT            0x07437100
+/* SUN_TOP_CTRL :: PRODUCT_ID :: spare [31:28] */
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_spare_MASK                    0xf0000000
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_spare_SHIFT                   28
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_spare_DEFAULT                 0x00000000
+
+/* SUN_TOP_CTRL :: PRODUCT_ID :: product_id [27:08] */
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_product_id_MASK               0x0fffff00
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_product_id_SHIFT              8
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_product_id_DEFAULT            0x00074371
+
+/* SUN_TOP_CTRL :: PRODUCT_ID :: major_rev_id [07:04] */
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_major_rev_id_MASK             0x000000f0
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_major_rev_id_SHIFT            4
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_major_rev_id_DEFAULT          0x00000000
+
+/* SUN_TOP_CTRL :: PRODUCT_ID :: minor_rev_id [03:00] */
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_minor_rev_id_MASK             0x0000000f
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_minor_rev_id_SHIFT            0
+#define BCHP_SUN_TOP_CTRL_PRODUCT_ID_minor_rev_id_DEFAULT          0x00000000
 
 /***************************************************************************
  *BSP_FEATURE_TABLE_ADDR - BSP feature table address

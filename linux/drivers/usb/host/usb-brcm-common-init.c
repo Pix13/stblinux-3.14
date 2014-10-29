@@ -230,6 +230,15 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 		USB_CTRL_MASK(USB30_CTL1, usb3_ioc));
 #endif
 
+#if !defined(CONFIG_BCM7439A0) && !defined(CONFIG_BCM74371A0)
+	/*
+	 * HW7439-637: 7439a0 and its derivatives do not have large enough
+	 * descriptor storage for this.
+	 */
+	DEV_SET(USB_CTRL_REG(ctrl, SETUP),
+		USB_CTRL_MASK(SETUP, ss_ehci64bit_en));
+#endif
+
 	DEV_SET(USB_CTRL_REG(ctrl, USB30_CTL1),
 		USB_CTRL_MASK(USB30_CTL1, phy3_pll_seq_start));
 	DEV_SET(USB_CTRL_REG(ctrl, PLL_CTL),

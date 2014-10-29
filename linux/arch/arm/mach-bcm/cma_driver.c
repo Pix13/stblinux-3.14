@@ -279,6 +279,9 @@ void __init cma_reserve(void)
 		struct cma *tmp_cma_area;
 		base = meminfo.bank[iter].start;
 
+		if (cma_data.nr_regions_valid == NR_BANKS)
+			pr_err("cma_data.regions overflow\n");
+
 		if (cma_calc_rsv_range(iter, &base, &size))
 			continue;
 
@@ -294,11 +297,7 @@ void __init cma_reserve(void)
 			memblock_debug = 1;
 			memblock_dump_all();
 			memblock_debug = 0;
-		}
-
-		if (cma_data.nr_regions_valid == NR_BANKS)
-			pr_err("cma_data.regions overflow\n");
-		else {
+		} else {
 			cma_data.regions[cma_data.nr_regions_valid].start =
 				PFN_PHYS(tmp_cma_area->base_pfn);
 			cma_data.regions[cma_data.nr_regions_valid].size = size;

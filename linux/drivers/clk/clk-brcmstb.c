@@ -33,16 +33,6 @@
 
 static bool shut_off_unused_clks;
 
-struct bcm_clk {
-	struct clk_hw hw;
-	char name[16];
-	char parent_name[16];
-	u32 flags;
-	struct clk_ops ops;
-	void __iomem	*clk_ctrl;
-	void __iomem	*clk_cfg;
-};
-
 struct bcm_clk_gate {
 	struct clk_hw hw;
 	void __iomem *reg;
@@ -58,151 +48,8 @@ struct bcm_clk_sw {
 	struct clk_ops ops;
 };
 
-#define to_brcmstb_clk(p) container_of(p, struct bcm_clk, hw)
 #define to_brcmstb_clk_gate(p) container_of(p, struct bcm_clk_gate, hw)
 #define to_brcmstb_clk_sw(p) container_of(p, struct bcm_clk_sw, hw)
-
-static int
-brcmstb_clk_pll_enable(struct clk_hw *hwclk)
-{
-	return 0;
-}
-
-static void
-brcmstb_clk_pll_disable(struct clk_hw *hwclk)
-{
-}
-
-static int
-brcmstb_clk_set_rate(struct clk_hw *hwclk, unsigned long rate,
-		     unsigned long parent_rate)
-{
-	return 0;
-}
-
-static long
-brcmstb_clk_round_rate(struct clk_hw *hwclk, unsigned long rate,
-		    unsigned long *prate)
-{
-	return 0;
-}
-
-static unsigned long
-brcmstb_clk_recalc_rate(struct clk_hw *hwclk, unsigned long rate)
-
-{
-	return 0;
-}
-
-static struct clk * __init
-brcmstb_clk_register(struct device *dev, struct bcm_clk *brcmstb_clk,
-		     struct clk_ops *ops, const char *name,
-		     const char *parent_name, u32 flags)
-{
-	struct clk *clk;
-	struct clk_init_data init;
-
-	init.name = name;
-	init.ops = ops;
-	init.flags = flags;
-	init.parent_names = &parent_name;
-	init.num_parents = (parent_name ? 1 : 0);
-	brcmstb_clk->hw.init = &init;
-
-	clk = clk_register(dev, &brcmstb_clk->hw);
-
-	if (WARN_ON(IS_ERR(clk)))
-		goto err_clk_register;
-
-	return clk;
-
-err_clk_register:
-	return ERR_PTR(-EINVAL);
-}
-
-static void
-brcmstb_clk_init(struct bcm_clk *brcmstb_clk_table, int lim)
-{
-	struct clk *clk;
-	struct bcm_clk *brcmstb_clk;
-	int clk_idx, ret;
-	char *parent_name;
-
-	for (clk_idx = 0; clk_idx < lim; clk_idx++) {
-		brcmstb_clk = &brcmstb_clk_table[clk_idx];
-
-		if (!brcmstb_clk->ops.enable)
-			brcmstb_clk->ops.enable =
-				&brcmstb_clk_pll_enable;
-
-		if (!brcmstb_clk->ops.disable)
-			brcmstb_clk->ops.disable =
-				&brcmstb_clk_pll_disable;
-
-		if (!brcmstb_clk->ops.set_rate)
-			brcmstb_clk->ops.set_rate =
-				&brcmstb_clk_set_rate;
-
-		if (!brcmstb_clk->ops.round_rate)
-			brcmstb_clk->ops.round_rate =
-				&brcmstb_clk_round_rate;
-
-		if (!brcmstb_clk->ops.recalc_rate)
-			brcmstb_clk->ops.recalc_rate =
-				&brcmstb_clk_recalc_rate;
-
-		parent_name = brcmstb_clk_table[clk_idx].parent_name;
-		clk = brcmstb_clk_register(NULL, brcmstb_clk,
-					   &brcmstb_clk->ops,
-					   brcmstb_clk->name,
-					   parent_name,
-					   (parent_name == NULL ?
-					    CLK_IS_ROOT | CLK_IGNORE_UNUSED :
-					    CLK_IGNORE_UNUSED));
-
-		if (IS_ERR(clk))
-			pr_err("%s clk_register failed\n",
-				brcmstb_clk->name);
-
-		ret = clk_register_clkdev(clk, brcmstb_clk->name, NULL);
-
-		if (ret)
-			pr_err("%s clk device registration failed\n",
-			       brcmstb_clk->name);
-	}
-}
-
-/*
- * MOCA clock
- */
-enum brcmstb_moca_clk {
-	BRCM_CLK_MOCA,
-	BRCM_CLK_MOCA_CPU,
-	BRCM_CLK_MOCA_PHY
-};
-
-static struct bcm_clk brcmstb_moca_clk_table[] = {
-	[BRCM_CLK_MOCA] = {
-		.name = "moca",
-	},
-	[BRCM_CLK_MOCA_CPU] = {
-		.name		= "moca-cpu",
-		.parent_name    = "moca",
-	},
-	[BRCM_CLK_MOCA_PHY] = {
-		.name = "moca-phy",
-		.parent_name = "moca",
-	},
-};
-
-static void __init bmoca_clk_init(void)
-{
-	/*
-	 * MoCA clk init
-	 */
-	brcmstb_clk_init(brcmstb_moca_clk_table,
-			 ARRAY_SIZE(brcmstb_moca_clk_table));
-}
 
 static DEFINE_SPINLOCK(lock);
 
@@ -581,12 +428,17 @@ static void __init of_brcmstb_clk_sw_setup(struct device_node *node)
 	}
 	parent_names = kzalloc((sizeof(char *) * num_parents),
 			GFP_KERNEL);
+	if (!parent_names) {
+		pr_err("%s: failed to alloc parent_names\n", __func__);
+		return;
+	}
 
 	for (i = 0; i < num_parents; i++)
 		parent_names[i] = of_clk_get_parent_name(node, i);
 
 	clk = brcmstb_clk_sw_register(NULL, clk_name, parent_names, num_parents,
 				   0, NULL);
+	kfree(parent_names);
 
 	if (!IS_ERR(clk)) {
 		of_clk_add_provider(node, of_clk_src_simple_get, clk);
@@ -642,7 +494,4 @@ void __init brcmstb_clocks_init(void)
 {
 	/* DT-based clock config */
 	of_clk_init(bcm_full_clk ? brcmstb_clk_match_full : brcmstb_clk_match);
-
-	/* Static clock config */
-	bmoca_clk_init();
 }

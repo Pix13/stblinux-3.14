@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Wed May  8 03:09:20 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Thu Oct 16 03:13:02 2014
+ *                 Full Compile MD5 Checksum de9b89b7bd0a247e4ef34c06679b82b0
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              a9d4bc4b03768cbf7bc9dcb3982ac3a9
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008008
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -40,7 +42,7 @@
 #define BCHP_FPM_POOL_FPM_H__
 
 /***************************************************************************
- *FPM_POOL_FPM - FPM FPM Pool Management Registers
+ *FPM_POOL_FPM - FPM Pool Management Registers
  ***************************************************************************/
 #define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC    0x03a00200 /* POOL1 Allocation & De-allocation/Free Management Register */
 #define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC    0x03a00208 /* POOL2 Allocation & De-allocation/Free Management Register */
@@ -61,13 +63,13 @@
 #define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_reserved0_MASK       0x40000000
 #define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_reserved0_SHIFT      30
 
-/* FPM_POOL_FPM :: POOL1_ALLOC_DEALLOC :: POOL_ID [29:28] */
-#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_POOL_ID_MASK         0x30000000
-#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_POOL_ID_SHIFT        28
-#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_POOL_ID_DEFAULT      0x00000000
+/* FPM_POOL_FPM :: POOL1_ALLOC_DEALLOC :: DDR [29:29] */
+#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_DDR_MASK             0x20000000
+#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_DDR_SHIFT            29
+#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_DDR_DEFAULT          0x00000000
 
-/* FPM_POOL_FPM :: POOL1_ALLOC_DEALLOC :: TOKEN_INDEX [27:12] */
-#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x0ffff000
+/* FPM_POOL_FPM :: POOL1_ALLOC_DEALLOC :: TOKEN_INDEX [28:12] */
+#define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x1ffff000
 #define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_TOKEN_INDEX_SHIFT    12
 #define BCHP_FPM_POOL_FPM_POOL1_ALLOC_DEALLOC_TOKEN_INDEX_DEFAULT  0x00000000
 
@@ -88,13 +90,13 @@
 #define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_reserved0_MASK       0x40000000
 #define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_reserved0_SHIFT      30
 
-/* FPM_POOL_FPM :: POOL2_ALLOC_DEALLOC :: POOL_ID [29:28] */
-#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_POOL_ID_MASK         0x30000000
-#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_POOL_ID_SHIFT        28
-#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_POOL_ID_DEFAULT      0x00000000
+/* FPM_POOL_FPM :: POOL2_ALLOC_DEALLOC :: DDR [29:29] */
+#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_DDR_MASK             0x20000000
+#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_DDR_SHIFT            29
+#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_DDR_DEFAULT          0x00000000
 
-/* FPM_POOL_FPM :: POOL2_ALLOC_DEALLOC :: TOKEN_INDEX [27:12] */
-#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x0ffff000
+/* FPM_POOL_FPM :: POOL2_ALLOC_DEALLOC :: TOKEN_INDEX [28:12] */
+#define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x1ffff000
 #define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_TOKEN_INDEX_SHIFT    12
 #define BCHP_FPM_POOL_FPM_POOL2_ALLOC_DEALLOC_TOKEN_INDEX_DEFAULT  0x00000000
 
@@ -115,13 +117,13 @@
 #define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_reserved0_MASK       0x40000000
 #define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_reserved0_SHIFT      30
 
-/* FPM_POOL_FPM :: POOL3_ALLOC_DEALLOC :: POOL_ID [29:28] */
-#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_POOL_ID_MASK         0x30000000
-#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_POOL_ID_SHIFT        28
-#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_POOL_ID_DEFAULT      0x00000000
+/* FPM_POOL_FPM :: POOL3_ALLOC_DEALLOC :: DDR [29:29] */
+#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_DDR_MASK             0x20000000
+#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_DDR_SHIFT            29
+#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_DDR_DEFAULT          0x00000000
 
-/* FPM_POOL_FPM :: POOL3_ALLOC_DEALLOC :: TOKEN_INDEX [27:12] */
-#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x0ffff000
+/* FPM_POOL_FPM :: POOL3_ALLOC_DEALLOC :: TOKEN_INDEX [28:12] */
+#define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x1ffff000
 #define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_TOKEN_INDEX_SHIFT    12
 #define BCHP_FPM_POOL_FPM_POOL3_ALLOC_DEALLOC_TOKEN_INDEX_DEFAULT  0x00000000
 
@@ -142,13 +144,13 @@
 #define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_reserved0_MASK       0x40000000
 #define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_reserved0_SHIFT      30
 
-/* FPM_POOL_FPM :: POOL4_ALLOC_DEALLOC :: POOL_ID [29:28] */
-#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_POOL_ID_MASK         0x30000000
-#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_POOL_ID_SHIFT        28
-#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_POOL_ID_DEFAULT      0x00000000
+/* FPM_POOL_FPM :: POOL4_ALLOC_DEALLOC :: DDR [29:29] */
+#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_DDR_MASK             0x20000000
+#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_DDR_SHIFT            29
+#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_DDR_DEFAULT          0x00000000
 
-/* FPM_POOL_FPM :: POOL4_ALLOC_DEALLOC :: TOKEN_INDEX [27:12] */
-#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x0ffff000
+/* FPM_POOL_FPM :: POOL4_ALLOC_DEALLOC :: TOKEN_INDEX [28:12] */
+#define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_TOKEN_INDEX_MASK     0x1ffff000
 #define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_TOKEN_INDEX_SHIFT    12
 #define BCHP_FPM_POOL_FPM_POOL4_ALLOC_DEALLOC_TOKEN_INDEX_DEFAULT  0x00000000
 
@@ -177,8 +179,13 @@
 #define BCHP_FPM_POOL_FPM_POOL_MULTI_reserved0_MASK                0x40000000
 #define BCHP_FPM_POOL_FPM_POOL_MULTI_reserved0_SHIFT               30
 
-/* FPM_POOL_FPM :: POOL_MULTI :: TOKEN_INDEX [29:12] */
-#define BCHP_FPM_POOL_FPM_POOL_MULTI_TOKEN_INDEX_MASK              0x3ffff000
+/* FPM_POOL_FPM :: POOL_MULTI :: DDR [29:29] */
+#define BCHP_FPM_POOL_FPM_POOL_MULTI_DDR_MASK                      0x20000000
+#define BCHP_FPM_POOL_FPM_POOL_MULTI_DDR_SHIFT                     29
+#define BCHP_FPM_POOL_FPM_POOL_MULTI_DDR_DEFAULT                   0x00000000
+
+/* FPM_POOL_FPM :: POOL_MULTI :: TOKEN_INDEX [28:12] */
+#define BCHP_FPM_POOL_FPM_POOL_MULTI_TOKEN_INDEX_MASK              0x1ffff000
 #define BCHP_FPM_POOL_FPM_POOL_MULTI_TOKEN_INDEX_SHIFT             12
 #define BCHP_FPM_POOL_FPM_POOL_MULTI_TOKEN_INDEX_DEFAULT           0x00000000
 

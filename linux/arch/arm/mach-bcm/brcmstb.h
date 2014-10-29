@@ -30,7 +30,10 @@ extern int brcmstb_cpu_kill(unsigned int cpu);
 void __init brcmstb_cpu_ctrl_setup(unsigned int max_cpus);
 #else
 static inline void brcmstb_cpu_die(unsigned int cpu) {}
-static inline int brcmstb_cpu_kill(unsigned int cpu) {}
+static inline int brcmstb_cpu_kill(unsigned int cpu)
+{
+	return 0;
+}
 static inline void __init brcmstb_cpu_ctrl_setup(unsigned int max_cpus) {}
 #endif
 #ifdef CONFIG_CMA

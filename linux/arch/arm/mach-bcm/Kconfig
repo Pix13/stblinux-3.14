@@ -91,7 +91,6 @@ config BCM7145B0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_USE_MEGA_BARRIER
 
 config BCM7250B0
 	bool "7250 Bx"
@@ -249,7 +248,7 @@ config MTD_NAND_BRCMSTB
 	  Say Y to enable the onchip NAND controller.
 
 config BRCM_SDIO
-	bool "Broadcom SDHCI (SDIO) support"
+	tristate "Broadcom SDHCI (SDIO) support"
 	depends on BRCMSTB && MMC_SDHCI
 	default y
 	select MMC_SDHCI_IO_ACCESSORS
@@ -418,6 +417,7 @@ config BRCM_MSPI_64B_WORDS
 # issue noted in HW7445-1301 and derivatives.
 config BRCMSTB_USE_MEGA_BARRIER
 	bool
+	select CMA
 
 # Perform memory hashing before entering S3, using XPT DMA
 config BRCMSTB_XPT_HASH

@@ -133,18 +133,30 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 	res = clk_prepare_enable(clk);
 	if (res)
 		return res;
-	res = sdhci_pltfm_register(pdev, &sdhci_brcmstb_pdata, 0);
-	if (res)
-		return res;
 
-	res = sdhci_fix_caps(pdev);
-	if (res) {
-		sdhci_pltfm_unregister(pdev);
-		return res;
+	host = sdhci_pltfm_init(pdev, &sdhci_brcmstb_pdata, 0);
+	if (IS_ERR(host)) {
+		res = PTR_ERR(host);
+		goto undo_clk_prep;
 	}
-	host = platform_get_drvdata(pdev);
+	sdhci_get_of_property(pdev);
+	mmc_of_parse(host->mmc);
+	res = sdhci_fix_caps(pdev);
+	if (res)
+		goto undo_pltfm_init;
+
+	res = sdhci_add_host(host);
+	if (res)
+		goto undo_pltfm_init;
+
 	pltfm_host = sdhci_priv(host);
 	pltfm_host->clk = clk;
+	return res;
+
+undo_pltfm_init:
+	sdhci_pltfm_free(pdev);
+undo_clk_prep:
+	clk_disable_unprepare(clk);
 	return res;
 }
 

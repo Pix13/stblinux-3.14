@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 1999-2013, Broadcom Corporation
+ *     Copyright (c) 1999-2014, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,14 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on         Tue Apr 16 03:26:52 2013
- *                 MD5 Checksum         d41d8cd98f00b204e9800998ecf8427e
+ * Date:           Generated on              Sat Oct 25 03:10:01 2014
+ *                 Full Compile MD5 Checksum 00ab4e036e73f1457c251a48ed5348d8
+ *                   (minus title and desc)  
+ *                 MD5 Checksum              b6027e72d46753350fa78c0acea226e2
  *
- * Compiled with:  RDB Utility          combo_header.pl
- *                 RDB Parser           3.0
- *                 unknown              unknown
- *                 Perl Interpreter     5.008008
- *                 Operating System     linux
+ * Compiled with:  RDB Utility               combo_header.pl
+ *                 RDB Parser                3.0
+ *                 unknown                   unknown
+ *                 Perl Interpreter          5.008008
+ *                 Operating System          linux
  *
  * Revision History:
  *
@@ -1409,10 +1411,32 @@
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_select_current_gisb_control_SHIFT 7
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_select_current_gisb_control_DEFAULT 0x00000000
 
-/* AON_CTRL :: ANA_XTAL_CONTROL :: osc_cml_sel_pd [06:03] */
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_MASK         0x00000078
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_SHIFT        3
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_DEFAULT      0x00000000
+/* union - case bus [06:03] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bus :: osc_cml_sel_pd [06:03] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_MASK     0x00000078
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_SHIFT    3
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_DEFAULT  0x00000000
+
+/* union - case bit_blast [06:03] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_pcie [06:06] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie_MASK 0x00000040
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie_SHIFT 6
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_mocaphy [05:05] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_mocaphy_MASK 0x00000020
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_mocaphy_SHIFT 5
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_mocaphy_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_usb0 [04:04] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_usb0_MASK 0x00000010
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_usb0_SHIFT 4
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_usb0_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_sata3 [03:03] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_sata3_MASK 0x00000008
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_sata3_SHIFT 3
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_sata3_DEFAULT 0x00000000
 
 /* AON_CTRL :: ANA_XTAL_CONTROL :: osc_d2cbias_gisb_control [02:00] */
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_d2cbias_gisb_control_MASK 0x00000007

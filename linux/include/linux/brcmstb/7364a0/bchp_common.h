@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Thu Sep  4 03:28:41 2014
- *                 Full Compile MD5 Checksum 1782df3043f929698a3869b835cd123a
+ * Date:           Generated on              Wed Oct 22 03:11:48 2014
+ *                 Full Compile MD5 Checksum 08e1a7c8931083dc321aebee01be23fc
  *                   (minus title and desc)  
- *                 MD5 Checksum              6296cc47ae2b74764e7827f243438799
+ *                 MD5 Checksum              59bd60e4aff5fefc8861b8b125ee07f1
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -553,76 +553,6 @@
 #define BCHP_RFM_L2_REG_END                                0x0046cc2c
 #define BCHP_RFM_GRB_REG_START                             0x0046d000
 #define BCHP_RFM_GRB_REG_END                               0x0046d00c
-#define BCHP_PCIE_0_RC_CFG_TYPE1_REG_START                 0x00470000
-#define BCHP_PCIE_0_RC_CFG_TYPE1_REG_END                   0x0047003c
-#define BCHP_PCIE_0_RC_CFG_PM_REG_START                    0x00470048
-#define BCHP_PCIE_0_RC_CFG_PM_REG_END                      0x0047004c
-#define BCHP_PCIE_0_RC_CFG_PCIE_REG_START                  0x004700ac
-#define BCHP_PCIE_0_RC_CFG_PCIE_REG_END                    0x004700e4
-#define BCHP_PCIE_0_RC_CFG_AER_REG_START                   0x00470100
-#define BCHP_PCIE_0_RC_CFG_AER_REG_END                     0x00470134
-#define BCHP_PCIE_0_RC_CFG_VC_REG_START                    0x00470160
-#define BCHP_PCIE_0_RC_CFG_VC_REG_END                      0x00470178
-#define BCHP_PCIE_0_RC_CFG_VENDOR_REG_START                0x00470180
-#define BCHP_PCIE_0_RC_CFG_VENDOR_REG_END                  0x004701a4
-#define BCHP_PCIE_0_RC_CFG_PRIV0_REG_START                 0x00470404
-#define BCHP_PCIE_0_RC_CFG_PRIV0_REG_END                   0x00470418
-#define BCHP_PCIE_0_RC_CFG_PRIV1_REG_START                 0x00470428
-#define BCHP_PCIE_0_RC_CFG_PRIV1_REG_END                   0x00470630
-#define BCHP_PCIE_0_RC_TL_REG_START                        0x00470800
-#define BCHP_PCIE_0_RC_TL_REG_END                          0x00470998
-#define BCHP_PCIE_0_RC_DL_REG_START                        0x00471000
-#define BCHP_PCIE_0_RC_DL_REG_END                          0x00471424
-#define BCHP_PCIE_0_RC_PL_REG_START                        0x00471800
-#define BCHP_PCIE_0_RC_PL_REG_END                          0x00471e1c
-#define BCHP_PCIE_0_EP_CFG_TYPE0_REG_START                 0x00472000
-#define BCHP_PCIE_0_EP_CFG_TYPE0_REG_END                   0x0047203c
-#define BCHP_PCIE_0_EP_CFG_PM_REG_START                    0x00472048
-#define BCHP_PCIE_0_EP_CFG_PM_REG_END                      0x0047204c
-#define BCHP_PCIE_0_EP_CFG_VPD_REG_START                   0x00472050
-#define BCHP_PCIE_0_EP_CFG_VPD_REG_END                     0x00472054
-#define BCHP_PCIE_0_EP_CFG_MSI_REG_START                   0x00472058
-#define BCHP_PCIE_0_EP_CFG_MSI_REG_END                     0x00472064
-#define BCHP_PCIE_0_EP_CFG_MSIX_REG_START                  0x004720a0
-#define BCHP_PCIE_0_EP_CFG_MSIX_REG_END                    0x004720a8
-#define BCHP_PCIE_0_EP_CFG_PCIE_REG_START                  0x004720ac
-#define BCHP_PCIE_0_EP_CFG_PCIE_REG_END                    0x004720e4
-#define BCHP_PCIE_0_EP_CFG_AER_REG_START                   0x00472100
-#define BCHP_PCIE_0_EP_CFG_AER_REG_END                     0x00472134
-#define BCHP_PCIE_0_EP_CFG_DEV_REG_START                   0x0047213c
-#define BCHP_PCIE_0_EP_CFG_DEV_REG_END                     0x00472144
-#define BCHP_PCIE_0_EP_CFG_PB_REG_START                    0x00472150
-#define BCHP_PCIE_0_EP_CFG_PB_REG_END                      0x0047215c
-#define BCHP_PCIE_0_EP_CFG_VC_REG_START                    0x00472160
-#define BCHP_PCIE_0_EP_CFG_VC_REG_END                      0x00472178
-#define BCHP_PCIE_0_EP_CFG_VENDOR_REG_START                0x00472180
-#define BCHP_PCIE_0_EP_CFG_VENDOR_REG_END                  0x004721a4
-#define BCHP_PCIE_0_EP_CFG_PRIV0_REG_START                 0x00472404
-#define BCHP_PCIE_0_EP_CFG_PRIV0_REG_END                   0x00472418
-#define BCHP_PCIE_0_EP_CFG_PRIV1_REG_START                 0x00472428
-#define BCHP_PCIE_0_EP_CFG_PRIV1_REG_END                   0x00472630
-#define BCHP_PCIE_0_EP_TL_REG_START                        0x00472800
-#define BCHP_PCIE_0_EP_TL_REG_END                          0x00472998
-#define BCHP_PCIE_0_EP_DL_REG_START                        0x00473000
-#define BCHP_PCIE_0_EP_DL_REG_END                          0x00473424
-#define BCHP_PCIE_0_EP_PL_REG_START                        0x00473800
-#define BCHP_PCIE_0_EP_PL_REG_END                          0x00473e1c
-#define BCHP_PCIE_0_MISC_REG_START                         0x00474000
-#define BCHP_PCIE_0_MISC_REG_END                           0x004740c4
-#define BCHP_PCIE_0_MISC_PERST_REG_START                   0x00474100
-#define BCHP_PCIE_0_MISC_PERST_REG_END                     0x00474104
-#define BCHP_PCIE_0_MISC_HARD_REG_START                    0x00474200
-#define BCHP_PCIE_0_MISC_HARD_REG_END                      0x00474204
-#define BCHP_PCIE_0_INTR2_REG_START                        0x00474300
-#define BCHP_PCIE_0_INTR2_REG_END                          0x0047432c
-#define BCHP_PCIE_0_DMA_REG_START                          0x00474400
-#define BCHP_PCIE_0_DMA_REG_END                            0x0047446c
-#define BCHP_PCIE_0_EXT_CFG_REG_START                      0x00478000
-#define BCHP_PCIE_0_EXT_CFG_REG_END                        0x00479008
-#define BCHP_PCIE_0_RGR1_REG_START                         0x00479200
-#define BCHP_PCIE_0_RGR1_REG_END                           0x00479210
-#define BCHP_PCIE_0_RG_REG_START                           0x00479300
-#define BCHP_PCIE_0_RG_REG_END                             0x0047930c
 #define BCHP_USB_CAPS_REG_START                            0x00480000
 #define BCHP_USB_CAPS_REG_END                              0x0048002c
 #define BCHP_USB_GR_BRIDGE_REG_START                       0x00480100
@@ -2720,103 +2650,6 @@
 /* M2MC :: LIST_PKT_11_SRC_CLUT :: REGISTER_CONTENTS [28:00] */
 #define BCHP_M2MC_LIST_PKT_11_SRC_CLUT_REGISTER_CONTENTS_MASK      0x1fffffff
 #define BCHP_M2MC_LIST_PKT_11_SRC_CLUT_REGISTER_CONTENTS_SHIFT     0
-
-/***************************************************************************
- *PCIE_DMA
- ***************************************************************************/
-/***************************************************************************
- *DESC_WORD0 - PCIE DMA Descriptor Word 0
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD0 :: MEMORY_ADDRESS [31:00] */
-#define BCHP_PCIE_DMA_DESC_WORD0_MEMORY_ADDRESS_MASK               0xffffffff
-#define BCHP_PCIE_DMA_DESC_WORD0_MEMORY_ADDRESS_SHIFT              0
-
-/***************************************************************************
- *DESC_WORD1 - PCIE DMA Descriptor Word 1
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD1 :: PCIE_ADDRESS_LO [31:00] */
-#define BCHP_PCIE_DMA_DESC_WORD1_PCIE_ADDRESS_LO_MASK              0xffffffff
-#define BCHP_PCIE_DMA_DESC_WORD1_PCIE_ADDRESS_LO_SHIFT             0
-
-/***************************************************************************
- *DESC_WORD2 - PCIE DMA Descriptor Word 2
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD2 :: PCIE_ADDRESS_HI [31:00] */
-#define BCHP_PCIE_DMA_DESC_WORD2_PCIE_ADDRESS_HI_MASK              0xffffffff
-#define BCHP_PCIE_DMA_DESC_WORD2_PCIE_ADDRESS_HI_SHIFT             0
-
-/***************************************************************************
- *DESC_WORD3 - PCIE DMA Descriptor Word 3
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD3 :: INTERRUPT_ENABLE [31:31] */
-#define BCHP_PCIE_DMA_DESC_WORD3_INTERRUPT_ENABLE_MASK             0x80000000
-#define BCHP_PCIE_DMA_DESC_WORD3_INTERRUPT_ENABLE_SHIFT            31
-
-/* PCIE_DMA :: DESC_WORD3 :: reserved0 [30:25] */
-#define BCHP_PCIE_DMA_DESC_WORD3_reserved0_MASK                    0x7e000000
-#define BCHP_PCIE_DMA_DESC_WORD3_reserved0_SHIFT                   25
-
-/* PCIE_DMA :: DESC_WORD3 :: DMA_TRANSFER_SIZE [24:00] */
-#define BCHP_PCIE_DMA_DESC_WORD3_DMA_TRANSFER_SIZE_MASK            0x01ffffff
-#define BCHP_PCIE_DMA_DESC_WORD3_DMA_TRANSFER_SIZE_SHIFT           0
-
-/***************************************************************************
- *DESC_WORD4 - PCIE DMA Descriptor Word 4
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD4 :: LAST_RECORD_INDICATOR [31:31] */
-#define BCHP_PCIE_DMA_DESC_WORD4_LAST_RECORD_INDICATOR_MASK        0x80000000
-#define BCHP_PCIE_DMA_DESC_WORD4_LAST_RECORD_INDICATOR_SHIFT       31
-
-/* PCIE_DMA :: DESC_WORD4 :: DMA_DIRECTION [30:30] */
-#define BCHP_PCIE_DMA_DESC_WORD4_DMA_DIRECTION_MASK                0x40000000
-#define BCHP_PCIE_DMA_DESC_WORD4_DMA_DIRECTION_SHIFT               30
-#define BCHP_PCIE_DMA_DESC_WORD4_DMA_DIRECTION_PCIE_TO_MEMORY      1
-#define BCHP_PCIE_DMA_DESC_WORD4_DMA_DIRECTION_MEMORY_TO_PCIE      0
-
-/* PCIE_DMA :: DESC_WORD4 :: reserved0 [29:03] */
-#define BCHP_PCIE_DMA_DESC_WORD4_reserved0_MASK                    0x3ffffff8
-#define BCHP_PCIE_DMA_DESC_WORD4_reserved0_SHIFT                   3
-
-/* PCIE_DMA :: DESC_WORD4 :: DESC_CONTIGUOUS [02:02] */
-#define BCHP_PCIE_DMA_DESC_WORD4_DESC_CONTIGUOUS_MASK              0x00000004
-#define BCHP_PCIE_DMA_DESC_WORD4_DESC_CONTIGUOUS_SHIFT             2
-
-/* PCIE_DMA :: DESC_WORD4 :: ENDIAN_XLATE_MODE [01:00] */
-#define BCHP_PCIE_DMA_DESC_WORD4_ENDIAN_XLATE_MODE_MASK            0x00000003
-#define BCHP_PCIE_DMA_DESC_WORD4_ENDIAN_XLATE_MODE_SHIFT           0
-#define BCHP_PCIE_DMA_DESC_WORD4_ENDIAN_XLATE_MODE_NO_SWAP         0
-#define BCHP_PCIE_DMA_DESC_WORD4_ENDIAN_XLATE_MODE_SWAP_16_IN_32   1
-#define BCHP_PCIE_DMA_DESC_WORD4_ENDIAN_XLATE_MODE_SWAP_32         2
-#define BCHP_PCIE_DMA_DESC_WORD4_ENDIAN_XLATE_MODE_reserved        3
-
-/***************************************************************************
- *DESC_WORD5 - PCIE DMA Descriptor Word 5
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD5 :: NEXT_DESC_ADDRESS_LO [31:05] */
-#define BCHP_PCIE_DMA_DESC_WORD5_NEXT_DESC_ADDRESS_LO_MASK         0xffffffe0
-#define BCHP_PCIE_DMA_DESC_WORD5_NEXT_DESC_ADDRESS_LO_SHIFT        5
-
-/* PCIE_DMA :: DESC_WORD5 :: reserved0 [04:00] */
-#define BCHP_PCIE_DMA_DESC_WORD5_reserved0_MASK                    0x0000001f
-#define BCHP_PCIE_DMA_DESC_WORD5_reserved0_SHIFT                   0
-
-/***************************************************************************
- *DESC_WORD6 - PCIE DMA Descriptor Word 6
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD6 :: NEXT_DESC_ADDRESS_HI [31:00] */
-#define BCHP_PCIE_DMA_DESC_WORD6_NEXT_DESC_ADDRESS_HI_MASK         0xffffffff
-#define BCHP_PCIE_DMA_DESC_WORD6_NEXT_DESC_ADDRESS_HI_SHIFT        0
-
-/***************************************************************************
- *DESC_WORD7 - PCIE DMA Descriptor Word 7
- ***************************************************************************/
-/* PCIE_DMA :: DESC_WORD7 :: reserved0 [31:08] */
-#define BCHP_PCIE_DMA_DESC_WORD7_reserved0_MASK                    0xffffff00
-#define BCHP_PCIE_DMA_DESC_WORD7_reserved0_SHIFT                   8
-
-/* PCIE_DMA :: DESC_WORD7 :: MEMORY_ADDRESS_HI [07:00] */
-#define BCHP_PCIE_DMA_DESC_WORD7_MEMORY_ADDRESS_HI_MASK            0x000000ff
-#define BCHP_PCIE_DMA_DESC_WORD7_MEMORY_ADDRESS_HI_SHIFT           0
 
 /***************************************************************************
  *RAAGA_AX_MISC

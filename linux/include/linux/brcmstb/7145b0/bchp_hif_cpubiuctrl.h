@@ -21,15 +21,15 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Sep  3 12:36:41 2014
- *                 Full Compile MD5 Checksum 1e5d73e2e037f01f6ffd5061d00a97a7
+ * Date:           Generated on              Mon Oct 20 03:10:30 2014
+ *                 Full Compile MD5 Checksum eb28ce4f1e21a5a2f696ae3965f6bf92
  *                   (minus title and desc)  
- *                 MD5 Checksum              c8f174845d8a27ef5365467f1c7a712b
+ *                 MD5 Checksum              fb1aa74dc14cfad64e08221bb4891f7d
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
  *                 unknown                   unknown
- *                 Perl Interpreter          5.008005
+ *                 Perl Interpreter          5.008008
  *                 Operating System          linux
  *
  * Revision History:
@@ -327,7 +327,7 @@
 /* HIF_CPUBIUCTRL :: CPU_BUS_RANGE_ULIMT5 :: BUSNUM [03:00] */
 #define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_BUSNUM_MASK       0x0000000f
 #define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_BUSNUM_SHIFT      0
-#define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_BUSNUM_DEFAULT    0x00000005
+#define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_BUSNUM_DEFAULT    0x00000004
 
 /***************************************************************************
  *CPU_BUS_RANGE_LLIMT5 - CPU Address Range5 Lower Limit Mapping Register
@@ -387,7 +387,7 @@
 /* HIF_CPUBIUCTRL :: CPU_BUS_RANGE_ULIMT7 :: BUSNUM [03:00] */
 #define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_BUSNUM_MASK       0x0000000f
 #define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_BUSNUM_SHIFT      0
-#define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_BUSNUM_DEFAULT    0x00000006
+#define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_BUSNUM_DEFAULT    0x00000005
 
 /***************************************************************************
  *CPU_BUS_RANGE_LLIMT7 - CPU Address Range7 Lower Limit Mapping Register
@@ -417,7 +417,7 @@
 /* HIF_CPUBIUCTRL :: CPU_BUS_RANGE_ULIMT8 :: BUSNUM [03:00] */
 #define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT8_BUSNUM_MASK       0x0000000f
 #define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT8_BUSNUM_SHIFT      0
-#define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT8_BUSNUM_DEFAULT    0x00000006
+#define BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT8_BUSNUM_DEFAULT    0x00000000
 
 /***************************************************************************
  *CPU_BUS_RANGE_LLIMT8 - CPU Address Range8 Lower Limit Mapping Register

@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Mon Jun 23 03:10:15 2014
- *                 Full Compile MD5 Checksum e63ead56985105e53762126b18fe3572
+ * Date:           Generated on              Thu Oct 16 03:13:05 2014
+ *                 Full Compile MD5 Checksum de9b89b7bd0a247e4ef34c06679b82b0
  *                   (minus title and desc)  
- *                 MD5 Checksum              b09a5415799edff59883995269342d83
+ *                 MD5 Checksum              a9d4bc4b03768cbf7bc9dcb3982ac3a9
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -1367,10 +1367,32 @@
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_en_osc_cmos_in_s3_SHIFT     16
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_en_osc_cmos_in_s3_DEFAULT   0x00000000
 
-/* AON_CTRL :: ANA_XTAL_CONTROL :: en_osc_cml_in_s3 [15:12] */
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_en_osc_cml_in_s3_MASK       0x0000f000
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_en_osc_cml_in_s3_SHIFT      12
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_en_osc_cml_in_s3_DEFAULT    0x00000000
+/* union - case bus [15:12] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bus :: en_osc_cml_in_s3 [15:12] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_en_osc_cml_in_s3_MASK   0x0000f000
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_en_osc_cml_in_s3_SHIFT  12
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_en_osc_cml_in_s3_DEFAULT 0x00000000
+
+/* union - case bit_blast [15:12] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: en_osc_cml_in_s3_rf4ce [15:15] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_rf4ce_MASK 0x00008000
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_rf4ce_SHIFT 15
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_rf4ce_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: en_osc_cml_in_s3_pcie_usb0 [14:14] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_pcie_usb0_MASK 0x00004000
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_pcie_usb0_SHIFT 14
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_pcie_usb0_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: en_osc_cml_in_s3_moca [13:13] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_moca_MASK 0x00002000
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_moca_SHIFT 13
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_moca_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: en_osc_cml_in_s3_us_top_wbadc [12:12] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_us_top_wbadc_MASK 0x00001000
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_us_top_wbadc_SHIFT 12
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_en_osc_cml_in_s3_us_top_wbadc_DEFAULT 0x00000000
 
 /* AON_CTRL :: ANA_XTAL_CONTROL :: osc_ldo_ctrl [11:08] */
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_ldo_ctrl_MASK           0x00000f00
@@ -1382,10 +1404,32 @@
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_select_current_gisb_control_SHIFT 7
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_select_current_gisb_control_DEFAULT 0x00000000
 
-/* AON_CTRL :: ANA_XTAL_CONTROL :: osc_cml_sel_pd [06:03] */
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_MASK         0x00000078
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_SHIFT        3
-#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_cml_sel_pd_DEFAULT      0x00000000
+/* union - case bus [06:03] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bus :: osc_cml_sel_pd [06:03] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_MASK     0x00000078
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_SHIFT    3
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bus_osc_cml_sel_pd_DEFAULT  0x00000000
+
+/* union - case bit_blast [06:03] */
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_rf4ce [06:06] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_rf4ce_MASK 0x00000040
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_rf4ce_SHIFT 6
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_rf4ce_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_pcie_usb0 [05:05] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie_usb0_MASK 0x00000020
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie_usb0_SHIFT 5
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_pcie_usb0_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_moca [04:04] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_moca_MASK 0x00000010
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_moca_SHIFT 4
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_moca_DEFAULT 0x00000000
+
+/* AON_CTRL :: ANA_XTAL_CONTROL :: bit_blast :: osc_cml_sel_pd_us_top_wbadc [03:03] */
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_us_top_wbadc_MASK 0x00000008
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_us_top_wbadc_SHIFT 3
+#define BCHP_AON_CTRL_ANA_XTAL_CONTROL_bit_blast_osc_cml_sel_pd_us_top_wbadc_DEFAULT 0x00000000
 
 /* AON_CTRL :: ANA_XTAL_CONTROL :: osc_d2cbias_gisb_control [02:00] */
 #define BCHP_AON_CTRL_ANA_XTAL_CONTROL_osc_d2cbias_gisb_control_MASK 0x00000007

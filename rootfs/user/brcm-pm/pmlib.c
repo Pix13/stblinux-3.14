@@ -1,28 +1,28 @@
 /*---------------------------------------------------------------------------
 
-    Copyright (c) 2001-2007 Broadcom Corporation                 /\
-                                                          _     /  \     _
+    Broadcom                                                     /\
+    Connecting everything(R)                              _     /  \     _
     _____________________________________________________/ \   /    \   / \_
-                                                            \_/      \_/  
+                                                            \_/      \_/
 
- Copyright (c) 2007 Broadcom Corporation
+ Copyright (c) 2007-2014 Broadcom Corporation
  All rights reserved.
- 
+
  Redistribution and use of this software in source and binary forms, with or
  without modification, are permitted provided that the following conditions
  are met:
- 
+
  * Redistributions of source code must retain the above copyright notice,
    this list of conditions and the following disclaimer.
- 
+
  * Redistributions in binary form must reproduce the above copyright notice,
    this list of conditions and the following disclaimer in the documentation
    and/or other materials provided with the distribution.
- 
+
  * Neither the name of Broadcom Corporation nor the names of its contributors
    may be used to endorse or promote products derived from this software
    without specific prior written permission of Broadcom Corporation.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -40,9 +40,6 @@
  Description:
  Power management API for Broadcom STB/DTV peripherals
 
-    when        who         what
-    -----       ---         ----
-    20071030    cernekee    initial version
  ------------------------------------------------------------------------- */
 
 #include <stdlib.h>
@@ -67,11 +64,10 @@
 
 #include <pmlib.h>
 
-struct brcm_pm_priv
-{
-	struct brcm_pm_state	last_state;
-	struct brcm_pm_cfg	cfg;
-	int			has_eth1;
+struct brcm_pm_priv {
+	struct brcm_pm_state last_state;
+	struct brcm_pm_cfg cfg;
+	int has_eth1;
 };
 
 #define BUF_SIZE	64
@@ -82,8 +78,9 @@ struct brcm_pm_priv
 #define SYS_TP1_STAT	"/sys/devices/system/cpu/cpu1/online"
 #define SYS_TP2_STAT	"/sys/devices/system/cpu/cpu2/online"
 #define SYS_TP3_STAT	"/sys/devices/system/cpu/cpu3/online"
-#define SYS_CPU_KHZ	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed"
-#define SYS_CPUFREQ_AVAIL	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies"
+#define SYS_CPUFREQ_CUR_FREQ "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq"
+#define SYS_CPUFREQ_SETSPEED "/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed"
+#define SYS_CPUFREQ_AVAIL "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies"
 #define SYS_CPUFREQ_GOV	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 #define SYS_STANDBY	"/sys/power/state"
 #define HALT_PATH	"/sbin/halt"
@@ -101,18 +98,17 @@ static int sysfs_get(char *path, unsigned int *out)
 	char buf[BUF_SIZE];
 
 	f = fopen(path, "r");
-	if(! f)
-		return(-1);
-	if(fgets(buf, BUF_SIZE, f) != buf)
-	{
+	if (!f)
+		return -1;
+	if (fgets(buf, BUF_SIZE, f) != buf) {
 		fclose(f);
-		return(-1);
+		return -1;
 	}
 	fclose(f);
-	if(sscanf(buf, "0x%x", &tmp) != 1 && sscanf(buf, "%u", &tmp) != 1)
-		return(-1);
+	if (sscanf(buf, "0x%x", &tmp) != 1 && sscanf(buf, "%u", &tmp) != 1)
+		return -1;
 	*out = tmp;
-	return(0);
+	return 0;
 }
 
 static int sysfs_set(char *path, int in)
@@ -121,16 +117,15 @@ static int sysfs_set(char *path, int in)
 	char buf[BUF_SIZE];
 
 	f = fopen(path, "w");
-	if(! f)
-		return(-1);
+	if (!f)
+		return -1;
 	sprintf(buf, "%u", in);
-	if((fputs(buf, f) < 0) || (fflush(f) < 0))
-	{
+	if ((fputs(buf, f) < 0) || (fflush(f) < 0)) {
 		fclose(f);
-		return(-1);
+		return -1;
 	}
 	fclose(f);
-	return(0);
+	return 0;
 }
 
 static int sysfs_set_string(char *path, const char *in)
@@ -138,31 +133,33 @@ static int sysfs_set_string(char *path, const char *in)
 	FILE *f;
 
 	f = fopen(path, "w");
-	if(! f)
-		return(-1);
-	if((fputs(in, f) < 0) || (fflush(f) < 0))
-	{
+	if (!f)
+		return -1;
+	if ((fputs(in, f) < 0) || (fflush(f) < 0)) {
 		fclose(f);
-		return(-1);
+		return -1;
 	}
 	fclose(f);
-	return(0);
+	return 0;
 }
 
 static int sysfs_get_string(char *path, char *in, int size)
 {
 	FILE *f;
+	size_t len;
 
 	f = fopen(path, "r");
 	if (!f)
-		return(-1);
-	if (fgets(in, size, f) < 0)
-	{
+		return -1;
+	if (fgets(in, size, f) < 0) {
 		fclose(f);
-		return(-1);
+		return -1;
 	}
 	fclose(f);
-	return(0);
+	len = strnlen(in, size);
+	if (in[len-1] == '\n')
+		in[len-1] = '\0';
+	return 0;
 }
 
 static int run(char *prog, ...)
@@ -175,29 +172,27 @@ static int run(char *prog, ...)
 	va_start(ap, prog);
 
 	pid = fork();
-	if(pid < 0)
-		return(-1);
-	
-	if(pid != 0)
-	{
+	if (pid < 0)
+		return -1;
+
+	if (pid != 0) {
 		wait(&status);
 		va_end(ap);
-		return(WEXITSTATUS(status) ? -1 : 0);
+		return WEXITSTATUS(status) ? -1 : 0;
 	}
 
 	/* child */
 	args[0] = prog;
-	do
-	{
+	do {
 		a = va_arg(ap, char *);
 		args[i++] = a;
-	} while(a);
+	} while (a);
 
 	execv(prog, args);
 	_exit(1);
 
-	va_end(ap);	/* never reached */
-	return(0);
+	va_end(ap);		/* never reached */
+	return 0;
 }
 
 static int brcm_pm_eth1_check(void)
@@ -208,8 +203,8 @@ static int brcm_pm_eth1_check(void)
 	int fd;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if(fd < 0)
-		return(0);
+	if (fd < 0)
+		return 0;
 
 	memset(&ifr, 0, sizeof(ifr));
 	memset(&drvinfo, 0, sizeof(drvinfo));
@@ -218,16 +213,16 @@ static int brcm_pm_eth1_check(void)
 	ifr.ifr_data = (caddr_t)&drvinfo;
 	strcpy(ifr.ifr_name, "eth1");
 
-	if(ioctl(fd, SIOCETHTOOL, &ifr) == 0) {
-		if(strcmp(drvinfo.driver, "BCMINTMAC") == 0)
+	if (ioctl(fd, SIOCETHTOOL, &ifr) == 0) {
+		if (strcmp(drvinfo.driver, "BCMINTMAC") == 0)
 			ret = 1;
-		if(strcmp(drvinfo.driver, "BCMUNIMAC") == 0)
+		if (strcmp(drvinfo.driver, "BCMUNIMAC") == 0)
 			ret = 1;
 	}
 
 	close(fd);
 
-	return(ret);
+	return ret;
 }
 
 void *brcm_pm_init(void)
@@ -235,28 +230,27 @@ void *brcm_pm_init(void)
 	struct brcm_pm_priv *ctx;
 
 	ctx = (void *)malloc(sizeof(*ctx));
-	if(! ctx)
+	if (!ctx)
 		goto bad;
 
 	/* this is the current PLL frequency going into the CPU */
-	if(sysfs_get(SYS_CPU_KHZ,
-		(unsigned int *)&ctx->last_state.cpu_base) != 0)
-	{
+	if (sysfs_get(SYS_CPUFREQ_CUR_FREQ,
+		      (unsigned int *)&ctx->last_state.cpu_base) != 0) {
 		/* cpufreq not supported on this platform */
 		ctx->last_state.cpu_base = BRCM_PM_UNDEF;
 	}
-	
-	if(brcm_pm_get_status(ctx, &ctx->last_state) != 0)
+
+	if (brcm_pm_get_status(ctx, &ctx->last_state) != 0)
 		goto bad_free;
-	
+
 	ctx->has_eth1 = brcm_pm_eth1_check();
-	
-	return(ctx);
+
+	return ctx;
 
 bad_free:
 	free(ctx);
 bad:
-	return(NULL);
+	return NULL;
 }
 
 void brcm_pm_close(void *vctx)
@@ -269,7 +263,7 @@ int brcm_pm_get_cfg(void *vctx, struct brcm_pm_cfg *cfg)
 	struct brcm_pm_priv *ctx = vctx;
 
 	*cfg = ctx->cfg;
-	return(0);
+	return 0;
 }
 
 int brcm_pm_set_cfg(void *vctx, struct brcm_pm_cfg *cfg)
@@ -277,13 +271,13 @@ int brcm_pm_set_cfg(void *vctx, struct brcm_pm_cfg *cfg)
 	struct brcm_pm_priv *ctx = vctx;
 
 	ctx->cfg = *cfg;
-	return(0);
+	return 0;
 }
 
 static int get_srpd_status(void)
 {
 	glob_t g;
-	int i, ret = 0;
+	int i;
 	unsigned int val = 0;
 
 	if (glob(SYS_SRPD_GLOB, GLOB_NOSORT, NULL, &g) != 0)
@@ -305,7 +299,7 @@ static int get_srpd_status(void)
 static int set_srpd(int val)
 {
 	glob_t g;
-	int i, ret = 0;
+	int i;
 
 	if (val < 0)
 		return 1;
@@ -327,36 +321,32 @@ int brcm_pm_get_status(void *vctx, struct brcm_pm_state *st)
 	struct brcm_pm_priv *ctx = vctx;
 
 	/* read status from /proc */
-	if(sysfs_get(SYS_SATA_STAT, (unsigned int *)&st->sata_status) != 0) {
+	if (sysfs_get(SYS_SATA_STAT, (unsigned int *)&st->sata_status) != 0)
 		st->sata_status = BRCM_PM_UNDEF;
-	}
-	if(sysfs_get(SYS_TP1_STAT, (unsigned int *)&st->tp1_status) != 0) {
+	if (sysfs_get(SYS_TP1_STAT, (unsigned int *)&st->tp1_status) != 0)
 		st->tp1_status = BRCM_PM_UNDEF;
-	}
-	if(sysfs_get(SYS_TP2_STAT, (unsigned int *)&st->tp2_status) != 0) {
+	if (sysfs_get(SYS_TP2_STAT, (unsigned int *)&st->tp2_status) != 0)
 		st->tp2_status = BRCM_PM_UNDEF;
-	}
-	if(sysfs_get(SYS_TP3_STAT, (unsigned int *)&st->tp3_status) != 0) {
+	if (sysfs_get(SYS_TP3_STAT, (unsigned int *)&st->tp3_status) != 0)
 		st->tp3_status = BRCM_PM_UNDEF;
-	}
-	if(sysfs_get(SYS_CPU_KHZ, (unsigned int *)&st->cpu_base) != 0) {
+	if (sysfs_get(SYS_CPUFREQ_CUR_FREQ, (unsigned int *)&st->cpu_base) != 0)
 		st->cpu_base = BRCM_PM_UNDEF;
-	}
-	if(sysfs_get_string(SYS_CPUFREQ_AVAIL, st->cpufreq_avail,
-			    CPUFREQ_AVAIL_MAXLEN) != 0) {
+	if (sysfs_get(SYS_CPUFREQ_SETSPEED,
+				(unsigned int *)&st->cpufreq_setspeed) != 0)
+		st->cpufreq_setspeed = BRCM_PM_UNDEF;
+	if (sysfs_get_string(SYS_CPUFREQ_AVAIL, st->cpufreq_avail,
+			     CPUFREQ_AVAIL_MAXLEN) != 0)
 		strcpy(st->cpufreq_avail, "");
-	}
-	if(sysfs_get_string(SYS_CPUFREQ_GOV, st->cpufreq_gov,
-			    CPUFREQ_GOV_MAXLEN) != 0) {
+	if (sysfs_get_string(SYS_CPUFREQ_GOV, st->cpufreq_gov,
+			     CPUFREQ_GOV_MAXLEN) != 0)
 		strcpy(st->cpufreq_gov, "");
-	}
 
 	st->srpd_status = get_srpd_status();
 
-	if(st != &ctx->last_state)
+	if (st != &ctx->last_state)
 		memcpy(&ctx->last_state, st, sizeof(*st));
 
-	return(0);
+	return 0;
 }
 
 static int sata_rescan_hosts(void)
@@ -364,14 +354,14 @@ static int sata_rescan_hosts(void)
 	glob_t g;
 	int i, ret = 0;
 
-	if(glob(SATA_RESCAN_GLOB, GLOB_NOSORT, NULL, &g) != 0)
-		return(-1);
+	if (glob(SATA_RESCAN_GLOB, GLOB_NOSORT, NULL, &g) != 0)
+		return -1;
 
-	for(i = 0; i < (int)g.gl_pathc; i++)
+	for (i = 0; i < (int)g.gl_pathc; i++)
 		ret |= sysfs_set_string(g.gl_pathv[i], "0 - 0");
 	globfree(&g);
 
-	return(ret);
+	return ret;
 }
 
 static int sata_delete_devices(void)
@@ -379,23 +369,23 @@ static int sata_delete_devices(void)
 	glob_t g;
 	int i, ret = 0;
 
-	if(glob(SATA_DELETE_GLOB, GLOB_NOSORT, NULL, &g) != 0)
-		return(0);
+	if (glob(SATA_DELETE_GLOB, GLOB_NOSORT, NULL, &g) != 0)
+		return 0;
 
-	for(i = 0; i < (int)g.gl_pathc; i++)
+	for (i = 0; i < (int)g.gl_pathc; i++)
 		ret |= sysfs_set(g.gl_pathv[i], 1);
 
 	globfree(&g);
 
-	return(ret);
+	return ret;
 }
 
-static int sata_power_up()
+static int sata_power_up(void)
 {
 	return sysfs_set_string(SATA_BIND_PATH, AHCI_DEV_NAME);
 }
 
-static int sata_power_down()
+static int sata_power_down(void)
 {
 	return sysfs_set_string(SATA_UNBIND_PATH, AHCI_DEV_NAME);
 }
@@ -409,10 +399,12 @@ int brcm_pm_set_status(void *vctx, struct brcm_pm_state *st)
 	((st->element != BRCM_PM_UNDEF) && \
 	 (st->element != ctx->last_state.element))
 
-	if(CHANGED(sata_status))
-	{
-		if(st->sata_status)
-		{
+#define CHANGED_STRING(element, maxlen) \
+	((st->element && ctx->last_state.element) && \
+	 (strncmp(st->element, ctx->last_state.element, maxlen)) != 0)
+
+	if (CHANGED(sata_status)) {
+		if (st->sata_status) {
 			ret |= sata_power_up();
 			ret |= sata_rescan_hosts();
 		} else {
@@ -425,50 +417,39 @@ int brcm_pm_set_status(void *vctx, struct brcm_pm_state *st)
 		ctx->last_state.sata_status = st->sata_status;
 	}
 
-	if(CHANGED(tp1_status))
-	{
+	if (CHANGED(tp1_status))
 		ret |= sysfs_set(SYS_TP1_STAT, st->tp1_status);
-	}
 
-	if(CHANGED(tp2_status))
-	{
+	if (CHANGED(tp2_status))
 		ret |= sysfs_set(SYS_TP2_STAT, st->tp2_status);
-	}
 
-	if(CHANGED(tp3_status))
-	{
+	if (CHANGED(tp3_status))
 		ret |= sysfs_set(SYS_TP3_STAT, st->tp3_status);
-	}
 
-	if(CHANGED(cpufreq_gov))
-	{
+	if (CHANGED_STRING(cpufreq_gov, CPUFREQ_GOV_MAXLEN))
 		ret |= sysfs_set_string(SYS_CPUFREQ_GOV, st->cpufreq_gov);
-	}
 
-	if(CHANGED(cpu_base))
-	{
-		ret |= sysfs_set(SYS_CPU_KHZ, st->cpu_base);
-	}
+	if (CHANGED(cpufreq_setspeed))
+		ret |= sysfs_set(SYS_CPUFREQ_SETSPEED, st->cpufreq_setspeed);
 
-	if(CHANGED(srpd_status))
-	{
+	if (CHANGED(srpd_status))
 		ret |= set_srpd(st->srpd_status);
-	}
 
 #undef CHANGED
+#undef CHANGED_STRING
 
-	return(ret);
+	return ret;
 }
 
 int brcm_pm_suspend(void *vctx, int suspend_mode)
 {
-	if(suspend_mode == BRCM_PM_STANDBY)
+	if (suspend_mode == BRCM_PM_STANDBY)
 		return sysfs_set_string(SYS_STANDBY, "standby");
-	if(suspend_mode == BRCM_PM_SUSPEND)
+	if (suspend_mode == BRCM_PM_SUSPEND)
 		return sysfs_set_string(SYS_STANDBY, "mem");
-	if(suspend_mode == BRCM_PM_HIBERNATE)
+	if (suspend_mode == BRCM_PM_HIBERNATE)
 		return sysfs_set_string(SYS_STANDBY, "disk");
-	if(suspend_mode == BRCM_PM_IRW_HALT)
+	if (suspend_mode == BRCM_PM_IRW_HALT)
 		return run(HALT_PATH, NULL);
 	return -1;
 }

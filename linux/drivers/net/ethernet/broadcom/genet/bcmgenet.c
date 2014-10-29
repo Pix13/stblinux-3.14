@@ -2544,10 +2544,8 @@ static void bcmgenet_of_parse(struct device_node *dn,
 	priv->phy_addr = 10;
 	priv->phy_speed = SPEED_1000;
 
-	if (!of_property_read_u32(dn, "phy-type", &propval)) {
-		priv->old_dt_binding = 1;
+	if (!of_property_read_u32(dn, "phy-type", &propval))
 		priv->phy_type = propval;
-	}
 	if (!of_property_read_u32(dn, "phy-id", &propval))
 		priv->phy_addr = propval;
 	if (!of_property_read_u32(dn, "phy-speed", &propval))

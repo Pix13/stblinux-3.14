@@ -1697,7 +1697,7 @@ out:
 	pte_unmap(pte);
 	return ret;
 #else
-	return 0;
+	return -ENOSYS;
 #endif
 }
 #endif

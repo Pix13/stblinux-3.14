@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Sat Jun 21 03:10:24 2014
- *                 Full Compile MD5 Checksum 2d7cd2763f1ef55897eaef5ea8fc6daa
+ * Date:           Generated on              Thu Oct 16 03:13:10 2014
+ *                 Full Compile MD5 Checksum de9b89b7bd0a247e4ef34c06679b82b0
  *                   (minus title and desc)  
- *                 MD5 Checksum              ad87f49099acb161d3ffa5d223fcb978
+ *                 MD5 Checksum              a9d4bc4b03768cbf7bc9dcb3982ac3a9
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -645,10 +645,14 @@
 /***************************************************************************
  *POOL1_CFG3 - POOL1 Configuration Register 3
  ***************************************************************************/
-/* FPM_CTRL_FPM :: POOL1_CFG3 :: POOL_SEL [31:00] */
-#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_POOL_SEL_MASK                 0xffffffff
-#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_POOL_SEL_SHIFT                0
-#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_POOL_SEL_DEFAULT              0x00000001
+/* FPM_CTRL_FPM :: POOL1_CFG3 :: POOL_BASE_ADDRESS_POOL2 [31:02] */
+#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_POOL_BASE_ADDRESS_POOL2_MASK  0xfffffffc
+#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_POOL_BASE_ADDRESS_POOL2_SHIFT 2
+#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_POOL_BASE_ADDRESS_POOL2_DEFAULT 0x00000000
+
+/* FPM_CTRL_FPM :: POOL1_CFG3 :: reserved0 [01:00] */
+#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_reserved0_MASK                0x00000003
+#define BCHP_FPM_CTRL_FPM_POOL1_CFG3_reserved0_SHIFT               0
 
 /***************************************************************************
  *POOL1_STAT1 - POOL1 Status Register 1

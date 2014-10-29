@@ -46,6 +46,7 @@
 #include <linux/clk-provider.h>
 #include <linux/clk/clk-brcmstb.h>
 #include <linux/netdevice.h>
+#include <linux/suspend.h>
 
 #define DRV_VERSION		0x00040000
 #define DRV_BUILD_NUMBER	0x20110831
@@ -124,7 +125,18 @@
 #define M2M_READ		(BIT(30) | BIT(27))
 #endif
 
-#define M2M_TIMEOUT_MS		10
+#define RESET_HIGH_CPU		BIT(0)
+#define RESET_MOCA_SYS		BIT(1)
+#define RESET_LOW_CPU		BIT(2)
+
+#define RESET_GMII		BIT(3)
+#define RESET_PHY_0		BIT(4)
+#define RESET_PHY_1		BIT(5)
+#define DISABLE_CLOCKS		BIT(7)
+#define DISABLE_PHY_0_CLOCK	BIT(8)
+#define DISABLE_PHY_1_CLOCK	BIT(9)
+
+#define M2M_TIMEOUT_MS		100
 
 #define NO_FLUSH_IRQ		0
 #define FLUSH_IRQ		1
@@ -132,6 +144,7 @@
 #define FLUSH_REQRESP_ONLY	3
 
 #define DEFAULT_PHY_CLOCK	(300 * 1000000)
+#define MOCA_SUSPEND_TIMEOUT_MS 300
 
 /* DMA buffers may not share a cache line with anything else */
 #define __DMA_ALIGN__		__aligned(L1_CACHE_BYTES)
@@ -243,6 +256,11 @@ struct moca_priv_data {
 	unsigned int		host_resp_offset;
 	unsigned int		core_req_offset;
 	unsigned int		core_resp_offset;
+
+	/* for user space suspend/resume notifications */
+	struct notifier_block	pm_notifier;
+	enum moca_pm_states	state;
+	struct completion	suspend_complete;
 };
 
 static const struct moca_regs regs_11_plus = {
@@ -365,6 +383,15 @@ struct bsc_regs {
 	u32			data_out[8];
 	u32			ctlhi_reg;
 	u32			scl_param;
+};
+
+static const char * const __maybe_unused moca_state_string[] = {
+	[MOCA_ACTIVE] = "active",
+	[MOCA_SUSPENDING] = "suspending",
+	[MOCA_SUSPENDING_WAITING_ACK] = "suspending waiting for ACK",
+	[MOCA_SUSPENDING_GOT_ACK] = "suspending got ACK",
+	[MOCA_SUSPENDED] = "suspended",
+	[MOCA_RESUMING] = "resuming",
 };
 
 /* support for multiple MoCA devices */
@@ -490,21 +517,19 @@ static void moca_hw_reset(struct moca_priv_data *priv)
 	/* assert resets */
 
 	/* reset CPU first, both CPUs for MoCA 20 HW */
-	if (moca_is_20(priv))
-		MOCA_SET(priv->base + r->sw_reset_offset, 5);
-	else
-		MOCA_SET(priv->base + r->sw_reset_offset, 1);
-
+	MOCA_SET(priv->base + r->sw_reset_offset, RESET_HIGH_CPU |
+		 (moca_is_20(priv) ? RESET_LOW_CPU : 0));
 	MOCA_RD(priv->base + r->sw_reset_offset);
 
 	udelay(20);
 
 	/* reset everything else except clocks */
-	MOCA_SET(priv->base + r->sw_reset_offset, ~(BIT(3) | BIT(7)));
+	MOCA_SET(priv->base + r->sw_reset_offset,
+		 ~(RESET_GMII | DISABLE_CLOCKS));
 	MOCA_RD(priv->base + r->sw_reset_offset);
 
 	/* disable clocks */
-	MOCA_SET(priv->base + r->sw_reset_offset, ~BIT(3));
+	MOCA_SET(priv->base + r->sw_reset_offset, ~RESET_GMII);
 	MOCA_RD(priv->base + r->sw_reset_offset);
 
 	MOCA_WR(priv->base + r->l2_clear_offset, 0xffffffff);
@@ -546,17 +571,18 @@ clk_err_chk:
 
 	if (action == MOCA_ENABLE) {
 		/* deassert moca_sys_reset and clock */
-		MOCA_UNSET(priv->base + r->sw_reset_offset, BIT(1) | BIT(7));
+		MOCA_UNSET(priv->base + r->sw_reset_offset,
+			   RESET_MOCA_SYS | DISABLE_CLOCKS);
 
 		if (priv->hw_rev >= HWREV_MOCA_20_GEN22) {
 			/* Take PHY0 out of reset and enable clock */
 			MOCA_UNSET(priv->base + r->sw_reset_offset,
-				   BIT(4) | BIT(8));
+				   RESET_PHY_0 | DISABLE_PHY_0_CLOCK);
 
 			if (priv->bonded_mode) {
 				/* Take PHY1 out of reset and enable clock */
 				MOCA_UNSET(priv->base + r->sw_reset_offset,
-					   BIT(5) | BIT(9));
+					   RESET_PHY_1 | DISABLE_PHY_1_CLOCK);
 			}
 		}
 		MOCA_RD(priv->base + r->sw_reset_offset);
@@ -663,13 +689,15 @@ static u32 moca_start_mips(struct moca_priv_data *priv, u32 cpu)
 
 	if (moca_is_20(priv)) {
 		if (cpu == 1)
-			MOCA_UNSET(priv->base + r->sw_reset_offset, BIT(0));
+			MOCA_UNSET(priv->base + r->sw_reset_offset,
+				   RESET_HIGH_CPU);
 		else {
 			moca_mmp_init(priv, 1);
-			MOCA_UNSET(priv->base + r->sw_reset_offset, BIT(2));
+			MOCA_UNSET(priv->base + r->sw_reset_offset,
+				   RESET_LOW_CPU);
 		}
 	} else
-		MOCA_UNSET(priv->base + r->sw_reset_offset, BIT(0));
+		MOCA_UNSET(priv->base + r->sw_reset_offset, RESET_HIGH_CPU);
 	MOCA_RD(priv->base + r->sw_reset_offset);
 	return 0;
 }
@@ -679,6 +707,7 @@ static void moca_m2m_xfer(struct moca_priv_data *priv,
 {
 	const struct moca_regs *r = priv->regs;
 	u32 status;
+	long timeout = msecs_to_jiffies(M2M_TIMEOUT_MS);
 
 	MOCA_WR(priv->base + r->m2m_src_offset, src);
 	MOCA_WR(priv->base + r->m2m_dst_offset, dst);
@@ -686,8 +715,7 @@ static void moca_m2m_xfer(struct moca_priv_data *priv,
 	MOCA_RD(priv->base + r->m2m_status_offset);
 	MOCA_WR(priv->base + r->m2m_cmd_offset, ctl);
 
-	if (wait_for_completion_timeout(&priv->copy_complete,
-		1000 * M2M_TIMEOUT_MS) <= 0) {
+	if (wait_for_completion_timeout(&priv->copy_complete, timeout) == 0) {
 		dev_warn(priv->dev, "DMA interrupt timed out, status %x\n",
 			 moca_irq_status(priv, NO_FLUSH_IRQ));
 	}
@@ -832,6 +860,7 @@ static int moca_write_img(struct moca_priv_data *priv, struct moca_xfer *x)
 	int pages, i, ret = -EINVAL;
 	struct moca_fw_hdr hdr;
 	u32 bl_chunks;
+	long timeout = msecs_to_jiffies(M2M_TIMEOUT_MS);
 
 	if (copy_from_user(&hdr, (void __user *)(unsigned long)x->buf,
 			sizeof(hdr)))
@@ -858,8 +887,8 @@ static int moca_write_img(struct moca_priv_data *priv, struct moca_xfer *x)
 
 	/* wait for an ACK, then write each successive chunk */
 	for (i = bl_chunks + 1; i < pages; i++) {
-		if (wait_for_completion_timeout(&priv->chunk_complete,
-				1000 * M2M_TIMEOUT_MS) <= 0) {
+		if (wait_for_completion_timeout(&priv->chunk_complete, timeout)
+		    == 0) {
 			moca_disable_irq(priv);
 			dev_warn(priv->dev, "chunk ack timed out\n");
 			ret = -EIO;
@@ -872,8 +901,7 @@ static int moca_write_img(struct moca_priv_data *priv, struct moca_xfer *x)
 
 	/* wait for ACK of last block.  Older firmware images didn't
 	   ACK the last block, so don't return an error */
-	wait_for_completion_timeout(&priv->chunk_complete,
-			1000 * M2M_TIMEOUT_MS / 10);
+	wait_for_completion_timeout(&priv->chunk_complete, timeout);
 
 out:
 	moca_put_pages(priv, pages);
@@ -1332,6 +1360,8 @@ static void moca_work_handler(struct work_struct *work)
 	u32 mask = 0;
 	int ret, stopped = 0;
 
+	mutex_lock(&priv->dev_mutex);
+
 	if (priv->enabled) {
 		mask = moca_irq_status(priv, FLUSH_IRQ);
 		if (mask & M2H_DMA) {
@@ -1350,6 +1380,7 @@ static void moca_work_handler(struct work_struct *work)
 		}
 
 		if (mask == 0) {
+			mutex_unlock(&priv->dev_mutex);
 			moca_enable_irq(priv);
 			return;
 		}
@@ -1358,13 +1389,12 @@ static void moca_work_handler(struct work_struct *work)
 			M2H_REQ_CPU0 | M2H_RESP_CPU0)) {
 			if (moca_get_mbx_offset(priv)) {
 				/* mbx interrupt but mbx_offset is bogus?? */
+				mutex_unlock(&priv->dev_mutex);
 				moca_enable_irq(priv);
 				return;
 			}
 		}
 	}
-
-	mutex_lock(&priv->dev_mutex);
 
 	if (!priv->running) {
 		stopped = 1;
@@ -1474,25 +1504,22 @@ static irqreturn_t moca_interrupt(int irq, void *arg)
 /*
  * BCM3450 ACCESS VIA I2C
  */
-
 static int moca_3450_wait(struct moca_priv_data *priv)
 {
 	struct bsc_regs *bsc = priv->i2c_base;
-	long timeout = HZ / 1000;	/* 1ms */
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wait);
-	int i = 0;
+	unsigned long time_left = jiffies + msecs_to_jiffies(50);
 
 	do {
 		if (I2C_RD(&bsc->iic_enable) & 2) {
 			I2C_WR(&bsc->iic_enable, 0);
 			return 0;
 		}
-		if (i++ > 50) {
+
+		if (time_after(jiffies, time_left)) {
 			I2C_WR(&bsc->iic_enable, 0);
 			dev_warn(priv->dev, "3450 I2C timed out\n");
-			return -1;
+			return -ETIMEDOUT;
 		}
-		sleep_on_timeout(&wait, timeout ? timeout : 1);
 	} while (1);
 }
 
@@ -1865,6 +1892,14 @@ static long moca_file_ioctl(struct file *file, unsigned int cmd,
 				priv->running = 1;
 		}
 		break;
+#ifdef CONFIG_PM
+	case MOCA_IOCTL_PM_SUSPEND:
+	case MOCA_IOCTL_PM_WOL:
+		if (priv->state == MOCA_SUSPENDING_WAITING_ACK)
+			complete(&priv->suspend_complete);
+		ret = 0;
+		break;
+#endif
 	case MOCA_IOCTL_STOP:
 		moca_msg_reset(priv);
 		moca_3450_init(priv, MOCA_DISABLE);
@@ -2161,10 +2196,34 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 	const u8 *macaddr;
 	const char *rfb;
 	const char *const of_rfb[MOCA_BAND_MAX + 1] = MOCA_BAND_NAMES;
+	u32 val;
 
 	memset(&pd, 0, sizeof(pd));
 
 	/* mandatory entries */
+
+	/* get the common clocks from bmoca node */
+	priv->clk = of_clk_get_by_name(of_node, "sw_moca");
+	if (IS_ERR(priv->clk)) {
+		dev_err(&pdev->dev,
+			"can't find sw_moca clk\n");
+		priv->clk = NULL;
+	}
+
+	priv->cpu_clk = of_clk_get_by_name(of_node, "sw_moca_cpu");
+	if (IS_ERR(priv->cpu_clk)) {
+		dev_err(&pdev->dev,
+			"can't find moca_cpu clk\n");
+		priv->cpu_clk = NULL;
+	}
+
+	priv->phy_clk = of_clk_get_by_name(of_node, "sw_moca_phy");
+	if (IS_ERR(priv->phy_clk)) {
+		dev_err(&pdev->dev,
+			"can't find moca_phy clk\n");
+		priv->phy_clk = NULL;
+	}
+
 	status = of_property_read_u32(of_node, "hw-rev", &pd.hw_rev);
 	if (status)
 		goto err;
@@ -2208,7 +2267,8 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 	}
 
 	/* optional entries */
-	of_property_read_u32(of_node, "i2c-base", &pd.bcm3450_i2c_base);
+	if (!of_property_read_u32(of_node, "i2c-base", &val))
+		pd.bcm3450_i2c_base = val;
 	of_property_read_u32(of_node, "i2c-addr", &pd.bcm3450_i2c_addr);
 	of_property_read_u32(of_node, "use-dma", &pd.use_dma);
 	of_property_read_u32(of_node, "use-spi", &pd.use_spi);
@@ -2226,6 +2286,213 @@ static const struct of_device_id bmoca_instance_match[] = {
 };
 
 MODULE_DEVICE_TABLE(bmoca, bmoca_instance_match);
+#endif
+
+#ifdef CONFIG_PM
+
+static int moca_in_reset(struct moca_priv_data *priv)
+{
+	/*
+	 * Make sure the mocad is not stopped
+	 */
+	if (!priv || !priv->running)
+		return 1;
+
+	if (MOCA_RD(priv->base + priv->regs->sw_reset_offset)
+	    & RESET_MOCA_SYS) {
+		/*
+		 * If we lost power to the block
+		 * (e.g. unclean S3 transition)
+		 */
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * Caller is assumed hold the mutex lock before changing the PM
+ * state
+ */
+static void moca_set_pm_state(struct moca_priv_data *priv,
+			      enum moca_pm_states state)
+{
+	dev_info(priv->dev, "state %s -> %s\n", moca_state_string[priv->state],
+		 moca_state_string[state]);
+	priv->state = state;
+}
+
+static int moca_send_reset_trap(struct moca_priv_data *priv)
+{
+	struct list_head *ml = NULL;
+	struct moca_core_msg *m;
+
+	ml = moca_detach_head(priv, &priv->core_msg_free_list);
+	if (ml == NULL) {
+		dev_warn(priv->dev, "no entries left on core_msg_free_list\n");
+		return -ENOMEM;
+	}
+
+	if (priv->mmp_20) {
+		/*
+		 * generate an IE_MOCA_RESET_REQUEST trap to the user space
+		 */
+		m = list_entry(ml, struct moca_core_msg, chain);
+		/* trap */
+		m->data[0] = cpu_to_be32(0x3);
+		/* length 12 bytes following this word */
+		m->data[1] = cpu_to_be32(12);
+		/* group 5, IE 0x805 = IE_MOCA_RESET_REQUEST */
+		m->data[3] = cpu_to_be32(0x111); /*cause */
+
+		m->data[2] = cpu_to_be32(0x50805);
+		m->data[4] = cpu_to_be32(0); /* mr_seq_num */
+		m->len = 20;
+		moca_attach_tail(priv, ml, &priv->core_msg_pend_list);
+		wake_up(&priv->core_msg_wq);
+	}
+
+	return 0;
+}
+
+static int moca_send_pm_trap(struct moca_priv_data *priv,
+					     enum moca_pm_states state)
+{
+	struct list_head *ml = NULL;
+	struct moca_core_msg *m;
+
+	ml = moca_detach_head(priv, &priv->core_msg_free_list);
+	if (ml == NULL) {
+		dev_warn(priv->dev, "no entries left on core_msg_free_list\n");
+		return -ENOMEM;
+	}
+
+	if (priv->mmp_20) {
+		/*
+		 * generate an IE_PM_NOTIFICATION trap to the user space
+		 */
+		m = list_entry(ml, struct moca_core_msg, chain);
+		m->data[0] = cpu_to_be32(0x3);
+		m->data[1] = cpu_to_be32(8);
+		m->data[2] = cpu_to_be32(0x11014);
+		m->data[3] = cpu_to_be32(state);
+		m->len = 16;
+		moca_attach_tail(priv, ml, &priv->core_msg_pend_list);
+		wake_up(&priv->core_msg_wq);
+	}
+
+	return 0;
+}
+
+static void moca_prepare_suspend(struct moca_priv_data *priv)
+{
+	int rc;
+	long timeout = msecs_to_jiffies(MOCA_SUSPEND_TIMEOUT_MS);
+
+	mutex_lock(&priv->dev_mutex);
+
+	if (moca_in_reset(priv)) {
+		dev_warn(priv->dev, "MoCA core powered off\n");
+		goto out;
+	}
+
+	switch (priv->state) {
+	case MOCA_ACTIVE:
+		/*
+		 * MOCA is active is online. Set state to MOCA_SUSPENDING and
+		 * notify user space daemon to go into hostless mode
+		 */
+		rc = moca_send_pm_trap(priv, MOCA_SUSPENDING);
+		if (rc != 0)
+			goto out;
+
+		moca_set_pm_state(priv, MOCA_SUSPENDING_WAITING_ACK);
+		mutex_unlock(&priv->dev_mutex);
+		/* wait for the ACK from mocad */
+		rc = wait_for_completion_timeout(&priv->suspend_complete,
+						 timeout);
+		if (!rc)
+			dev_err(priv->dev, "suspend timeout\n");
+
+		mutex_lock(&priv->dev_mutex);
+		break;
+	default:
+		dev_warn(priv->dev, "device not in MOCA_ACTIVE state\n");
+		break;
+	}
+
+out:
+	moca_set_pm_state(priv, MOCA_SUSPENDING_GOT_ACK);
+	mutex_unlock(&priv->dev_mutex);
+}
+
+static void moca_complete_resume(struct moca_priv_data *priv)
+{
+	int rc;
+
+	mutex_lock(&priv->dev_mutex);
+	if (moca_in_reset(priv)) {
+		dev_warn(priv->dev, "MoCA core in reset\n");
+		goto out;
+	}
+
+	if (priv->state != MOCA_RESUMING) {
+		dev_warn(priv->dev, "state %s should be %s\n",
+			 moca_state_string[priv->state],
+			 moca_state_string[MOCA_RESUMING]);
+		goto out;
+	}
+
+	/* Send a trap to moca firmware so that mocad resumes in host mode */
+	rc = moca_send_pm_trap(priv, MOCA_ACTIVE);
+	if (rc != 0)
+		dev_warn(priv->dev, "could not send MOCA_ACTIVE trap\n");
+
+out:
+	moca_set_pm_state(priv, MOCA_ACTIVE);
+	mutex_unlock(&priv->dev_mutex);
+}
+
+static int moca_pm_notifier(struct notifier_block *notifier,
+			     unsigned long pm_event,
+			     void *unused)
+{
+	struct moca_priv_data *priv = container_of(notifier,
+						   struct moca_priv_data,
+						   pm_notifier);
+	if (!priv->running) {
+		dev_warn(priv->dev, "%s: mocad not running\n",
+			 __func__);
+	}
+
+	switch (pm_event) {
+		dev_info(priv->dev, "%s for state %lu", __func__, pm_event);
+	case PM_HIBERNATION_PREPARE:
+	case PM_SUSPEND_PREPARE:
+		moca_prepare_suspend(priv);
+		break;
+	case PM_POST_HIBERNATION:
+	case PM_POST_SUSPEND:
+	case PM_POST_RESTORE:
+		moca_complete_resume(priv);
+		break;
+	case PM_RESTORE_PREPARE:
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+static int moca_register_pm_notifier(struct moca_priv_data *priv)
+{
+	priv->pm_notifier.notifier_call = moca_pm_notifier;
+	return register_pm_notifier(&priv->pm_notifier);
+}
+
+static int moca_unregister_pm_notifier(struct moca_priv_data *priv)
+{
+	return unregister_pm_notifier(&priv->pm_notifier);
+}
 #endif
 
 static int moca_probe(struct platform_device *pdev)
@@ -2249,10 +2516,6 @@ static int moca_probe(struct platform_device *pdev)
 	if (err)
 		goto bad;
 #endif
-	priv->clk = clk_get(&pdev->dev, "moca");
-	priv->cpu_clk = clk_get(&pdev->dev, "moca-cpu");
-	priv->phy_clk = clk_get(&pdev->dev, "moca-phy");
-
 	pd = pdev->dev.platform_data;
 	priv->hw_rev = pd->hw_rev;
 
@@ -2278,6 +2541,7 @@ static int moca_probe(struct platform_device *pdev)
 	init_waitqueue_head(&priv->core_msg_wq);
 	init_completion(&priv->copy_complete);
 	init_completion(&priv->chunk_complete);
+	init_completion(&priv->suspend_complete);
 
 	spin_lock_init(&priv->list_lock);
 	spin_lock_init(&priv->clock_lock);
@@ -2349,6 +2613,15 @@ static int moca_probe(struct platform_device *pdev)
 		priv->dev = NULL;
 	}
 
+#ifdef CONFIG_PM
+	err = moca_register_pm_notifier(priv);
+	if (err) {
+		dev_err(&pdev->dev, "register_pm_notifier failed err %d\n",
+			err);
+		goto bad2;
+	}
+#endif
+
 	return 0;
 
 bad2:
@@ -2367,6 +2640,7 @@ static int moca_remove(struct platform_device *pdev)
 	struct clk *clk = priv->clk;
 	struct clk *phy_clk = priv->phy_clk;
 	struct clk *cpu_clk = priv->cpu_clk;
+	int err = 0;
 
 	if (priv->dev)
 		device_destroy(moca_class, MKDEV(MOCA_MAJOR, priv->minor));
@@ -2377,26 +2651,94 @@ static int moca_remove(struct platform_device *pdev)
 		iounmap(priv->i2c_base);
 	if (priv->base)
 		iounmap(priv->base);
-	kfree(priv);
 
 	clk_put(cpu_clk);
 	clk_put(phy_clk);
 	clk_put(clk);
 
-	return 0;
+#ifdef CONFIG_PM
+	err = moca_unregister_pm_notifier(priv);
+	if (err) {
+		dev_err(&pdev->dev, "unregister_pm_notifier failed err %d\n",
+			err);
+	}
+#endif
+	kfree(priv);
+
+	return err;
 }
 
 #ifdef CONFIG_PM
 static int moca_suspend(struct device *dev)
 {
-	/* do not do anything on suspend.
-	MoCA core is not necessarily stopped */
+	int minor;
+	for (minor = 0; minor < NUM_MINORS; minor++) {
+		struct moca_priv_data *priv = minor_tbl[minor];
+		if (priv && priv->enabled) {
+			mutex_lock(&priv->dev_mutex);
 
+			/* check if either moca core in reset or
+			 * mocad has been killed
+			 */
+			if (moca_in_reset(priv)) {
+				moca_set_pm_state(priv, MOCA_SUSPENDED);
+				mutex_unlock(&priv->dev_mutex);
+				return 0;
+			}
+
+			switch (priv->state) {
+			case MOCA_SUSPENDING_GOT_ACK:
+				moca_set_pm_state(priv, MOCA_SUSPENDED);
+				break;
+
+			case MOCA_SUSPENDING:
+			case MOCA_SUSPENDING_WAITING_ACK:
+			default:
+				dev_warn(priv->dev, "state %s should be %s\n",
+				 moca_state_string[priv->state],
+				 moca_state_string[MOCA_SUSPENDING_GOT_ACK]);
+			}
+			mutex_unlock(&priv->dev_mutex);
+		}
+	}
 	return 0;
 }
 
 static int moca_resume(struct device *dev)
 {
+	int minor;
+	int rc;
+
+	for (minor = 0; minor < NUM_MINORS; minor++) {
+		struct moca_priv_data *priv = minor_tbl[minor];
+		if (priv && priv->enabled) {
+			if (moca_in_reset(priv)) {
+				/*
+				 * If we lost power to the block
+				 * (e.g. unclean S3 transition), but
+				 * the driver still thinks the core is
+				 * enabled, try to get things back in
+				 * sync.
+				 */
+				priv->enabled = 0;
+				dev_warn(priv->dev, "S3 : sending moca reset\n");
+				moca_msg_reset(priv);
+				rc = moca_send_reset_trap(priv);
+				if (rc)
+					dev_dbg(priv->dev,
+						"S3 : moca reset failed\n");
+			}
+
+			mutex_lock(&priv->dev_mutex);
+			if (priv->enabled && priv->state != MOCA_SUSPENDED)
+				dev_warn(priv->dev, "state %s should be %s\n",
+					 moca_state_string[priv->state],
+					 moca_state_string[MOCA_SUSPENDED]);
+
+			moca_set_pm_state(priv, MOCA_RESUMING);
+			mutex_unlock(&priv->dev_mutex);
+		}
+	}
 	return 0;
 }
 
