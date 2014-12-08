@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -11,7 +12,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <libgen.h>
-#include "cmatest.h"
+#include <linux/brcmstb/cma_driver.h>
 
 #define PAGE_SIZE 4096
 #define TEST_BFR_LEN (64 * PAGE_SIZE)
@@ -19,6 +20,8 @@
 #define MAX_DESC_LEN 64
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define BUG_PRINT(ret) fprintf(stderr, "bug @ line %d (%d)\n", __LINE__, (ret))
+
+static const char *DEFAULT_CMA_FD = "/dev/brcm_cma0";
 
 enum cmd_index {
 	CMD_ALLOC = 0,
@@ -80,7 +83,7 @@ static int cma_get_mem(int fd, uint32_t dev_index, uint32_t num_bytes,
 
 	ret = ioctl(fd, CMA_DEV_IOC_GETMEM, &get_mem_p);
 	if (ret != 0) {
-		printf("	ioctl failed (%d)\n", ret);
+		printf("ioctl failed (%d)\n", ret);
 		return ret;
 	}
 
@@ -88,9 +91,9 @@ static int cma_get_mem(int fd, uint32_t dev_index, uint32_t num_bytes,
 
 	ret = get_mem_p.status;
 	if (ret == 0)
-		printf("	alloc PA=%llxh LEN=%xh\n", *addr, num_bytes);
+		printf("alloc PA=0x%llx LEN=0x%x\n", *addr, num_bytes);
 	else
-		printf("	alloc PA=%llxh LEN=%xh failed (%d)\n", *addr,
+		printf("alloc PA=0x%llx LEN=0x%x failed (%d)\n", *addr,
 			num_bytes, ret);
 
 	return ret;
@@ -114,9 +117,9 @@ static int cma_put_mem(int fd, uint32_t dev_index, uint64_t addr,
 
 	ret = put_mem_p.status;
 	if (ret == 0)
-		printf("	freed PA=%llxh LEN=%xh\n", addr, num_bytes);
+		printf("freed PA=0x%llx LEN=0x%x\n", addr, num_bytes);
 	else
-		printf("	freed PA=%llxh LEN=%xh failed (%d)\n", addr,
+		printf("failed to free PA=0x%llx LEN=0x%x (%d)\n", addr,
 			num_bytes, ret);
 
 	return ret;
@@ -141,10 +144,10 @@ static int cma_get_phys_info(int fd, uint32_t dev_index, uint64_t *addr,
 		*addr = physinfo_p.addr;
 		*num_bytes = physinfo_p.num_bytes;
 		*memc = physinfo_p.memc;
-		printf("	physinfo PA=%llxh LEN=%xh MEMC=%d\n",
-		       *addr, *num_bytes, *memc);
+		printf("region %-2u   0x%016llx-0x%016llx %12u (MEMC%d)\n",
+		       dev_index, *addr, *addr + *num_bytes, *num_bytes, *memc);
 	} else
-		printf("	getphysinfo failed\n");
+		printf("getphysinfo failed\n");
 
 	return ret;
 }
@@ -187,10 +190,10 @@ static int cma_get_region_info(int fd, uint32_t dev_index, uint32_t region_num,
 	*num_bytes = getreginfo_p.num_bytes;
 
 	if (!ret) {
-		printf("	memc=%d addr=%llxh num_bytes=%xh\n", *memc,
-			*addr, *num_bytes);
+		printf("  alloc     0x%016llx-0x%016llx %12u\n", *addr, *addr+*num_bytes,
+		       *num_bytes);
 	} else
-		printf("	%s failed (%d)\n", __func__, ret);
+		printf("%s failed (%d)\n", __func__, ret);
 
 	return ret;
 }
@@ -236,8 +239,6 @@ static int list_one(int fd, uint32_t cma_dev_index)
 		goto done;
 	}
 
-	printf("num regions = %d\n", num_regions);
-
 	for (i = 0; i < num_regions; i++) {
 		int32_t reg_memc;
 		uint64_t addr;
@@ -250,10 +251,6 @@ static int list_one(int fd, uint32_t cma_dev_index)
 			BUG_PRINT(ret);
 			goto done;
 		}
-
-		printf("memc[%d]      = %xh\n", i, memc);
-		printf("addr[%d]      = %llxh\n", i, addr);
-		printf("num_bytes[%d] = %xh\n", i, num_bytes);
 	}
 
 done:
@@ -578,7 +575,7 @@ static void cma_mmap(int cma_fd, uint32_t base, uint32_t len, char *path)
 		return;
 	}
 
-	printf("mmap() base=%xh len=%xh at va=%xh\n", base, len, align_va);
+	printf("mmap() base=0x%x len=0x%x at va=%ph\n", base, len, align_va);
 	mem = mmap(align_va, len, PROT_READ | PROT_WRITE,
 		   MAP_SHARED | MAP_FIXED, cma_fd, base);
 
@@ -632,15 +629,19 @@ static void show_usage(char *argv)
 	int i;
 	char *execname = basename(argv);
 
-	printf("usage: %s <device> <command> <args...>\n", execname);
-	printf("\ncommands <args...>:\n");
+	printf("Usage: %s [device] <command> <args...>\n\n", execname);
+	printf("Commands:\n");
 
 	for (i = 0; i < (int)ARRAY_SIZE(cmds); i++)
 		printf("    %-9s %s\n", cmds[i].cmd_name, cmds[i].desc);
 
-	printf("\nexamples:\n");
+	printf("Examples:\n");
+	printf("    %s alloc 2 0x1000 0x0\n", execname);
+	printf("    %s unittest\n\n", execname);
 	printf("    %s /dev/brcm_cma0 alloc 2 0x1000 0x0\n", execname);
 	printf("    %s /dev/brcm_cma0 unittest\n\n", execname);
+
+	printf("If device is not provided, it defaults to /dev/brcm_cma0.\n");
 }
 
 static enum cmd_index check_cmd(char *exec, const char *str, int num_opts)
@@ -663,25 +664,46 @@ static enum cmd_index check_cmd(char *exec, const char *str, int num_opts)
 	return cmd_idx;
 }
 
+/* read hex or dec depending on starting "0x" */
+static int hex_or_dec_input_u32(char *str, uint32_t *bytes)
+{
+	if (strstr(str, "0x") == str)
+		return sscanf(str, "%x", bytes);
+	else
+		return sscanf(str, "%u", bytes);
+}
+
 int main(int argc, char *argv[])
 {
 	int fd;
 	int ret = 0;
 	enum cmd_index cmd_idx;
+	int cmd_argc;
+	char **cmd_argv;
+	const char *device_path;
 
-	if (argc < 3) {
+	if (argc > 2 && strstr(argv[1], "/dev") == argv[1]) {
+		/* We got the optional device arg */
+		device_path = argv[1];
+		cmd_argc = argc - 3; /* minus exec, cmd, path */
+		cmd_idx = check_cmd(argv[0], argv[2], cmd_argc);
+		cmd_argv = &argv[3];
+	} else if (argc > 1) {
+		device_path = DEFAULT_CMA_FD;
+		cmd_argc = argc - 2; /* minus exec, cmd */
+		cmd_idx = check_cmd(argv[0], argv[1], cmd_argc);
+		cmd_argv = &argv[2];
+	} else {
 		show_usage(argv[0]);
 		return -1;
 	}
 
-	fd = open(argv[1], O_RDWR);
+	fd = open(device_path, O_RDWR);
 	if (fd < 0) {
-		printf("couldn't open device %s\n", argv[1]);
+		printf("couldn't open device %s\n", device_path);
 		goto done;
 	}
 
-	cmd_idx = check_cmd(argv[0], argv[2],
-			argc - 3 /* minus exec, file, cmd */);
 	switch (cmd_idx) {
 	case CMD_ALLOC: {
 		uint32_t cma_dev_index;
@@ -689,9 +711,9 @@ int main(int argc, char *argv[])
 		uint32_t align_bytes;
 		uint64_t addr;
 
-		sscanf(argv[3], "%x", &cma_dev_index);
-		sscanf(argv[4], "%x", &num_bytes);
-		sscanf(argv[5], "%x", &align_bytes);
+		sscanf(cmd_argv[0], "%u", &cma_dev_index);
+		hex_or_dec_input_u32(cmd_argv[1], &num_bytes);
+		hex_or_dec_input_u32(cmd_argv[2], &align_bytes);
 
 		ret = cma_get_mem(fd, cma_dev_index, num_bytes, align_bytes,
 			&addr);
@@ -700,7 +722,7 @@ int main(int argc, char *argv[])
 			goto done;
 		}
 
-		printf("PA=%llxh\n", addr);
+		printf("PA=0x%llx\n", addr);
 		break;
 	}
 	case CMD_FREE: {
@@ -708,9 +730,9 @@ int main(int argc, char *argv[])
 		uint64_t addr;
 		uint32_t num_bytes;
 
-		sscanf(argv[3], "%x", &cma_dev_index);
-		sscanf(argv[4], "%llx", &addr);
-		sscanf(argv[5], "%x", &num_bytes);
+		sscanf(cmd_argv[0], "%u", &cma_dev_index);
+		sscanf(cmd_argv[1], "%llx", &addr);
+		hex_or_dec_input_u32(cmd_argv[2], &num_bytes);
 
 		ret = cma_put_mem(fd, cma_dev_index, addr, num_bytes);
 		if (ret) {
@@ -722,7 +744,7 @@ int main(int argc, char *argv[])
 	case CMD_LIST: {
 		uint32_t cma_dev_index;
 
-		sscanf(argv[3], "%x", &cma_dev_index);
+		sscanf(cmd_argv[0], "%x", &cma_dev_index);
 
 		ret = list_one(fd, cma_dev_index);
 		break;
@@ -748,7 +770,7 @@ int main(int argc, char *argv[])
 	case CMD_SETPROT: {
 		uint32_t x;
 
-		sscanf(argv[3], "%x", &x);
+		sscanf(cmd_argv[0], "%x", &x);
 
 		ret = ioctl(fd, CMA_DEV_IOC_SET_PG_PROT, &x);
 		if (ret) {
@@ -771,10 +793,10 @@ int main(int argc, char *argv[])
 		uint32_t base;
 		uint32_t len;
 
-		sscanf(argv[3], "%x", &base);
-		sscanf(argv[4], "%x", &len);
+		sscanf(cmd_argv[0], "%x", &base);
+		sscanf(cmd_argv[1], "%x", &len);
 
-		cma_mmap(fd, base, len, argv[5]);
+		cma_mmap(fd, base, len, cmd_argv[2]);
 		break;
 	}
 	case CMD_VERSION: {

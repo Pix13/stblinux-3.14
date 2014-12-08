@@ -330,8 +330,19 @@ static int bcm_sf2_port_setup(struct dsa_switch *ds, int port,
 	/* Re-enable the GPHY and re-apply workarounds */
 	if (port == 0 && priv->hw_params.num_gphy == 1) {
 		bcm_sf2_gphy_enable_set(ds, true);
-		if (phy)
+		if (phy) {
+			/* if phy_stop() has been called before, phy
+			 * will be in halted state, and phy_start()
+			 * will call resume.
+			 *
+			 * the resume path does not configure back
+			 * autoneg settings, and since we hard reset
+			 * the phy manually here, we need to reset the
+			 * state machine also.
+			 */
+			phy->state = PHY_READY;
 			phy_init_hw(phy);
+		}
 	}
 
 	/* Enable port 7 interrupts to get notified */
@@ -471,6 +482,30 @@ static irqreturn_t bcm_sf2_switch_1_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int bcm_sf2_sw_rst(struct bcm_sf2_priv *priv)
+{
+	unsigned int timeout = 1000;
+	u32 reg;
+
+	reg = core_readl(priv, CORE_WATCHDOG_CTRL);
+	reg |= SOFTWARE_RESET | EN_CHIP_RST | EN_SW_RESET;
+	core_writel(priv, reg, CORE_WATCHDOG_CTRL);
+
+	do {
+		reg = core_readl(priv, CORE_WATCHDOG_CTRL);
+		if (!(reg & SOFTWARE_RESET))
+			break;
+
+		usleep_range(1000, 2000);
+	} while (timeout-- > 0);
+
+	if (timeout == 0)
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
+
 static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 {
 	const char *reg_names[BCM_SF2_REGS_NUM] = BCM_SF2_REGS_NAME;
@@ -498,7 +533,8 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 		*base = of_iomap(dn, i);
 		if (*base == NULL) {
 			pr_err("unable to find register: %s\n", reg_names[i]);
-			return -ENODEV;
+			ret = -ENODEV;
+			goto out_unmap;
 		}
 		base++;
 	}
@@ -517,6 +553,12 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 	}
 	clk_prepare_enable(priv->clk_mdiv);
 
+	ret = bcm_sf2_sw_rst(priv);
+	if (ret) {
+		pr_err("%s: failed to reset switch\n", __func__);
+		goto out_clk;
+	}
+
 	/* Disable all interrupts and request them */
 	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
 	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
@@ -529,14 +571,14 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 				"switch_0", priv);
 	if (ret < 0) {
 		pr_err("failed to request switch_0 IRQ\n");
-		goto out_unmap;
+		goto out_clk;
 	}
 
 	ret = request_irq(priv->irq1, bcm_sf2_switch_1_isr, 0,
 				"switch_1", priv);
 	if (ret < 0) {
 		pr_err("failed to request switch_1 IRQ\n");
-		goto out_unmap;
+		goto out_irq0;
 	}
 
 	/* Reset the MIB counters */
@@ -577,6 +619,9 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 					SWITCH_TOP_REV_MASK;
 	priv->hw_params.core_rev = (rev & SF2_REV_MASK);
 
+	rev = reg_readl(priv, REG_PHY_REVISION);
+	priv->hw_params.gphy_rev = rev & PHY_REVISION_MASK;
+
 	pr_info("Starfighter 2 top: %x.%02x, core: %x.%02x base: 0x%p, IRQs: %d, %d\n",
 		priv->hw_params.top_rev >> 8, priv->hw_params.top_rev & 0xff,
 		priv->hw_params.core_rev >> 8, priv->hw_params.core_rev & 0xff,
@@ -584,10 +629,16 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 
 	return 0;
 
+out_irq0:
+	free_irq(priv->irq0, priv);
+out_clk:
+	clk_disable_unprepare(priv->clk_mdiv);
+	clk_disable_unprepare(priv->clk);
 out_unmap:
 	base = &priv->core;
 	for (i = 0; i < BCM_SF2_REGS_NUM; i++) {
-		iounmap(*base);
+		if (*base)
+			iounmap(*base);
 		base++;
 	}
 	return ret;
@@ -596,6 +647,18 @@ out_unmap:
 static int bcm_sf2_sw_set_addr(struct dsa_switch *ds, u8 *addr)
 {
 	return 0;
+}
+
+static u32 bcm_sf2_sw_get_phy_flags(struct dsa_switch *ds, int port)
+{
+	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+
+	/* The BCM7xxx PHY driver expects to find the integrated PHY revision
+	 * in bits 15:8 and the patch level in bits 7:0 which is exactly what
+	 * the REG_PHY_REVISION register layout is.
+	 */
+
+	return priv->hw_params.gphy_rev;
 }
 
 static int bcm_sf2_sw_indir_rw(struct dsa_switch *ds, int op, int addr,
@@ -827,29 +890,6 @@ static int bcm_sf2_sw_suspend(struct dsa_switch *ds)
 	return 0;
 }
 
-static int bcm_sf2_sw_rst(struct bcm_sf2_priv *priv)
-{
-	unsigned int timeout = 1000;
-	u32 reg;
-
-	reg = core_readl(priv, CORE_WATCHDOG_CTRL);
-	reg |= SOFTWARE_RESET | EN_CHIP_RST | EN_SW_RESET;
-	core_writel(priv, reg, CORE_WATCHDOG_CTRL);
-
-	do {
-		reg = core_readl(priv, CORE_WATCHDOG_CTRL);
-		if (!(reg & SOFTWARE_RESET))
-			break;
-
-		usleep_range(1000, 2000);
-	} while (timeout-- > 0);
-
-	if (timeout == 0)
-		return -ETIMEDOUT;
-
-	return 0;
-}
-
 static int bcm_sf2_sw_resume(struct dsa_switch *ds)
 {
 	struct bcm_sf2_priv *priv = ds_to_priv(ds);
@@ -936,6 +976,7 @@ static struct dsa_switch_driver bcm_sf2_switch_driver = {
 	.probe			= bcm_sf2_sw_probe,
 	.setup			= bcm_sf2_sw_setup,
 	.set_addr		= bcm_sf2_sw_set_addr,
+	.get_phy_flags		= bcm_sf2_sw_get_phy_flags,
 	.phy_read		= bcm_sf2_sw_phy_read,
 	.phy_write		= bcm_sf2_sw_phy_write,
 	.get_strings		= bcm_sf2_sw_get_strings,

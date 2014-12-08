@@ -118,7 +118,7 @@ static const struct of_device_id brcm_ohci_of_match[] = {
 	{}
 };
 
-MODULE_DEVICE_TABLE(platform, brcm_ohci_of_match);
+MODULE_DEVICE_TABLE(of, brcm_ohci_of_match);
 #endif /* CONFIG_OF */
 
 static struct platform_driver ohci_brcm_driver = {
@@ -153,3 +153,4 @@ module_exit(ohci_brcm_cleanup);
 
 MODULE_DESCRIPTION(BRCM_DRIVER_DESC);
 MODULE_AUTHOR("Al Cooper");
+MODULE_LICENSE("GPL");

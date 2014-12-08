@@ -110,17 +110,6 @@ config BCM7364A0
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
 
-config BCM7366A0
-	bool "7366 Ax"
-	select BCM7366
-	select BRCM_GENET_V4
-	select BRCM_HAS_NAND_MAJOR_7
-	select BRCM_HAS_NAND_MINOR_0
-	select BRCM_HAS_BSPI_V4
-	select BRCM_HAS_MOCA_20_GEN23
-	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_USE_MEGA_BARRIER
-
 config BCM7366B0
 	bool "7366 Bx"
 	select BCM7366
@@ -162,17 +151,6 @@ config BCM7439B0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
-
-config BCM7445C0
-	bool "7445 Cx"
-	select BCM7445
-	select BRCM_GENET_V4
-	select BRCM_HAS_MOCA_20_GEN23
-	select BRCM_HAS_NAND_MAJOR_7
-	select BRCM_HAS_NAND_MINOR_0
-	select BRCM_HAS_BSPI_V4
-	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_USE_MEGA_BARRIER
 
 config BCM7445D0
 	bool "7445 Dx"
@@ -229,7 +207,7 @@ config BRCM_USB
 	tristate "Broadcom STB USB support"
 	depends on BRCMSTB && USB
 	select BRCM_USB_OHCI if USB_OHCI_HCD
-	select BRCM_USB_EHCI
+	select BRCM_USB_EHCI if USB_EHCI_HCD
 	select BRCM_USB_XHCI if USB_XHCI_HCD
 	default y
 	help
@@ -424,10 +402,10 @@ config BRCMSTB_XPT_HASH
 	bool
 
 config BRCM_USB_OHCI
-       bool
+       tristate
 
 config BRCM_USB_EHCI
-       bool
+       tristate
 
 config BRCM_USB_XHCI
-       bool
+       tristate

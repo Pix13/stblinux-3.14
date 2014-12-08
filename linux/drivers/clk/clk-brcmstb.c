@@ -28,10 +28,13 @@
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
+#include <linux/syscore_ops.h>
 #include <linux/brcmstb/brcmstb.h>
 #include <linux/clk/clk-brcmstb.h>
 
-static bool shut_off_unused_clks;
+static bool shut_off_unused_clks = true;
+static int bcm_full_clk = 2;
+static void __iomem *cpu_clk_div_reg;
 
 struct bcm_clk_gate {
 	struct clk_hw hw;
@@ -139,11 +142,10 @@ static int __init parse_cpu_clk_div_table(struct device_node *np)
 static void __init cpu_clk_div_setup(struct device_node *np)
 {
 	struct clk *clk;
-	void __iomem *reg;
 	int rc;
 
-	reg = of_iomap(np, 0);
-	if (!reg) {
+	cpu_clk_div_reg = of_iomap(np, 0);
+	if (!cpu_clk_div_reg) {
 		pr_err("unable to iomap cpu clk divider register!\n");
 		return;
 	}
@@ -157,7 +159,8 @@ static void __init cpu_clk_div_setup(struct device_node *np)
 		goto err;
 
 	clk = clk_register_divider_table(NULL, "cpu-clk-div",
-					 of_clk_get_parent_name(np, 0), 0, reg,
+					 of_clk_get_parent_name(np, 0), 0,
+					 cpu_clk_div_reg,
 					 cpu_clk_div_pos, cpu_clk_div_width,
 					 0, cpu_clk_div_table, &lock);
 	if (IS_ERR(clk))
@@ -175,8 +178,8 @@ err:
 	kfree(cpu_clk_div_table);
 	cpu_clk_div_table = NULL;
 
-	if (reg)
-		iounmap(reg);
+	if (cpu_clk_div_reg)
+		iounmap(cpu_clk_div_reg);
 }
 
 /*
@@ -449,18 +452,11 @@ static void __init of_brcmstb_clk_sw_setup(struct device_node *node)
 	}
 }
 
-static bool bcm_full_clk = true;
 
 static int __init _bcm_full_clk(char *str)
 {
-	int level = 1;
-
-	get_option(&str, &level);
-	if (level == 0)
-		bcm_full_clk = false;
-	else if (level > 1)
-		shut_off_unused_clks = true;
-
+	get_option(&str, &bcm_full_clk);
+	shut_off_unused_clks = bcm_full_clk > 1;
 	return 0;
 }
 
@@ -490,8 +486,33 @@ static const struct of_device_id brcmstb_clk_match_full[] __initconst = {
 	{}
 };
 
+#ifdef CONFIG_PM_SLEEP
+static u32 cpu_clk_div_reg_dump;
+
+static int brcmstb_clk_suspend(void)
+{
+	if (cpu_clk_div_reg)
+		cpu_clk_div_reg_dump = __raw_readl(cpu_clk_div_reg);
+	return 0;
+}
+
+static void brcmstb_clk_resume(void)
+{
+	if (cpu_clk_div_reg)
+		__raw_writel(cpu_clk_div_reg_dump, cpu_clk_div_reg);
+}
+
+static struct syscore_ops brcmstb_clk_syscore_ops = {
+	.suspend = brcmstb_clk_suspend,
+	.resume = brcmstb_clk_resume,
+};
+#endif /* CONFIG_PM_SLEEP */
+
 void __init brcmstb_clocks_init(void)
 {
+#ifdef CONFIG_PM_SLEEP
+	register_syscore_ops(&brcmstb_clk_syscore_ops);
+#endif
 	/* DT-based clock config */
 	of_clk_init(bcm_full_clk ? brcmstb_clk_match_full : brcmstb_clk_match);
 }

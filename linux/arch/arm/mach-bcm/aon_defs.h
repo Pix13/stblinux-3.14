@@ -25,6 +25,9 @@
 enum {
 	/* Restore random key for AES memory verification (off = fixed key) */
 	S3_FLAG_LOAD_RANDKEY		= (1 << 0),
+
+	/* Scratch buffer page table is present */
+	S3_FLAG_SCRATCH_BUFFER_TABLE	= (1 << 1),
 };
 
 #define BRCMSTB_HASH_LEN		(128 / 8) /* 128-bit hash */
@@ -37,7 +40,27 @@ enum {
 
 #define BRCMSTB_S3_MAGIC		0x5AFEB007
 #define BOOTLOADER_SCRATCH_SIZE		64
-#define IMAGE_DESCRIPTORS_BUFSIZE	(256 * 1024)
+#define IMAGE_DESCRIPTORS_BUFSIZE	(2 * 1024)
+/*
+ * Store up to 64 4KB page entries; this number is flexible, as long as
+ * brcmstb_bootloader_scratch_table::num_entries is adjusted accordingly
+ */
+#define BRCMSTB_SCRATCH_BUF_SIZE	(256 * 1024)
+
+struct brcmstb_bootloader_scratch_table {
+	/* System page size, in KB; likely 4 (i.e., 4KB) */
+	uint32_t page_size;
+	/*
+	 * Number of page entries in this table. Provided for flexibility, but
+	 * should be BRCMSTB_SCRATCH_BUF_SIZE / PAGE_SIZE
+	 */
+	uint16_t num_entries;
+	uint16_t reserved;
+	struct {
+		uint32_t upper;
+		uint32_t lower;
+	} entries[];
+} __packed;
 
 struct brcmstb_s3_params {
 	/* scratch memory for bootloader */
@@ -61,7 +84,13 @@ struct brcmstb_s3_params {
 	 */
 	uint32_t desc_offset_2;
 
-	uint32_t spare[72];
+	/*
+	 * (Physical) address of a brcmstb_bootloader_scratch_table, for
+	 * providing a large DRAM buffer to the bootloader
+	 */
+	uint64_t buffer_table;
+
+	uint32_t spare[70];
 
 	uint8_t descriptors[IMAGE_DESCRIPTORS_BUFSIZE];
 } __packed;

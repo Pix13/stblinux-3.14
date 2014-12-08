@@ -179,6 +179,8 @@ struct moca_regs {
 	unsigned int		m2m_dst_offset;
 	unsigned int		m2m_cmd_offset;
 	unsigned int		m2m_status_offset;
+	unsigned int		m2m_src_high_offset;
+	unsigned int		m2m_dst_high_offset;
 	unsigned int		moca2host_mmp_inbox_0_offset;
 	unsigned int		moca2host_mmp_inbox_1_offset;
 	unsigned int		moca2host_mmp_inbox_2_offset;
@@ -352,6 +354,8 @@ static const struct moca_regs regs_20 = {
 	.m2m_dst_offset			= 0x001ffc04,
 	.m2m_cmd_offset			= 0x001ffc08,
 	.m2m_status_offset		= 0x001ffc0c,
+	.m2m_src_high_offset		= 0x001ffc10,
+	.m2m_dst_high_offset		= 0x001ffc14,
 	.moca2host_mmp_inbox_0_offset	= 0x001ffd58,
 	.moca2host_mmp_inbox_1_offset	= 0x001ffd5c,
 	.moca2host_mmp_inbox_2_offset	= 0x001ffd60,
@@ -485,9 +489,14 @@ static void moca_mmp_init(struct moca_priv_data *priv, int is20)
 	}
 }
 
-static int moca_is_20(struct moca_priv_data *priv)
+static bool moca_is_20(struct moca_priv_data *priv)
 {
 	return (priv->hw_rev & MOCA_PROTVER_MASK) == MOCA_PROTVER_20;
+}
+
+static bool moca_has_m2m_high(struct moca_priv_data *priv)
+{
+	return priv->hw_rev >= HWREV_MOCA_20_GEN23;
 }
 
 #ifdef CONFIG_BRCM_MOCA_BUILTIN_FW
@@ -703,14 +712,22 @@ static u32 moca_start_mips(struct moca_priv_data *priv, u32 cpu)
 }
 
 static void moca_m2m_xfer(struct moca_priv_data *priv,
-	u32 dst, u32 src, u32 ctl)
+	dma_addr_t dst, dma_addr_t src, u32 ctl)
 {
 	const struct moca_regs *r = priv->regs;
 	u32 status;
 	long timeout = msecs_to_jiffies(M2M_TIMEOUT_MS);
+	u32 dst_low = lower_32_bits(dst);
+	u32 src_low = lower_32_bits(src);
+	u32 dst_high = upper_32_bits(dst);
+	u32 src_high = upper_32_bits(src);
 
-	MOCA_WR(priv->base + r->m2m_src_offset, src);
-	MOCA_WR(priv->base + r->m2m_dst_offset, dst);
+	MOCA_WR(priv->base + r->m2m_src_offset, src_low);
+	MOCA_WR(priv->base + r->m2m_dst_offset, dst_low);
+	if (moca_has_m2m_high(priv)) {
+		MOCA_WR(priv->base + r->m2m_src_high_offset, src_high);
+		MOCA_WR(priv->base + r->m2m_dst_high_offset, dst_high);
+	}
 	MOCA_WR(priv->base + r->m2m_status_offset, 0);
 	MOCA_RD(priv->base + r->m2m_status_offset);
 	MOCA_WR(priv->base + r->m2m_cmd_offset, ctl);
@@ -723,35 +740,35 @@ static void moca_m2m_xfer(struct moca_priv_data *priv,
 	status = MOCA_RD(priv->base + r->m2m_status_offset);
 
 	if (status & (3 << 29))
-		dev_warn(priv->dev, "bad status %08x (s/d/c %08x %08x %08x)\n",
-			 status, src, dst, ctl);
+		dev_warn(priv->dev, "bad status %08x (s/d/c %pad %pad %08x)\n",
+			 status, &src, &dst, ctl);
 }
 
 static void moca_write_mem(struct moca_priv_data *priv,
-	u32 dst_offset, void *src, unsigned int len)
+	dma_addr_t dst_offset, void *src, unsigned int len)
 {
 	dma_addr_t pa;
 
 	if (moca_range_ok(priv, dst_offset, len) < 0) {
-		dev_warn(priv->dev, "copy past end of cntl memory: %08x\n",
-			 dst_offset);
+		dev_warn(priv->dev, "copy past end of cntl memory: %pad\n",
+			 &dst_offset);
 		return;
 	}
 
 	pa = dma_map_single(&priv->pdev->dev, src, len, DMA_TO_DEVICE);
-	moca_m2m_xfer(priv, dst_offset + priv->regs->data_mem_offset, (u32)pa,
+	moca_m2m_xfer(priv, dst_offset + priv->regs->data_mem_offset, pa,
 		len | M2M_WRITE);
 	dma_unmap_single(&priv->pdev->dev, pa, len, DMA_TO_DEVICE);
 }
 
 static void moca_read_mem(struct moca_priv_data *priv,
-	void *dst, u32 src_offset, unsigned int len)
+	void *dst, dma_addr_t src_offset, unsigned int len)
 {
 	int i;
 
 	if (moca_range_ok(priv, src_offset, len) < 0) {
-		dev_warn(priv->dev, "copy past end of cntl memory: %08x\n",
-			 src_offset);
+		dev_warn(priv->dev, "copy past end of cntl memory: %pad\n",
+			 &src_offset);
 		return;
 	}
 
@@ -762,7 +779,7 @@ static void moca_read_mem(struct moca_priv_data *priv,
 }
 
 static void moca_write_sg(struct moca_priv_data *priv,
-	u32 dst_offset, struct scatterlist *sg, int nents)
+	dma_addr_t dst_offset, struct scatterlist *sg, int nents)
 {
 	int j;
 	uintptr_t addr = priv->regs->data_mem_offset + dst_offset;
@@ -770,7 +787,7 @@ static void moca_write_sg(struct moca_priv_data *priv,
 	dma_map_sg(&priv->pdev->dev, sg, nents, DMA_TO_DEVICE);
 
 	for (j = 0; j < nents; j++) {
-		moca_m2m_xfer(priv, addr, (u32)sg[j].dma_address,
+		moca_m2m_xfer(priv, addr, sg[j].dma_address,
 			sg[j].length | M2M_WRITE);
 
 		addr += sg[j].length;
@@ -780,7 +797,7 @@ static void moca_write_sg(struct moca_priv_data *priv,
 }
 
 static inline void moca_read_sg(struct moca_priv_data *priv,
-	u32 src_offset, struct scatterlist *sg, int nents)
+	dma_addr_t src_offset, struct scatterlist *sg, int nents)
 {
 	int j;
 	uintptr_t addr = priv->regs->data_mem_offset + src_offset;
@@ -788,7 +805,7 @@ static inline void moca_read_sg(struct moca_priv_data *priv,
 	dma_map_sg(&priv->pdev->dev, sg, nents, DMA_FROM_DEVICE);
 
 	for (j = 0; j < nents; j++) {
-		moca_m2m_xfer(priv, (u32)sg[j].dma_address, addr,
+		moca_m2m_xfer(priv, sg[j].dma_address, addr,
 			sg[j].length | M2M_READ);
 
 		addr += sg[j].length;

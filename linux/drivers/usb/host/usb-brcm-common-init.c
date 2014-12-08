@@ -47,18 +47,11 @@
 #define USB_CTRL_SHIFT(reg, field) (BCHP_USB1_CTRL_##reg##_##field##_SHIFT)
 #endif
 
-#define USB_CTRL_SET(base, reg, mask) do {		\
-		USB_CTRL_REG(base, reg) =		\
-			USB_CTRL_REG(base, reg) |	\
-			USB_CTRL_MASK(reg, mask);	\
-	} while (0)
+#define USB_CTRL_SET(base, reg, mask) DEV_SET(USB_CTRL_REG(base, reg),	\
+						USB_CTRL_MASK(reg, mask))
 
-#define USB_CTRL_UNSET(base, reg, mask) do {		\
-		USB_CTRL_REG(base, reg) =		\
-			USB_CTRL_REG(base, reg) &	\
-			~USB_CTRL_MASK(reg, mask);	\
-	} while (0)
-
+#define USB_CTRL_UNSET(base, reg, mask) DEV_UNSET(USB_CTRL_REG(base, reg),  \
+						USB_CTRL_MASK(reg, mask))
 
 #define MDIO_USB2	0
 #define MDIO_USB3	(1 << 31)
@@ -95,7 +88,7 @@ static uint32_t usb_mdio_read(uintptr_t ctrl_base, uint32_t reg, int mode)
 	DEV_WR(USB_CTRL_REG(ctrl_base, MDIO), data);
 	udelay(10);
 
-	return (DEV_RD(USB_CTRL_REG(ctrl_base, MDIO2)) & 0xffff);
+	return DEV_RD(USB_CTRL_REG(ctrl_base, MDIO2)) & 0xffff;
 }
 
 static void usb_mdio_write(uintptr_t ctrl_base, uint32_t reg,
@@ -110,6 +103,32 @@ static void usb_mdio_write(uintptr_t ctrl_base, uint32_t reg,
 	data &= ~(1 << 25);
 	udelay(10);
 	DEV_WR(USB_CTRL_REG(ctrl_base, MDIO), data);
+}
+
+
+static void usb_phy_ldo_fix(uintptr_t usbctrl)
+{
+	USB_CTRL_UNSET(usbctrl, PLL_CTL, PLL_RESETB);
+	DEV_WR(USB_CTRL_REG(usbctrl, UTMI_CTL_1), 0);
+	DEV_WR(USB_CTRL_REG(usbctrl, PLL_LDO_CTL),
+		USB_CTRL_MASK(PLL_LDO_CTL, AFE_CORERDY_VDDC));
+#if defined(BCHP_USB_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK) || \
+	defined(BCHP_USB1_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK)
+	USB_CTRL_SET(usbctrl, PLL_CTL, PLL_IDDQ_PWRDN);
+	msleep(10);
+	USB_CTRL_UNSET(usbctrl, PLL_CTL, PLL_IDDQ_PWRDN);
+#else
+	USB_CTRL_SET(usbctrl, USB_PM, USB_PWRDN);
+	msleep(10);
+	USB_CTRL_UNSET(usbctrl, USB_PM, USB_PWRDN);
+#endif
+	USB_CTRL_SET(usbctrl, PLL_LDO_CTL, AFE_BG_PWRDWNB);
+	USB_CTRL_SET(usbctrl, PLL_LDO_CTL, AFE_LDO_PWRDWNB);
+	msleep(1);
+	DEV_WR(USB_CTRL_REG(usbctrl, UTMI_CTL_1),
+		USB_CTRL_MASK(UTMI_CTL_1, UTMI_SOFT_RESETB) |
+		USB_CTRL_MASK(UTMI_CTL_1, UTMI_SOFT_RESETB_P1));
+	USB_CTRL_SET(usbctrl, PLL_CTL, PLL_RESETB);
 }
 
 static void usb2_eye_fix(uintptr_t ctrl_base)
@@ -168,6 +187,34 @@ void brcm_usb_common_ctrl_xhci_soft_reset(uintptr_t ctrl, int on_off)
 }
 
 
+static void memc_fix(uintptr_t ctrl_base)
+{
+#if defined(CONFIG_BCM7445D0)
+	/*
+	 * This is a workaround for HW7445-1869 where a DMA write ends up
+	 * doing a read pre-fetch after the end of the DMA buffer. This
+	 * causes a problem when the DMA buffer is at the end of physical
+	 * memory, causing the pre-fetch read to access non-existand memory,
+	 * and the chip bondout has MEMC2 disabled. When the pre-fetch read
+	 * tries to use the disabled MEMC2, it hangs the bus. The workaround
+	 * is to disable MEMC2 access in the usb controller which avoids
+	 * the hang.
+	 */
+	uint32_t prid;
+
+	prid = BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID) & 0xfffff000;
+	switch (prid) {
+	case 0x72520000:
+	case 0x74480000:
+	case 0x74490000:
+	case 0x07252000:
+	case 0x07448000:
+	case 0x07449000:
+		USB_CTRL_UNSET(ctrl_base, SETUP, scb2_en);
+	}
+#endif
+}
+
 void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 {
 	uint32_t reg;
@@ -191,8 +238,7 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 		usb_mdio_write(ctrl, 0x03, 0x6302, MDIO_USB3);
 	}
 #endif
-#if defined(CONFIG_BCM7445C0) || defined(CONFIG_BCM7439A0) || \
-	defined(CONFIG_BCM7366)
+#if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7366)
 	/*
 	 * The PHY3_SOFT_RESETB bits default to the wrong state.
 	 */
@@ -230,7 +276,8 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 		USB_CTRL_MASK(USB30_CTL1, usb3_ioc));
 #endif
 
-#if !defined(CONFIG_BCM7439A0) && !defined(CONFIG_BCM74371A0)
+#if !defined(CONFIG_BCM7439A0) && !defined(CONFIG_BCM74371A0) && \
+	!defined(CONFIG_BCM7364A0)
 	/*
 	 * HW7439-637: 7439a0 and its derivatives do not have large enough
 	 * descriptor storage for this.
@@ -238,13 +285,16 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 	DEV_SET(USB_CTRL_REG(ctrl, SETUP),
 		USB_CTRL_MASK(SETUP, ss_ehci64bit_en));
 #endif
-
+	/* Make sure it's low to insure a rising edge. */
+	DEV_UNSET(USB_CTRL_REG(ctrl, USB30_CTL1),
+		USB_CTRL_MASK(USB30_CTL1, phy3_pll_seq_start));
 	DEV_SET(USB_CTRL_REG(ctrl, USB30_CTL1),
 		USB_CTRL_MASK(USB30_CTL1, phy3_pll_seq_start));
 	DEV_SET(USB_CTRL_REG(ctrl, PLL_CTL),
 		USB_CTRL_MASK(PLL_CTL, PLL_SUSPEND_EN));
 
 	usb2_eye_fix(ctrl);
+	usb_phy_ldo_fix(ctrl);
 	if (xhci) {
 		usb3_pll_fix(ctrl);
 		usb3_ssc_enable(ctrl);
@@ -254,6 +304,11 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 	reg = DEV_RD(USB_CTRL_REG(ctrl, SETUP));
 	reg &= ~USB_CTRL_SETUP_CONDITIONAL_BITS;
 	reg |= ENDIAN_SETTINGS;
+
+#if defined(CONFIG_BCM7364A0)
+	/* Suppress overcurrent indication from USB30 ports */
+	reg |= BCHP_USB_CTRL_SETUP_OC3_DISABLE_MASK;
+#endif
 
 	/*
 	 * Make sure the the second and third memory controller
@@ -278,5 +333,6 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 	reg &= ~USB_CTRL_MASK(EBRIDGE, EBR_SCB_SIZE);
 	reg |= (0x08 << USB_CTRL_SHIFT(EBRIDGE, EBR_SCB_SIZE));
 	DEV_WR(USB_CTRL_REG(ctrl, EBRIDGE), reg);
+	memc_fix(ctrl);
 }
 

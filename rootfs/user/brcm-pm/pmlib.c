@@ -51,6 +51,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <glob.h>
+#include <libgen.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
@@ -84,14 +85,21 @@ struct brcm_pm_priv {
 #define SYS_CPUFREQ_GOV	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 #define SYS_STANDBY	"/sys/power/state"
 #define HALT_PATH	"/sbin/halt"
-#define AHCI_DEV_NAME	"strict-ahci.0"
-#define SATA_SCSI_DEVICE "/sys/devices/platform/" AHCI_DEV_NAME "/ata*/host*/target*/*/scsi_device/*/device"
+#define AHCI_DEV_NAME_GLOB	"strict-ahci.*"
+#define SATA_SCSI_DEVICE "/sys/devices/platform/" AHCI_DEV_NAME_GLOB "/ata*/host*/target*/*/scsi_device/*/device"
 #define SATA_DELETE_GLOB SATA_SCSI_DEVICE "/delete"
 #define SATA_RESCAN_GLOB "/sys/class/scsi_host/host*/scan"
-#define SATA_UNBIND_PATH "/sys/bus/platform/drivers/ahci/unbind"
-#define SATA_BIND_PATH	"/sys/bus/platform/drivers/ahci/bind"
+#define AHCI_PATH "/sys/bus/platform/drivers/ahci"
+#define SATA_DEVICE_PATH "/sys/bus/platform/devices/" AHCI_DEV_NAME_GLOB
+#define SATA_UNBIND_PATH AHCI_PATH "/unbind"
+#define SATA_BIND_PATH	AHCI_PATH "/bind"
 
-static int sysfs_get(char *path, unsigned int *out)
+static int file_exists(const char *path)
+{
+	return !access(path, F_OK);
+}
+
+static int sysfs_get(const char *path, unsigned int *out)
 {
 	FILE *f;
 	unsigned int tmp;
@@ -111,7 +119,7 @@ static int sysfs_get(char *path, unsigned int *out)
 	return 0;
 }
 
-static int sysfs_set(char *path, int in)
+static int sysfs_set(const char *path, int in)
 {
 	FILE *f;
 	char buf[BUF_SIZE];
@@ -128,7 +136,7 @@ static int sysfs_set(char *path, int in)
 	return 0;
 }
 
-static int sysfs_set_string(char *path, const char *in)
+static int sysfs_set_string(const char *path, const char *in)
 {
 	FILE *f;
 
@@ -143,7 +151,7 @@ static int sysfs_set_string(char *path, const char *in)
 	return 0;
 }
 
-static int sysfs_get_string(char *path, char *in, int size)
+static int sysfs_get_string(const char *path, char *in, int size)
 {
 	FILE *f;
 	size_t len;
@@ -316,13 +324,13 @@ static int set_srpd(int val)
 	return 0;
 }
 
+static int get_sata_status(void);
+
 int brcm_pm_get_status(void *vctx, struct brcm_pm_state *st)
 {
 	struct brcm_pm_priv *ctx = vctx;
 
 	/* read status from /proc */
-	if (sysfs_get(SYS_SATA_STAT, (unsigned int *)&st->sata_status) != 0)
-		st->sata_status = BRCM_PM_UNDEF;
 	if (sysfs_get(SYS_TP1_STAT, (unsigned int *)&st->tp1_status) != 0)
 		st->tp1_status = BRCM_PM_UNDEF;
 	if (sysfs_get(SYS_TP2_STAT, (unsigned int *)&st->tp2_status) != 0)
@@ -340,6 +348,8 @@ int brcm_pm_get_status(void *vctx, struct brcm_pm_state *st)
 	if (sysfs_get_string(SYS_CPUFREQ_GOV, st->cpufreq_gov,
 			     CPUFREQ_GOV_MAXLEN) != 0)
 		strcpy(st->cpufreq_gov, "");
+
+	st->sata_status = get_sata_status();
 
 	st->srpd_status = get_srpd_status();
 
@@ -380,14 +390,54 @@ static int sata_delete_devices(void)
 	return ret;
 }
 
-static int sata_power_up(void)
+static int get_sata_status(void)
 {
-	return sysfs_set_string(SATA_BIND_PATH, AHCI_DEV_NAME);
+	glob_t g;
+	int i, is_on = 1;
+	char *path;
+	size_t len;
+
+	if (glob(SATA_DEVICE_PATH, GLOB_NOSORT, NULL, &g) != 0)
+		/* No AHCI devices present? */
+		return BRCM_PM_UNDEF;
+
+	/* Allocate at least space for AHCI_PATH/strict-ahci.XX */
+	len = strlen(AHCI_PATH) + strlen(AHCI_DEV_NAME_GLOB) + 10;
+	path = calloc(len, sizeof(*path));
+
+	/* Check if any strict-ahci.* devices are present at AHCI_PATH */
+	for (i = 0; i < (int)g.gl_pathc; i++) {
+		strncat(path, AHCI_PATH "/", len - 1);
+		strncat(path, basename(g.gl_pathv[i]), len - 1);
+		if (!file_exists(path)) {
+			/* At least one device is unbound */
+			is_on = 0;
+			goto out;
+		}
+	}
+
+out:
+	globfree(&g);
+	free(path);
+
+	return is_on;
 }
 
-static int sata_power_down(void)
+static int sata_set_power(int on)
 {
-	return sysfs_set_string(SATA_UNBIND_PATH, AHCI_DEV_NAME);
+	glob_t g;
+	int i, ret = 0;
+	const char *dest = on ? SATA_BIND_PATH : SATA_UNBIND_PATH;
+
+	if (glob(SATA_DEVICE_PATH, GLOB_NOSORT, NULL, &g) != 0)
+		return 0;
+
+	for (i = 0; i < (int)g.gl_pathc; i++)
+		ret |= sysfs_set_string(dest, basename(g.gl_pathv[i]));
+
+	globfree(&g);
+
+	return ret;
 }
 
 int brcm_pm_set_status(void *vctx, struct brcm_pm_state *st)
@@ -405,14 +455,14 @@ int brcm_pm_set_status(void *vctx, struct brcm_pm_state *st)
 
 	if (CHANGED(sata_status)) {
 		if (st->sata_status) {
-			ret |= sata_power_up();
+			ret |= sata_set_power(1);
 			ret |= sata_rescan_hosts();
 		} else {
 			/* Remove SCSI devices, triggering HDD spin-down */
 			ret |= sata_delete_devices();
 			/* Small delay before yanking the device entirely */
 			usleep(100000);
-			ret |= sata_power_down();
+			ret |= sata_set_power(0);
 		}
 		ctx->last_state.sata_status = st->sata_status;
 	}

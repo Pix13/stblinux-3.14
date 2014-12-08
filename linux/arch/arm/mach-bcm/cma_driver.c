@@ -39,6 +39,8 @@
 #include <linux/bitmap.h>
 #include <linux/highmem.h>
 #include <linux/dma-contiguous.h>
+#include <linux/sizes.h>
+#include <linux/vme.h>
 #include <asm/div64.h>
 #include <asm/setup.h>
 
@@ -163,14 +165,14 @@ static u32 __init parse_static_rsv_entries(const u64 range_start,
 	return bytes_reserved;
 }
 
-static int __init cma_calc_rsv_range(int bank_nr, phys_addr_t *base,
-					phys_addr_t *size)
+static int __init cma_calc_rsv_range(int bank_nr, phys_addr_t *size)
 {
 	/* This is the alignment used in dma_contiguous_reserve_area() */
 	const phys_addr_t alignment =
 			PAGE_SIZE << max(MAX_ORDER - 1, pageblock_order);
 	u64 total = 0;
 	u32 bytes_reserved;
+	struct membank *bank = &meminfo.bank[bank_nr];
 
 	/*
 	 * In DT, the 'reg' property in the 'memory' node is typically
@@ -201,47 +203,46 @@ static int __init cma_calc_rsv_range(int bank_nr, phys_addr_t *base,
 	 *
 	 */
 	if (bank_nr == 0) {
-		if ((meminfo.nr_banks == 1) && !meminfo.bank[bank_nr].highmem) {
+		if ((meminfo.nr_banks == 1) && !bank->highmem) {
 			u32 rem;
 			u64 tmp;
 
-			if (meminfo.bank[bank_nr].size <
-				cma_data.prm_low_lim_mb) {
+			if (bank->size < cma_data.prm_low_lim_mb) {
 				/* don't bother */
 				pr_err("low memory block too small\n");
 				return -EINVAL;
 			}
 
 			/* kernel reserves X percent, cma gets the rest */
-			tmp = ((u64)meminfo.bank[bank_nr].size) *
+			tmp = ((u64)bank->size) *
 					(100 - cma_data.prm_low_kern_rsv_pct);
 			rem = do_div(tmp, 100);
 			total = tmp + rem;
 		} else {
-			if (meminfo.bank[bank_nr].size >=
-				cma_data.prm_kern_rsv_mb) {
-				total = meminfo.bank[bank_nr].size -
-					cma_data.prm_kern_rsv_mb;
+			if (bank->size >= cma_data.prm_kern_rsv_mb) {
+				total = bank->size - cma_data.prm_kern_rsv_mb;
 			} else {
-				pr_debug("bank start=%llxh size=%llxh is smaller than cma_data.prm_kern_rsv_mb=%llxh - skipping\n",
-					meminfo.bank[bank_nr].start,
-					meminfo.bank[bank_nr].size,
+				pr_debug("bank start=0x%pa size=0x%pa is smaller than cma_data.prm_kern_rsv_mb=0x%llx - skipping\n",
+					&bank->start,
+					&bank->size,
 					cma_data.prm_kern_rsv_mb);
 				return -EINVAL;
 			}
 		}
-
-		if (*base != 0) {
-			pr_warn("low memory bank doesn't start at 0 - adjusting\n");
-			*base = 0;
-		}
-	} else
-		total = meminfo.bank[bank_nr].size;
+	} else if (bank->start >= VME_A32_MAX && bank->size > SZ_64M) {
+		/*
+		 * Nexus can't use the address extension range yet, just reserve
+		 * 64 MiB in these areas until we have a firmer specification.
+		 */
+		total = SZ_64M;
+	} else {
+		total = bank->size;
+	}
 
 	/* Subtract the size of any DT-based (/memreserve/) memblock
 	 * reservations that overlap with the current range from the total.
 	 */
-	bytes_reserved = parse_static_rsv_entries(*base, total);
+	bytes_reserved = parse_static_rsv_entries(bank->start, total);
 	if (total >= bytes_reserved)
 		total -= bytes_reserved;
 
@@ -272,24 +273,26 @@ void __init cma_reserve(void)
 {
 	int rc;
 	int iter;
-	phys_addr_t base = 0;
-	phys_addr_t size = 0;
 
 	for_each_bank(iter, &meminfo) {
 		struct cma *tmp_cma_area;
-		base = meminfo.bank[iter].start;
+		struct membank *bank = &meminfo.bank[iter];
+		phys_addr_t size = 0;
+		phys_addr_t bank_end = bank->start + bank->size;
 
 		if (cma_data.nr_regions_valid == NR_BANKS)
 			pr_err("cma_data.regions overflow\n");
 
-		if (cma_calc_rsv_range(iter, &base, &size))
+		if (cma_calc_rsv_range(iter, &size))
 			continue;
 
-		pr_debug("reserve: %llxh, %llxh\n", base, size);
-		rc = dma_contiguous_reserve_area(size, base, 0, &tmp_cma_area);
+		pr_debug("try to reserve 0x%pa in 0x%pa-0x%pa\n", &size,
+				&bank->start, &bank_end);
+		rc = dma_contiguous_reserve_area(size, bank->start,
+				bank_end, &tmp_cma_area);
 		if (rc) {
-			pr_err("reservation failed (base=%llxh,size=%llxh,rc=%d)\n",
-				base, size, rc);
+			pr_err("reservation failed (bank=0x%pa-0x%pa,size=0x%pa,rc=%d)\n",
+				&bank->start, &bank_end, &size, rc);
 			/*
 			 * This will help us see if a stray memory reservation
 			 * is fragmenting the memblock.
@@ -320,9 +323,9 @@ static struct platform_device * __init cma_register_dev_one(int id,
 	pdev = platform_device_register_data(NULL, "brcm-cma", id,
 		&cma_data.regions[region_idx], sizeof(struct cma_pdev_data));
 	if (!pdev) {
-		pr_err("couldn't register pdev for %d,%llxh,%llxh\n", id,
-			cma_data.regions[region_idx].start,
-			cma_data.regions[region_idx].size);
+		pr_err("couldn't register pdev for %d,0x%pa,0x%pa\n", id,
+			&cma_data.regions[region_idx].start,
+			&cma_data.regions[region_idx].size);
 	}
 
 	return pdev;
@@ -371,13 +374,13 @@ static int cma_dev_release(struct inode *inode, struct file *filp)
 
 static void cma_dev_vma_open(struct vm_area_struct *vma)
 {
-	dev_dbg(cma_root_dev->dev, "%s: VA=%lxh PA=%lxh\n", __func__,
+	dev_dbg(cma_root_dev->dev, "%s: VA=0x%lx PA=0x%lx\n", __func__,
 		vma->vm_start, vma->vm_pgoff << PAGE_SHIFT);
 }
 
 static void cma_dev_vma_close(struct vm_area_struct *vma)
 {
-	dev_dbg(cma_root_dev->dev, "%s: VA=%lxh PA=%lxh\n", __func__,
+	dev_dbg(cma_root_dev->dev, "%s: VA=0x%lx PA=0x%lx\n", __func__,
 		vma->vm_start, vma->vm_pgoff << PAGE_SHIFT);
 }
 
@@ -482,6 +485,9 @@ cleanup:
  * cma_dev_get_cma_dev() - Get a cma_dev * by memc index
  *
  * @memc: The MEMC index
+ *
+ * Return: a pointer to the associated CMA device, or NULL if no such
+ * device.
  */
 struct cma_dev *cma_dev_get_cma_dev(int memc)
 {
@@ -519,6 +525,8 @@ EXPORT_SYMBOL(cma_dev_get_cma_dev);
  * physical address of the contiguous region that was carved out
  * @len: Number of bytes to allocate
  * @align: Byte alignment
+ *
+ * Return: 0 on success, negative on failure.
  */
 int cma_dev_get_mem(struct cma_dev *cma_dev, u64 *addr, u32 len,
 			u32 align)
@@ -528,19 +536,23 @@ int cma_dev_get_mem(struct cma_dev *cma_dev, u64 *addr, u32 len,
 	struct device *dev = cma_dev->dev;
 
 	if ((len & ~PAGE_MASK) || (len == 0)) {
-		dev_dbg(dev, "bad length (%xh)\n", len);
+		dev_dbg(dev, "bad length (0x%x)\n", len);
 		status = -EINVAL;
 		goto done;
 	}
 
 	if (align & ~PAGE_MASK) {
-		dev_dbg(dev, "bad alignment (%xh)\n", align);
+		dev_dbg(dev, "bad alignment (0x%x)\n", align);
 		status = -EINVAL;
 		goto done;
 	}
 
-	page = dma_alloc_from_contiguous(dev, len >> PAGE_SHIFT,
-					 get_order(align));
+	if (align <= PAGE_SIZE)
+		page = dma_alloc_from_contiguous(dev, len >> PAGE_SHIFT, 0);
+	else
+		page = dma_alloc_from_contiguous(dev, len >> PAGE_SHIFT,
+				get_order(align));
+
 	if (page == NULL) {
 		status = -ENOMEM;
 		goto done;
@@ -560,6 +572,8 @@ EXPORT_SYMBOL(cma_dev_get_mem);
  * @addr: Start physical address of allocated region
  * @len: Number of bytes that were allocated (this must match with get_mem
  * call!)
+ *
+ * Return: 0 on success, negative on failure.
  */
 int cma_dev_put_mem(struct cma_dev *cma_dev, u64 addr, u32 len)
 {
@@ -567,12 +581,12 @@ int cma_dev_put_mem(struct cma_dev *cma_dev, u64 addr, u32 len)
 	struct device *dev = cma_dev->dev;
 
 	if (page == NULL) {
-		dev_dbg(cma_root_dev->dev, "bad addr (%llxh)\n", addr);
+		dev_dbg(cma_root_dev->dev, "bad addr (0x%llx)\n", addr);
 		return -EINVAL;
 	}
 
 	if (len % PAGE_SIZE) {
-		dev_dbg(cma_root_dev->dev, "bad length (%xh)\n", len);
+		dev_dbg(cma_root_dev->dev, "bad length (0x%x)\n", len);
 		return -EINVAL;
 	}
 
@@ -636,6 +650,8 @@ static int scan_alloc_bitmap(struct cma_dev *cma_dev, int op, int *region_count,
  * cma_dev_get_num_regions() - Get number of allocated regions
  *
  * @cma_dev: The CMA device
+ *
+ * Return: 0 on success, negative on failure
  */
 int cma_dev_get_num_regions(struct cma_dev *cma_dev)
 {
@@ -654,6 +670,8 @@ EXPORT_SYMBOL(cma_dev_get_num_regions);
  * @memc: MEMC index associated with the region
  * @addr: Physical address of region
  * @num_bytes: Size of region in bytes
+ *
+ * Return: 0 on success, negative on failure.
  */
 int cma_dev_get_region_info(struct cma_dev *cma_dev, int region_num,
 			    s32 *memc, u64 *addr, u32 *num_bytes)
@@ -784,6 +802,8 @@ static struct page **get_pages(struct page *page, int num_pages)
  * contiguous memory.
  * @num_pages: Number of pages
  * @pgprot: Page protection bits
+ *
+ * Return: pointer to mapping, or NULL on failure
  */
 void *cma_dev_kva_map(struct page *page, int num_pages, pgprot_t pgprot)
 {
@@ -822,6 +842,8 @@ EXPORT_SYMBOL(cma_dev_kva_map);
  * to physical pages mapped by cma_dev_kva_map()
  *
  * @kva: Kernel virtual address previously mapped by cma_dev_kva_map()
+ *
+ * Return: 0 on success, negative on failure.
  */
 int cma_dev_kva_unmap(const void *kva)
 {
@@ -1157,7 +1179,7 @@ static int __init cma_drvr_probe(struct platform_device *pdev)
 	 */
 	INIT_LIST_HEAD(&cma_dev->list);
 	list_add(&cma_dev->list, &cma_root_dev->cma_devs.list);
-	dev_info(dev, "Added CMA device @ PA=0x%llx LEN=%xh\n",
+	dev_info(dev, "Added CMA device @ PA=0x%llx LEN=0x%x\n",
 		 cma_dev->range.base, cma_dev->range.size);
 
 	if (data->do_prealloc) {
@@ -1180,7 +1202,7 @@ done:
 
 int cma_drvr_is_ready(void)
 {
-	return (cma_root_dev != NULL);
+	return cma_root_dev != NULL;
 }
 
 static struct platform_driver cma_driver = {

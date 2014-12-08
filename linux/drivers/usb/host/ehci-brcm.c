@@ -26,7 +26,6 @@
 #include <linux/clk.h>
 
 #include "ehci.h"
-#include "ehci-hcd.c"
 #include "usb-brcm.h"
 
 #define BRCM_DRIVER_DESC "EHCI BRCM driver"
@@ -36,6 +35,10 @@ struct brcm_hcd {
 };
 
 static const char brcm_hcd_name[] = "ehci-brcm";
+
+static int (*org_hub_control)(struct usb_hcd *hcd,
+			u16 typeReq, u16 wValue, u16 wIndex,
+			char *buf, u16 wLength);
 
 /* ehci_brcm_wait_for_sof
  * Wait for start of next microframe, then wait extra delay microseconds
@@ -86,8 +89,7 @@ static int ehci_brcm_hub_control(
 		local_irq_save(flags);
 		ehci_brcm_wait_for_sof(ehci, 5);
 	}
-
-	retval = ehci_hub_control(hcd, typeReq, wValue, wIndex, buf, wLength);
+	retval = (*org_hub_control)(hcd, typeReq, wValue, wIndex, buf, wLength);
 	if (irq_disabled)
 		local_irq_restore(flags);
 	return retval;
@@ -138,6 +140,8 @@ static int ehci_brcm_probe(struct platform_device *dev)
 		return err;
 
 	/* Hook the hub control routine to work around a bug */
+	if (org_hub_control == NULL)
+		org_hub_control = ehci_brcm_hc_driver.hub_control;
 	ehci_brcm_hc_driver.hub_control = ehci_brcm_hub_control;
 
 	err = brcm_usb_probe(dev, &ehci_brcm_hc_driver, &hcd, &usb_clk);
@@ -208,7 +212,7 @@ static const struct of_device_id brcm_ehci_of_match[] = {
 	{}
 };
 
-MODULE_DEVICE_TABLE(platform, brcm_ehci_of_match);
+MODULE_DEVICE_TABLE(of, brcm_ehci_of_match);
 #endif /* CONFIG_OF */
 
 static struct platform_driver ehci_brcm_driver = {

@@ -32,6 +32,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/sizes.h>
 #include <linux/kconfig.h>
+#include <linux/sort.h>
 #include <asm/fncpy.h>
 #include <asm/suspend.h>
 #include <asm/setup.h>
@@ -51,6 +52,8 @@
 
 /* Capped for performance reasons */
 #define MAX_HASH_SIZE			SZ_256M
+/* Max per bank, to keep some fairness */
+#define MAX_HASH_SIZE_BANK		SZ_64M
 
 struct brcmstb_memc {
 	void __iomem *ddr_phy_base;
@@ -85,9 +88,7 @@ enum bsp_initiate_command {
 #define PM_INITIATE_FAIL	0xfe
 
 /* Several chips have an old PM_INITIATE interface that doesn't ACK commands */
-#define PM_INITIATE_NO_ACK	(IS_ENABLED(CONFIG_BCM7366A0) || \
-				 IS_ENABLED(CONFIG_BCM7445C0) || \
-				 IS_ENABLED(CONFIG_BCM7439A0))
+#define PM_INITIATE_NO_ACK	IS_ENABLED(CONFIG_BCM7439A0)
 
 static struct brcmstb_pm_control ctrl;
 static suspend_state_t suspend_state;
@@ -265,6 +266,9 @@ static int brcmstb_pm_s3_control_hash(struct brcmstb_s3_params *params,
 	if (ret)
 		return ret;
 
+	dma_sync_single_for_device(NULL, params_pa, sizeof(*params),
+				   DMA_TO_DEVICE);
+
 	ret = memdma_run(params_pa, 0, false);
 	if (ret)
 		return ret;
@@ -287,86 +291,143 @@ static inline int region_collision(struct dma_region *reg1,
 }
 
 /**
- * Check if @regions[0] collides with @except, and modify regions[0] and
- * regions[1] (if needed) to ensure that they they exclude any area in @except
+ * Check if @regions[0] collides with regions in @exceptions, and modify
+ * regions[0..(max-1)] to ensure that they they exclude any area in @exceptions
+ *
+ * Note that the regions in @exceptions must be sorted into ascending order prior
+ * to calling this function
  *
  * Returns the number of @regions used
  *
- * e.g., if @regions[0] and @except do not overlap, return 1 and do nothing
- *       if @except is entirely contained within @regions[0], split @regions[0]
- *          into @regions[0] and @regions[1], and return 2
+ * e.g., if @regions[0] and @exceptions do not overlap, return 1 and do nothing
+ *       if @exceptions contains two ranges and both are entirely contained
+ *          within @regions[0], split @regions[0] into @regions[0],
+ *          @regions[1], and @regions[2], and return 3
  */
-static int region_handle_collisions(struct dma_region *regions,
-				    struct dma_region *except)
+static int region_handle_collisions(struct dma_region *regions, int max,
+				struct dma_region *exceptions, int num_except)
 {
+	int i;
 	struct dma_region *reg = &regions[0];
-	dma_addr_t start = reg->addr;
-	dma_addr_t end = reg->addr + reg->len;
+	int reg_count = 1;
 
-	if (!region_collision(reg, except))
-		/* No collision */
-		return 1;
+	/*
+	 * Since the list of regions is ordered in ascending order we need only
+	 * to compare the last entry in regions against each exception region
+	 */
+	for (i = 0; i < num_except; i++) {
+		struct dma_region *except = &exceptions[i];
+		dma_addr_t start = reg->addr;
+		dma_addr_t end = reg->addr + reg->len;
 
-	if (start < except->addr && end > except->addr + except->len) {
-		/* Split in 2 */
-		regions[1].addr = except->addr + except->len;
-		regions[1].len = end - regions[1].addr;
-		reg->len = except->addr - start;
-		return 2;
-	} else if (start < except->addr) {
-		/* Overlap at right edge; truncate end of 'reg' */
-		reg->len = except->addr - start;
-		return 1;
-	} else if (end > except->addr + except->len) {
-		/* Overlap at left edge; truncate beginning of 'reg' */
-		reg->addr = except->addr + except->len;
-		reg->len = end - reg->addr;
-		return 1;
-	} else {
-		/*
-		 * 'reg' is entirely contained within 'except'?
-		 * This should not happen, but trim to zero-length just in case
-		 */
-		reg->len = 0;
-		return 0;
+		if (!region_collision(reg, except))
+			/* No collision */
+			continue;
+
+		if (start < except->addr && end > except->addr + except->len) {
+			reg->len = except->addr - start;
+			if (reg_count < max) {
+				/* Split in 2 */
+				reg++;
+				reg_count++;
+				reg->addr = except->addr + except->len;
+				reg->len = end - reg->addr;
+			} else {
+				pr_warn("Not enough space to split region\n");
+				break;
+			}
+		} else if (start < except->addr) {
+			/* Overlap at right edge; truncate end of 'reg' */
+			reg->len = except->addr - start;
+		} else if (end > except->addr + except->len) {
+			/* Overlap at left edge; truncate beginning of 'reg' */
+			reg->addr = except->addr + except->len;
+			reg->len = end - reg->addr;
+		} else {
+			/*
+			 * 'reg' is entirely contained within 'except'?  This
+			 * should not happen, but trim to zero-length just in
+			 * case
+			 */
+			reg->len = 0;
+			reg_count--;
+			break;
+		}
 	}
+
+	return reg_count;
+}
+
+static int dma_region_compare(const void *a, const void *b)
+{
+	struct dma_region *reg_a = (struct dma_region *)a;
+	struct dma_region *reg_b = (struct dma_region *)b;
+
+	if (reg_a->addr < reg_b->addr)
+		return -1;
+	if (reg_a->addr > reg_b->addr)
+		return 1;
+	return 0;
 }
 
 /* Initialize the DMA region list and return the number of regions */
 static int configure_main_hash(struct dma_region *regions, int max,
-			       struct dma_region *exclude)
+			       struct dma_region *exclude, int num_exclude)
 {
 	int idx = 0, bank_nr;
 	size_t total = 0;
 
 	/*
-	 * Hash up to 64MB from each memory bank, with a total limit of
-	 * MAX_HASH_SIZE. Account for collisions with the 'exclude' region.
+	 * First sort the excluded regions in ascending order. This makes things
+	 * easier when we come to adding the regions since we avoid having to
+	 * add entries in the middle of the region list
+	 */
+	sort(exclude, num_exclude, sizeof(exclude[0]), &dma_region_compare,
+			NULL);
+
+	/*
+	 * Hash up to MAX_HASH_SIZE_BANK from each memory bank, with a
+	 * total limit of MAX_HASH_SIZE. Account for collisions with the
+	 * 'exclude' regions.
 	 */
 	for_each_bank(bank_nr, &meminfo) {
 		const struct membank *bank = &meminfo.bank[bank_nr];
 		struct dma_region *reg = &regions[idx];
 		int i, count;
+		size_t bank_total = 0;
 
 		reg->addr = bank->start;
-		/* Cap 64MB per bank, and MAX_HASH_SIZE total */
-		reg->len = min_t(size_t, bank->size, SZ_64M);
-		if (reg->len > MAX_HASH_SIZE - total)
-			reg->len = MAX_HASH_SIZE - total;
+		reg->len = bank->size;
 
 		/*
-		 * Check for collisions with the excluded region.
-		 * 'reg' may be split into 0, 1, or 2 segments, so account
+		 * Check for collisions with the excluded regions.  'reg' may be
+		 * split into 0 to (num_exclude + 1) segments, so account
 		 * accordingly
 		 */
-		count = region_handle_collisions(reg, exclude);
-		/* Add region length(s) to total */
-		for (i = 0; i < count; i++)
-			total += reg[i].len;
+		count = region_handle_collisions(reg, max - idx, exclude,
+						 num_exclude);
 
-		idx += count;
-		/* Pad by 1, in case the next region would split in 2 */
-		if (idx + 1 >= max)
+		/*
+		 * Add region length(s) to total. Cap at MAX_HASH_SIZE_BANK
+		 * per bank and MAX_HASH_SIZE total.
+		 */
+		for (i = 0; i < count; i++) {
+			/* Don't create 0-sized regions */
+			if (total >= MAX_HASH_SIZE)
+				break;
+			if (bank_total >= MAX_HASH_SIZE_BANK)
+				break;
+			if (total + reg[i].len > MAX_HASH_SIZE)
+				reg[i].len = MAX_HASH_SIZE - total;
+			if (bank_total + reg[i].len > MAX_HASH_SIZE_BANK)
+				reg[i].len = MAX_HASH_SIZE_BANK - bank_total;
+			total += reg[i].len;
+			bank_total += reg[i].len;
+		}
+
+		idx += i;
+
+		if (idx >= max)
 			break;
 
 		/* Apply total cap */
@@ -410,6 +471,9 @@ static int run_dual_hash(struct dma_region *regions, int numregions,
 	if (ret)
 		return ret;
 
+	dma_sync_single_for_device(NULL, pa1, sizeof(*desc1) * numregions,
+				   DMA_TO_DEVICE);
+
 	/* Go! */
 	ret = memdma_run(pa1, pa2, !!regions2);
 	if (ret)
@@ -424,14 +488,16 @@ static int run_dual_hash(struct dma_region *regions, int numregions,
 }
 
 static int brcmstb_pm_s3_main_memory_hash(struct brcmstb_s3_params *params,
-		phys_addr_t params_pa, struct dma_region *except)
+		phys_addr_t params_pa, struct dma_region *except,
+		int num_except)
 {
 	struct dma_region regions[40];
 	phys_addr_t descs_pa;
 	struct mcpb_dma_desc *descs;
 	int nregs, ret;
 
-	nregs = configure_main_hash(regions, ARRAY_SIZE(regions), except);
+	nregs = configure_main_hash(regions, ARRAY_SIZE(regions), except,
+			num_except);
 	if (nregs < 0)
 		return nregs;
 
@@ -461,9 +527,11 @@ static noinline int brcmstb_pm_s3_finish(void)
 	enum bsp_initiate_command cmd;
 	int i, ret;
 	/* exempt S3 parameters from hashing */
-	struct dma_region except = {
-		.addr = params_pa,
-		.len = sizeof(*params),
+	struct dma_region except[] = {
+		{
+			.addr = params_pa,
+			.len = sizeof(*params),
+		},
 	};
 
 	flush_cache_all();
@@ -484,7 +552,8 @@ static noinline int brcmstb_pm_s3_finish(void)
 	}
 
 	/* Hash main memory */
-	ret = brcmstb_pm_s3_main_memory_hash(params, params_pa, &except);
+	ret = brcmstb_pm_s3_main_memory_hash(params, params_pa, except,
+					     ARRAY_SIZE(except));
 	if (ret)
 		return ret;
 
@@ -787,17 +856,31 @@ int brcmstb_pm_init(void)
 		return ret;
 	}
 
-	ctrl.s3_params = dma_alloc_coherent(NULL,
-			sizeof(struct brcmstb_s3_params),
-			&ctrl.s3_params_pa, GFP_KERNEL);
+	ctrl.s3_params = kmalloc(sizeof(*ctrl.s3_params), GFP_KERNEL);
 	if (!ctrl.s3_params)
 		return -ENOMEM;
+	ctrl.s3_params_pa = dma_map_single(NULL, ctrl.s3_params,
+					   sizeof(*ctrl.s3_params),
+					   DMA_TO_DEVICE);
+	if (dma_mapping_error(NULL, ctrl.s3_params_pa)) {
+		pr_err("error mapping DMA memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	ret = brcmstb_regsave_init();
 	if (ret)
-		return ret;
+		goto out2;
 
 	pm_power_off = brcmstb_pm_poweroff;
 	suspend_set_ops(&brcmstb_pm_ops);
 	return 0;
+
+out2:
+	dma_unmap_single(NULL, ctrl.s3_params_pa, sizeof(*ctrl.s3_params),
+			 DMA_TO_DEVICE);
+out:
+	kfree(ctrl.s3_params);
+
+	return ret;
 }

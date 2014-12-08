@@ -53,8 +53,7 @@ enum {
 	CPU_RESET_CONFIG_REG		= 2,
 };
 
-#if (defined(CONFIG_BCM7445C0) || defined(CONFIG_BCM7445D0) || \
-	defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7366A0) || \
+#if (defined(CONFIG_BCM7445D0) || defined(CONFIG_BCM7439A0) || \
 	defined(CONFIG_BCM7366B0))
 /* HW7445-1290, HW7439-463, HW7366-422: 2nd'ary CPU cores may fail to boot
  * ---

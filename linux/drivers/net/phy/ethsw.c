@@ -580,7 +580,7 @@ static int proc_get_sw_param(struct seq_file *m, void *v)
 
 static int proc_set_sw_param(struct file *f, const char *buf, size_t cnt, loff_t *data)
 {
-	struct phy_device *phydev = (struct phy_device *)data;
+	struct phy_device *phydev = PDE_DATA(file_inode(f));
 	char input[32];
 	int i;
 	int r;

@@ -914,6 +914,8 @@ config ARCH_MULTI_V7
 	bool "ARMv7 based platforms (Cortex-A, PJ4, Scorpion, Krait)"
 	default y
 	select ARCH_MULTI_V6_V7
+	select ARCH_FLATMEM_ENABLE
+	select ARCH_SPARSEMEM_ENABLE
 	select CPU_V7
 
 config ARCH_MULTI_V6_V7
@@ -1775,11 +1777,11 @@ config OABI_COMPAT
 config ARCH_HAS_HOLES_MEMORYMODEL
 	bool
 
-config ARCH_SPARSEMEM_ENABLE
+config ARCH_FLATMEM_ENABLE
 	bool
 
-config ARCH_SPARSEMEM_DEFAULT
-	def_bool ARCH_SPARSEMEM_ENABLE
+config ARCH_SPARSEMEM_ENABLE
+	bool
 
 config ARCH_SELECT_MEMORY_MODEL
 	def_bool ARCH_SPARSEMEM_ENABLE

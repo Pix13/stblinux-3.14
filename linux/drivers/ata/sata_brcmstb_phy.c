@@ -33,6 +33,7 @@
 #include <linux/platform_device.h>
 #include <linux/ahci_platform.h>
 #include <linux/compiler.h>
+#include <linux/brcmstb/brcmstb.h>
 #include <scsi/scsi_host.h>
 
 #include "sata_brcmstb.h"

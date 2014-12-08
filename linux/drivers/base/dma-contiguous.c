@@ -254,8 +254,8 @@ int __init dma_contiguous_reserve_area(phys_addr_t size, phys_addr_t base,
 	*res_cma = cma;
 	cma_area_count++;
 
-	pr_info("CMA: reserved %ld MiB at %08lx\n", (unsigned long)size / SZ_1M,
-		(unsigned long)base);
+	pr_info("CMA: reserved %ld MiB at %pa\n", (unsigned long)size / SZ_1M,
+		&base);
 
 	/* Architecture specific contiguous memory fixup. */
 	dma_contiguous_early_fixup(base, size);
@@ -279,7 +279,7 @@ err:
 struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int align)
 {
-	unsigned long mask, pfn, pageno, start = 0;
+	unsigned long mask, offset, pfn, pageno, start = 0;
 	struct cma *cma = dev_get_cma_area(dev);
 	struct page *page = NULL;
 	int ret;
@@ -297,12 +297,13 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		return NULL;
 
 	mask = (1 << align) - 1;
+	offset = ALIGN(cma->base_pfn, 1 << align) - cma->base_pfn;
 
 	mutex_lock(&cma_mutex);
 
 	for (;;) {
-		pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count,
-						    start, count, mask);
+		pageno = bitmap_find_next_zero_area_off(cma->bitmap, cma->count,
+						    start, count, mask, offset);
 		if (pageno >= cma->count)
 			break;
 
