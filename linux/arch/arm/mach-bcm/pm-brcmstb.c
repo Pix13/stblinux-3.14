@@ -88,7 +88,8 @@ enum bsp_initiate_command {
 #define PM_INITIATE_FAIL	0xfe
 
 /* Several chips have an old PM_INITIATE interface that doesn't ACK commands */
-#define PM_INITIATE_NO_ACK	IS_ENABLED(CONFIG_BCM7439A0)
+#define PM_INITIATE_NO_ACK	(IS_ENABLED(CONFIG_BCM7439A0) || \
+				 IS_ENABLED(CONFIG_BCM74371A0))
 
 static struct brcmstb_pm_control ctrl;
 static suspend_state_t suspend_state;

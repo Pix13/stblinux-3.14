@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Sat Sep 13 03:11:15 2014
- *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
+ * Date:           Generated on              Wed Nov 19 03:12:34 2014
+ *                 Full Compile MD5 Checksum 090c477e923b422fcfb8d82b056c5fac
  *                   (minus title and desc)  
- *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
+ *                 MD5 Checksum              3f553d4cd3bba7438ffdad1405cbf563
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -635,22 +635,22 @@
 #define BCHP_PCIE_0_RGR1_REG_END                           0x00479210
 #define BCHP_PCIE_0_RG_REG_START                           0x00479300
 #define BCHP_PCIE_0_RG_REG_END                             0x0047930c
-#define BCHP_USB1_CAPS_REG_START                           0x00490000
-#define BCHP_USB1_CAPS_REG_END                             0x0049002c
-#define BCHP_USB1_GR_BRIDGE_REG_START                      0x00490100
-#define BCHP_USB1_GR_BRIDGE_REG_END                        0x0049010c
-#define BCHP_USB1_INTR2_REG_START                          0x00490180
-#define BCHP_USB1_INTR2_REG_END                            0x004901ac
-#define BCHP_USB1_CTRL_REG_START                           0x00490200
-#define BCHP_USB1_CTRL_REG_END                             0x004902fc
-#define BCHP_USB1_EHCI_REG_START                           0x00490300
-#define BCHP_USB1_EHCI_REG_END                             0x004903a4
-#define BCHP_USB1_OHCI_REG_START                           0x00490400
-#define BCHP_USB1_OHCI_REG_END                             0x00490454
-#define BCHP_USB1_EHCI1_REG_START                          0x00490500
-#define BCHP_USB1_EHCI1_REG_END                            0x004905a4
-#define BCHP_USB1_OHCI1_REG_START                          0x00490600
-#define BCHP_USB1_OHCI1_REG_END                            0x00490654
+#define BCHP_USB_CAPS_REG_START                            0x00490000
+#define BCHP_USB_CAPS_REG_END                              0x0049002c
+#define BCHP_USB_GR_BRIDGE_REG_START                       0x00490100
+#define BCHP_USB_GR_BRIDGE_REG_END                         0x0049010c
+#define BCHP_USB_INTR2_REG_START                           0x00490180
+#define BCHP_USB_INTR2_REG_END                             0x004901ac
+#define BCHP_USB_CTRL_REG_START                            0x00490200
+#define BCHP_USB_CTRL_REG_END                              0x004902fc
+#define BCHP_USB_EHCI_REG_START                            0x00490300
+#define BCHP_USB_EHCI_REG_END                              0x004903a4
+#define BCHP_USB_OHCI_REG_START                            0x00490400
+#define BCHP_USB_OHCI_REG_END                              0x00490454
+#define BCHP_USB_EHCI1_REG_START                           0x00490500
+#define BCHP_USB_EHCI1_REG_END                             0x004905a4
+#define BCHP_USB_OHCI1_REG_START                           0x00490600
+#define BCHP_USB_OHCI1_REG_END                             0x00490654
 #define BCHP_AVS_CPU_PROG_MEM_REG_START                    0x004c0000
 #define BCHP_AVS_CPU_PROG_MEM_REG_END                      0x004c2ffc
 #define BCHP_AVS_CPU_DATA_MEM_REG_START                    0x004c4000
@@ -1005,12 +1005,6 @@
 #define BCHP_DDR34_PHY_BYTE_LANE_0_0_REG_END               0x00906518
 #define BCHP_DDR34_PHY_BYTE_LANE_1_0_REG_START             0x00906600
 #define BCHP_DDR34_PHY_BYTE_LANE_1_0_REG_END               0x00906718
-#define BCHP_DDR34_PHY_BYTE_LANE_2_0_REG_START             0x00906800
-#define BCHP_DDR34_PHY_BYTE_LANE_2_0_REG_END               0x00906918
-#define BCHP_DDR34_PHY_BYTE_LANE_3_0_REG_START             0x00906a00
-#define BCHP_DDR34_PHY_BYTE_LANE_3_0_REG_END               0x00906b18
-#define BCHP_DDR34_PHY_ECC_LANE_0_REG_START                0x00906c00
-#define BCHP_DDR34_PHY_ECC_LANE_0_REG_END                  0x00906d18
 #define BCHP_SHIMPHY_ADDR_CNTL_0_REG_START                 0x00908000
 #define BCHP_SHIMPHY_ADDR_CNTL_0_REG_END                   0x009080e0
 #define BCHP_MEMC_SENTINEL_0_0_REG_START                   0x00940000

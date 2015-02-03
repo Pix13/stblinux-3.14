@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Sat Sep 13 03:11:32 2014
- *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
+ * Date:           Generated on              Wed Nov 19 03:12:51 2014
+ *                 Full Compile MD5 Checksum 090c477e923b422fcfb8d82b056c5fac
  *                   (minus title and desc)  
- *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
+ *                 MD5 Checksum              3f553d4cd3bba7438ffdad1405cbf563
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -1523,15 +1523,10 @@
 /***************************************************************************
  *PLL_DTT_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_DTT_PLL_MISC2 :: PLLRESERVED0 [31:01] */
-#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_PLLRESERVED0_MASK            0xfffffffe
-#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_PLLRESERVED0_SHIFT           1
+/* CLKGEN :: PLL_DTT_PLL_MISC2 :: PLLRESERVED0 [31:00] */
+#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_PLLRESERVED0_MASK            0xffffffff
+#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_PLLRESERVED0_SHIFT           0
 #define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_PLLRESERVED0_DEFAULT         0x00000000
-
-/* CLKGEN :: PLL_DTT_PLL_MISC2 :: DIG_INPUT_SEL [00:00] */
-#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_DIG_INPUT_SEL_MASK           0x00000001
-#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_DIG_INPUT_SEL_SHIFT          0
-#define BCHP_CLKGEN_PLL_DTT_PLL_MISC2_DIG_INPUT_SEL_DEFAULT        0x00000000
 
 /***************************************************************************
  *PLL_DTT_PLL_PWRON - Poweron
@@ -3979,15 +3974,10 @@
 /***************************************************************************
  *PLL_SYS0_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_SYS0_PLL_MISC2 :: PLLRESERVED0 [31:01] */
-#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_PLLRESERVED0_MASK           0xfffffffe
-#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_PLLRESERVED0_SHIFT          1
+/* CLKGEN :: PLL_SYS0_PLL_MISC2 :: PLLRESERVED0 [31:00] */
+#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_PLLRESERVED0_MASK           0xffffffff
+#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_PLLRESERVED0_SHIFT          0
 #define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_PLLRESERVED0_DEFAULT        0x00000000
-
-/* CLKGEN :: PLL_SYS0_PLL_MISC2 :: DIG_INPUT_SEL [00:00] */
-#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_DIG_INPUT_SEL_MASK          0x00000001
-#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_DIG_INPUT_SEL_SHIFT         0
-#define BCHP_CLKGEN_PLL_SYS0_PLL_MISC2_DIG_INPUT_SEL_DEFAULT       0x00000000
 
 /***************************************************************************
  *PLL_SYS0_PLL_PWRON - Poweron
@@ -4403,15 +4393,10 @@
 /***************************************************************************
  *PLL_SYS1_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_SYS1_PLL_MISC2 :: PLLRESERVED0 [31:01] */
-#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_PLLRESERVED0_MASK           0xfffffffe
-#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_PLLRESERVED0_SHIFT          1
+/* CLKGEN :: PLL_SYS1_PLL_MISC2 :: PLLRESERVED0 [31:00] */
+#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_PLLRESERVED0_MASK           0xffffffff
+#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_PLLRESERVED0_SHIFT          0
 #define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_PLLRESERVED0_DEFAULT        0x00000000
-
-/* CLKGEN :: PLL_SYS1_PLL_MISC2 :: DIG_INPUT_SEL [00:00] */
-#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_DIG_INPUT_SEL_MASK          0x00000001
-#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_DIG_INPUT_SEL_SHIFT         0
-#define BCHP_CLKGEN_PLL_SYS1_PLL_MISC2_DIG_INPUT_SEL_DEFAULT       0x00000000
 
 /***************************************************************************
  *PLL_SYS1_PLL_PWRON - Poweron
@@ -4758,15 +4743,10 @@
 /***************************************************************************
  *PLL_VCXO0_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_VCXO0_PLL_MISC2 :: PLLRESERVED0 [31:01] */
-#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_PLLRESERVED0_MASK          0xfffffffe
-#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_PLLRESERVED0_SHIFT         1
+/* CLKGEN :: PLL_VCXO0_PLL_MISC2 :: PLLRESERVED0 [31:00] */
+#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_PLLRESERVED0_MASK          0xffffffff
+#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_PLLRESERVED0_SHIFT         0
 #define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_PLLRESERVED0_DEFAULT       0x00000000
-
-/* CLKGEN :: PLL_VCXO0_PLL_MISC2 :: DIG_INPUT_SEL [00:00] */
-#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_DIG_INPUT_SEL_MASK         0x00000001
-#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_DIG_INPUT_SEL_SHIFT        0
-#define BCHP_CLKGEN_PLL_VCXO0_PLL_MISC2_DIG_INPUT_SEL_DEFAULT      0x00000000
 
 /***************************************************************************
  *PLL_VCXO0_PLL_PWRON - Poweron
@@ -5118,15 +5098,10 @@
 /***************************************************************************
  *PLL_VCXO1_PLL_MISC2 - Mscellaneous control bus continued.
  ***************************************************************************/
-/* CLKGEN :: PLL_VCXO1_PLL_MISC2 :: PLLRESERVED0 [31:01] */
-#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_PLLRESERVED0_MASK          0xfffffffe
-#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_PLLRESERVED0_SHIFT         1
+/* CLKGEN :: PLL_VCXO1_PLL_MISC2 :: PLLRESERVED0 [31:00] */
+#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_PLLRESERVED0_MASK          0xffffffff
+#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_PLLRESERVED0_SHIFT         0
 #define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_PLLRESERVED0_DEFAULT       0x00000000
-
-/* CLKGEN :: PLL_VCXO1_PLL_MISC2 :: DIG_INPUT_SEL [00:00] */
-#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_DIG_INPUT_SEL_MASK         0x00000001
-#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_DIG_INPUT_SEL_SHIFT        0
-#define BCHP_CLKGEN_PLL_VCXO1_PLL_MISC2_DIG_INPUT_SEL_DEFAULT      0x00000000
 
 /***************************************************************************
  *PLL_VCXO1_PLL_PWRON - Poweron

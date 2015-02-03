@@ -4,7 +4,8 @@ Required properties:
 
 - compatible: should be "brcm,brcmstb-i2c"
 - clock-frequency: 32-bit decimal value of iic master clock freqency in Hz
-		   valid values are 375000, 390000, 187500 and 200000
+		   valid values are 375000, 390000, 187500, 200000
+		   93750, 97500, 46875 and 50000
 - reg: specifies the base physical address and size of the registers
 
 Optional properties :

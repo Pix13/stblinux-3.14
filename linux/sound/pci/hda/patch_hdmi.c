@@ -1062,6 +1062,7 @@ static void hdmi_pin_setup_infoframe(struct hda_codec *codec,
 {
 	union audio_infoframe ai;
 
+	memset(&ai, 0, sizeof(ai));
 	if (conn_type == 0) { /* HDMI */
 		struct hdmi_audio_infoframe *hdmi_ai = &ai.hdmi;
 
@@ -1556,19 +1557,22 @@ static bool hdmi_present_sense(struct hdmi_spec_per_pin *per_pin, int repoll)
 		}
 	}
 
-	if (pin_eld->eld_valid && !eld->eld_valid) {
-		update_eld = true;
+	if (pin_eld->eld_valid != eld->eld_valid)
 		eld_changed = true;
-	}
+
+	if (pin_eld->eld_valid && !eld->eld_valid)
+		update_eld = true;
+
 	if (update_eld) {
 		bool old_eld_valid = pin_eld->eld_valid;
 		pin_eld->eld_valid = eld->eld_valid;
-		eld_changed = pin_eld->eld_size != eld->eld_size ||
+		if (pin_eld->eld_size != eld->eld_size ||
 			      memcmp(pin_eld->eld_buffer, eld->eld_buffer,
-				     eld->eld_size) != 0;
-		if (eld_changed)
+				     eld->eld_size) != 0) {
 			memcpy(pin_eld->eld_buffer, eld->eld_buffer,
 			       eld->eld_size);
+			eld_changed = true;
+		}
 		pin_eld->eld_size = eld->eld_size;
 		pin_eld->info = eld->info;
 
@@ -3313,6 +3317,7 @@ static const struct hda_codec_preset snd_hda_preset_hdmi[] = {
 { .id = 0x80862808, .name = "Broadwell HDMI",	.patch = patch_generic_hdmi },
 { .id = 0x80862880, .name = "CedarTrail HDMI",	.patch = patch_generic_hdmi },
 { .id = 0x80862882, .name = "Valleyview2 HDMI",	.patch = patch_generic_hdmi },
+{ .id = 0x80862883, .name = "Braswell HDMI",	.patch = patch_generic_hdmi },
 { .id = 0x808629fb, .name = "Crestline HDMI",	.patch = patch_generic_hdmi },
 {} /* terminator */
 };
@@ -3369,6 +3374,7 @@ MODULE_ALIAS("snd-hda-codec-id:80862807");
 MODULE_ALIAS("snd-hda-codec-id:80862808");
 MODULE_ALIAS("snd-hda-codec-id:80862880");
 MODULE_ALIAS("snd-hda-codec-id:80862882");
+MODULE_ALIAS("snd-hda-codec-id:80862883");
 MODULE_ALIAS("snd-hda-codec-id:808629fb");
 
 MODULE_LICENSE("GPL");

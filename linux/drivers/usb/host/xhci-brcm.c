@@ -140,7 +140,7 @@ static int xhci_brcm_suspend(struct device *dev)
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
 	struct brcm_hcd *brcm_hcd_ptr = hcd_to_brcm(hcd);
 
-	ret = xhci_suspend(xhci);
+	ret = xhci_suspend(xhci, device_may_wakeup(dev));
 	clk_disable(brcm_hcd_ptr->hcd_clk);
 	return ret;
 }

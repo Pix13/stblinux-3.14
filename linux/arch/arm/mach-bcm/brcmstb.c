@@ -37,6 +37,7 @@
 #include <linux/phy_fixed.h>
 #include <linux/irqchip.h>
 #include <linux/irqchip/arm-gic.h>
+#include <linux/syscore_ops.h>
 #include <asm/cacheflush.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -144,6 +145,73 @@ static inline void of_add_fixed_phys(void)
 }
 #endif /* CONFIG_FIXED_PHY */
 
+#define CPU_CREDIT_REG_OFFSET 0x184
+#define  CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK 0x70000000
+
+static void __iomem *cpubiuctrl_base;
+
+/*
+ * HW7445-1920: Disable MCP write pairing to improve stability on long term
+ * stress test.
+ */
+static int __init disable_mcp_write_pairing(void)
+{
+	u32 creds = 0;
+
+	if (!cpubiuctrl_base)
+		return -1;
+
+	creds = __raw_readl(cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
+	if (creds & CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK) {
+		pr_info("MCP: Disabling write pairing\n");
+		__raw_writel(creds & ~CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK,
+				cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
+	} else {
+		pr_info("MCP: Write pairing already disabled\n");
+	}
+
+	return 0;
+}
+
+static void __init setup_hifcpubiuctrl_regs(void)
+{
+	struct device_node *np;
+
+	np = of_find_compatible_node(NULL, NULL, "brcm,brcmstb-cpu-biu-ctrl");
+	if (!np)
+		pr_err("missing BIU control node\n");
+
+	cpubiuctrl_base = of_iomap(np, 0);
+	if (!cpubiuctrl_base)
+		pr_err("failed to remap BIU control base\n");
+
+	of_node_put(np);
+}
+
+#ifdef CONFIG_PM_SLEEP
+static u32 cpu_credit_reg_dump;  /* for save/restore */
+
+static int brcmstb_cpu_credit_reg_suspend(void)
+{
+	if (cpubiuctrl_base)
+		cpu_credit_reg_dump =
+			__raw_readl(cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
+	return 0;
+}
+
+static void brcmstb_cpu_credit_reg_resume(void)
+{
+	if (cpubiuctrl_base)
+		__raw_writel(cpu_credit_reg_dump,
+				cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
+}
+
+static struct syscore_ops brcmstb_cpu_credit_syscore_ops = {
+	.suspend = brcmstb_cpu_credit_reg_suspend,
+	.resume = brcmstb_cpu_credit_reg_resume,
+};
+#endif
+
 void brcmstb_irq0_init(void)
 {
 	BDEV_WR(BCHP_IRQ0_IRQEN, BCHP_IRQ0_IRQEN_uarta_irqen_MASK
@@ -174,10 +242,16 @@ static void __init brcmstb_init_machine(void)
 	if (ret)
 		pr_warn("PM: initialization failed with code %d\n", ret);
 	platform_device_register_full(&devinfo);
+#ifdef CONFIG_PM_SLEEP
+	register_syscore_ops(&brcmstb_cpu_credit_syscore_ops);
+#endif
 }
 
 static void __init brcmstb_init_early(void)
 {
+	setup_hifcpubiuctrl_regs();
+	if (disable_mcp_write_pairing())
+		pr_err("MCP: Unable to disable write pairing!\n");
 	add_preferred_console("ttyS", 0, "115200");
 }
 

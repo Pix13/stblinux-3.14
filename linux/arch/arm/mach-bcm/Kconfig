@@ -99,6 +99,7 @@ config BCM7250B0
 	select BRCM_HAS_NAND_MINOR_1
 	select BRCM_HAS_BSPI_V4
 	select BRCM_MSPI_64B_WORDS
+	select BRCMSTB_XPT_HASH if PM
 
 config BCM7364A0
 	bool "7364 Ax"
@@ -109,9 +110,21 @@ config BCM7364A0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
+	select BRCMSTB_XPT_HASH if PM
 
 config BCM7366B0
 	bool "7366 Bx"
+	select BCM7366
+	select BRCM_GENET_V4
+	select BRCM_HAS_NAND_MAJOR_7
+	select BRCM_HAS_NAND_MINOR_1
+	select BRCM_HAS_BSPI_V4
+	select BRCM_HAS_MOCA_20_GEN23
+	select BRCM_MSPI_64B_WORDS
+	select BRCMSTB_XPT_HASH if PM
+
+config BCM7366C0
+	bool "7366 Cx"
 	select BCM7366
 	select BRCM_GENET_V4
 	select BRCM_HAS_NAND_MAJOR_7
@@ -151,6 +164,7 @@ config BCM7439B0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
+	select BRCMSTB_XPT_HASH if PM
 
 config BCM7445D0
 	bool "7445 Dx"

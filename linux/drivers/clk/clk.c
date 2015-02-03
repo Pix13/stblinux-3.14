@@ -20,6 +20,7 @@
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/sched.h>
+#include <linux/syscore_ops.h>
 
 #include "clk.h"
 
@@ -613,13 +614,13 @@ static int __init clk_ignore_unused_setup(char *__unused)
 }
 __setup("clk_ignore_unused", clk_ignore_unused_setup);
 
-static int clk_disable_unused(void)
+static void clk_disable_unused(void)
 {
 	struct clk *clk;
 
 	if (clk_ignore_unused) {
 		pr_warn("clk: Not disabling unused clocks\n");
-		return 0;
+		return;
 	}
 
 	clk_prepare_lock();
@@ -637,10 +638,19 @@ static int clk_disable_unused(void)
 		clk_unprepare_unused_subtree(clk);
 
 	clk_prepare_unlock();
+}
 
+static struct syscore_ops disable_unused_ops = {
+	.resume	= clk_disable_unused,
+};
+
+static int clk_init_disable_unused(void)
+{
+	clk_disable_unused();
+	register_syscore_ops(&disable_unused_ops);
 	return 0;
 }
-late_initcall_sync(clk_disable_unused);
+late_initcall_sync(clk_init_disable_unused);
 
 /***    helper functions   ***/
 
@@ -1600,6 +1610,7 @@ static struct clk *clk_propagate_rate_change(struct clk *clk, unsigned long even
 static void clk_change_rate(struct clk *clk)
 {
 	struct clk *child;
+	struct hlist_node *tmp;
 	unsigned long old_rate;
 	unsigned long best_parent_rate = 0;
 	bool skip_set_rate = false;
@@ -1638,7 +1649,11 @@ static void clk_change_rate(struct clk *clk)
 	if (clk->notifier_count && old_rate != clk->rate)
 		__clk_notify(clk, POST_RATE_CHANGE, old_rate, clk->rate);
 
-	hlist_for_each_entry(child, &clk->children, child_node) {
+	/*
+	 * Use safe iteration, as change_rate can actually swap parents
+	 * for certain clock types.
+	 */
+	hlist_for_each_entry_safe(child, tmp, &clk->children, child_node) {
 		/* Skip children who will be reparented to another clock */
 		if (child->new_parent && child->new_parent != clk)
 			continue;

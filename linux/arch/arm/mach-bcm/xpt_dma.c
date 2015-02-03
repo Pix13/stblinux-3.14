@@ -49,7 +49,19 @@
 #define XPT_MAC_A	0
 #define XPT_MAC_B	1
 
-#define MAX_HASH_WAIT_US	(15 * 1024 * 1024) /* 15 seconds */
+#define MAX_HASH_WAIT_US	(15 * 1000 * 1000) /* 15 seconds */
+
+static inline void xpt_set_power(int on)
+{
+#ifdef BCHP_XPT_PMU_FE_SP_PD_MEM_PWR_DN_CTRL
+	uint32_t val = on ? 0 : ~0;
+
+	/* Power on/off everything */
+	BDEV_WR(BCHP_XPT_PMU_FE_SP_PD_MEM_PWR_DN_CTRL, val);
+	BDEV_WR(BCHP_XPT_PMU_MCPB_SP_PD_MEM_PWR_DN_CTRL, val);
+	BDEV_WR(BCHP_XPT_PMU_MEMDMA_SP_PD_MEM_PWR_DN_CTRL, val);
+#endif
+}
 
 static void mcpb_run(int enable, int channel)
 {
@@ -135,8 +147,8 @@ static int mcpb_init_desc(struct mcpb_dma_desc *desc, dma_addr_t next,
 	if (WARN_ON((next & 0x1f) || (upper_32_bits(next) != 0)))
 		return -EINVAL;
 
-	desc->buf_hi = 0;
-	desc->buf_lo = buf; /* BUFF_ST_RD_ADDR [31:0] */
+	desc->buf_hi = upper_32_bits(buf);
+	desc->buf_lo = lower_32_bits(buf); /* BUFF_ST_RD_ADDR [31:0] */
 	desc->next_offs = lower_32_bits(next); /* NEXT_DESC_ADDR [31:5] */
 	desc->size = len; /* BUFF_SIZE [31:0] */
 	desc->opts2 = MCPB_DW5_PID_CHANNEL_VALID | MCPB_DW5_ENDIAN_STRAP_INV;
@@ -247,9 +259,12 @@ static void memdma_start(dma_addr_t desc, int channel)
 int memdma_run(dma_addr_t desc1, dma_addr_t desc2, bool dual_channel)
 {
 	int ret, ret2 = 0;
+
+	xpt_set_power(1);
+
 	ret = mcpb_soft_init();
 	if (ret)
-		return ret;
+		goto out;
 
 	memdma_init_hw(0, PID_CHANNEL_A);
 	mb();
@@ -257,6 +272,7 @@ int memdma_run(dma_addr_t desc1, dma_addr_t desc2, bool dual_channel)
 
 	if (dual_channel) {
 		memdma_init_hw(1, PID_CHANNEL_B);
+		mb();
 		memdma_start(desc2, XPT_CHANNEL_B);
 	}
 
@@ -264,12 +280,14 @@ int memdma_run(dma_addr_t desc1, dma_addr_t desc2, bool dual_channel)
 	if (dual_channel)
 		ret2 = memdma_wait_for_hash(XPT_MAC_B);
 
-	if (ret)
-		return ret;
-	if (ret2)
-		return ret2;
+	/* Report the 1st non-zero return code */
+	if (!ret)
+		ret = ret2;
 
-	return 0;
+out:
+	xpt_set_power(0);
+
+	return ret;
 }
 
 static uint32_t get_hash_idx(int mac_num, int word)

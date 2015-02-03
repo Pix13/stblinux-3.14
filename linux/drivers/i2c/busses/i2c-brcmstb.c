@@ -70,7 +70,7 @@
 #define COND_START_STOP		(COND_RESTART | COND_NOSTART | COND_NOSTOP)
 
 /* BSC data transfer direction */
-#define DTF_WR_MASK	        0x00000000
+#define DTF_WR_MASK		0x00000000
 #define DTF_RD_MASK		0x00000001
 /* BSC data transfer direction combined format */
 #define DTF_RD_WR_MASK		0x00000002
@@ -89,6 +89,12 @@ struct bsc_regs {
 	u32	scl_param;
 };
 
+struct bsc_clk_param {
+	u32 hz;
+	u32 scl_mask;
+	u32 div_mask;
+};
+
 enum bsc_xfer_cmd {
 	CMD_WR,
 	CMD_RD,
@@ -103,18 +109,58 @@ static char const *cmd_string[] = {
 	[CMD_RD_NOACK] = "RD NOACK",
 };
 
-enum bus_speed_mask {
+enum bus_speeds {
 	SPD_375K,
 	SPD_390K,
 	SPD_187K,
 	SPD_200K,
+	SPD_93K,
+	SPD_97K,
+	SPD_46K,
+	SPD_50K
 };
 
-static const u32 bus_speed_hz[] = {
-	[SPD_375K] = 375000,
-	[SPD_390K] = 390000,
-	[SPD_187K] = 187000,
-	[SPD_200K] = 200000,
+static const struct bsc_clk_param  bsc_clk[] = {
+	[SPD_375K] = {
+		.hz = 375000,
+		.scl_mask = SPD_375K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = 0
+	},
+	[SPD_390K] = {
+		.hz = 390000,
+		.scl_mask = SPD_390K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = 0
+	},
+	[SPD_187K] = {
+		.hz = 187500,
+		.scl_mask = SPD_187K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = 0
+	},
+	[SPD_200K] = {
+		.hz = 200000,
+		.scl_mask = SPD_200K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = 0
+	},
+	[SPD_93K]  = {
+		.hz = 93750,
+		.scl_mask = SPD_375K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = BSC_CTL_REG_DIV_CLK_MASK
+	},
+	[SPD_97K]  = {
+		.hz = 97500,
+		.scl_mask = SPD_390K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = BSC_CTL_REG_DIV_CLK_MASK
+	},
+	[SPD_46K]  = {
+		.hz = 46875,
+		.scl_mask = SPD_187K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = BSC_CTL_REG_DIV_CLK_MASK
+	},
+	[SPD_50K]  = {
+		.hz = 50000,
+		.scl_mask = SPD_200K << BSC_CTL_REG_SCL_SEL_SHIFT,
+		.div_mask = BSC_CTL_REG_DIV_CLK_MASK
+	}
 };
 
 struct brcmstb_i2c_dev {
@@ -126,6 +172,7 @@ struct brcmstb_i2c_dev {
 	struct i2c_adapter adapter;
 	struct completion done;
 	bool is_suspended;
+	u32 clk_freq_hz;
 };
 
 #define bsc_readl(_dev, reg)						\
@@ -475,22 +522,15 @@ static const struct i2c_algorithm brcmstb_i2c_algo = {
 
 static void brcmstb_i2c_set_bus_speed(struct brcmstb_i2c_dev *dev)
 {
-	int i = 0, num_speeds = ARRAY_SIZE(bus_speed_hz);
-	u32 of_bus_speed_hz;
-	int ret = of_property_read_u32(dev->device->of_node, "clock-frequency",
-				       &of_bus_speed_hz);
-	if (ret < 0) {
-		dev_warn(dev->device, "missing clock-frequency property\n");
-		dev_warn(dev->device, "setting default clock-frequency %dHz\n",
-			bus_speed_hz[0]);
-		of_bus_speed_hz = bus_speed_hz[0];
-	}
+	int i = 0, num_speeds = ARRAY_SIZE(bsc_clk);
+	u32 clk_freq_hz = dev->clk_freq_hz;
 
 	for (i = 0; i < num_speeds; i++) {
-		if (bus_speed_hz[i] == of_bus_speed_hz) {
-			dev->bsc_regmap->ctl_reg &= ~BSC_CTL_REG_SCL_SEL_MASK;
-			dev->bsc_regmap->ctl_reg |=
-				(i << BSC_CTL_REG_SCL_SEL_SHIFT);
+		if (bsc_clk[i].hz == clk_freq_hz) {
+			dev->bsc_regmap->ctl_reg &= ~(BSC_CTL_REG_SCL_SEL_MASK
+						| BSC_CTL_REG_DIV_CLK_MASK);
+			dev->bsc_regmap->ctl_reg |= (bsc_clk[i].scl_mask |
+						     bsc_clk[i].div_mask);
 			bsc_writel(dev, dev->bsc_regmap->ctl_reg, ctl_reg);
 			break;
 		}
@@ -500,9 +540,9 @@ static void brcmstb_i2c_set_bus_speed(struct brcmstb_i2c_dev *dev)
 		i = (bsc_readl(dev, ctl_reg) & BSC_CTL_REG_SCL_SEL_MASK) >>
 			BSC_CTL_REG_SCL_SEL_SHIFT;
 		dev_warn(dev->device, "invalid input clock-frequency %dHz\n",
-			of_bus_speed_hz);
+			clk_freq_hz);
 		dev_warn(dev->device, "leaving current clock-frequency @ %dHz\n",
-			bus_speed_hz[i]);
+			bsc_clk[i].hz);
 	}
 }
 
@@ -581,9 +621,19 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 		dev_err(dev->device, "failed to add adapter\n");
 		goto probe_errorout;
 	}
+
+	if (of_property_read_u32(dev->device->of_node,
+				 "clock-frequency", &dev->clk_freq_hz)) {
+		dev_warn(dev->device, "missing clock-frequency property\n");
+		dev_warn(dev->device, "setting default clock-frequency %dHz\n",
+			 bsc_clk[0].hz);
+		dev->clk_freq_hz = bsc_clk[0].hz;
+	}
+
 	brcmstb_i2c_set_bsc_reg_defaults(dev);
-	dev_info(dev->device, "%s registered in %s, using mode\n",
-		 int_name, (dev->irq >= 0) ? "interrupt" : "polling");
+	dev_info(dev->device, "%s@%dhz registered in %s mode\n",
+		 int_name ? int_name : " ", dev->clk_freq_hz,
+		 (dev->irq >= 0) ? "interrupt" : "polling");
 
 	return 0;
 

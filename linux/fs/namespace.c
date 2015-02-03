@@ -777,6 +777,20 @@ static void attach_mnt(struct mount *mnt,
 	list_add_tail(&mnt->mnt_child, &parent->mnt_mounts);
 }
 
+static void attach_shadowed(struct mount *mnt,
+			struct mount *parent,
+			struct mount *shadows)
+{
+	if (shadows) {
+		hlist_add_after_rcu(&shadows->mnt_hash, &mnt->mnt_hash);
+		list_add(&mnt->mnt_child, &shadows->mnt_child);
+	} else {
+		hlist_add_head_rcu(&mnt->mnt_hash,
+				m_hash(&parent->mnt, mnt->mnt_mountpoint));
+		list_add_tail(&mnt->mnt_child, &parent->mnt_mounts);
+	}
+}
+
 /*
  * vfsmount lock must be held for write
  */
@@ -795,12 +809,7 @@ static void commit_tree(struct mount *mnt, struct mount *shadows)
 
 	list_splice(&head, n->list.prev);
 
-	if (shadows)
-		hlist_add_after_rcu(&shadows->mnt_hash, &mnt->mnt_hash);
-	else
-		hlist_add_head_rcu(&mnt->mnt_hash,
-				m_hash(&parent->mnt, mnt->mnt_mountpoint));
-	list_add_tail(&mnt->mnt_child, &parent->mnt_mounts);
+	attach_shadowed(mnt, parent, shadows);
 	touch_mnt_namespace(n);
 }
 
@@ -1217,6 +1226,11 @@ static void namespace_unlock(void)
 	head.first->pprev = &head.first;
 	INIT_HLIST_HEAD(&unmounted);
 
+	/* undo decrements we'd done in umount_tree() */
+	hlist_for_each_entry(mnt, &head, mnt_hash)
+		if (mnt->mnt_ex_mountpoint.mnt)
+			mntget(mnt->mnt_ex_mountpoint.mnt);
+
 	up_write(&namespace_sem);
 
 	synchronize_rcu();
@@ -1253,6 +1267,9 @@ void umount_tree(struct mount *mnt, int how)
 		hlist_add_head(&p->mnt_hash, &tmp_list);
 	}
 
+	hlist_for_each_entry(p, &tmp_list, mnt_hash)
+		list_del_init(&p->mnt_child);
+
 	if (how)
 		propagate_umount(&tmp_list);
 
@@ -1263,9 +1280,9 @@ void umount_tree(struct mount *mnt, int how)
 		p->mnt_ns = NULL;
 		if (how < 2)
 			p->mnt.mnt_flags |= MNT_SYNC_UMOUNT;
-		list_del_init(&p->mnt_child);
 		if (mnt_has_parent(p)) {
 			put_mountpoint(p->mnt_mp);
+			mnt_add_count(p->mnt_parent, -1);
 			/* move the reference to mountpoint into ->mnt_ex_mountpoint */
 			p->mnt_ex_mountpoint.dentry = p->mnt_mountpoint;
 			p->mnt_ex_mountpoint.mnt = &p->mnt_parent->mnt;
@@ -1278,6 +1295,8 @@ void umount_tree(struct mount *mnt, int how)
 	}
 	if (last) {
 		last->mnt_hash.next = unmounted.first;
+		if (unmounted.first)
+			unmounted.first->pprev = &last->mnt_hash.next;
 		unmounted.first = tmp_list.first;
 		unmounted.first->pprev = &unmounted.first;
 	}
@@ -1348,6 +1367,8 @@ static int do_umount(struct mount *mnt, int flags)
 		 * Special case for "unmounting" root ...
 		 * we just try to remount it readonly.
 		 */
+		if (!capable(CAP_SYS_ADMIN))
+			return -EPERM;
 		down_write(&sb->s_umount);
 		if (!(sb->s_flags & MS_RDONLY))
 			retval = do_remount_sb(sb, MS_RDONLY, NULL, 0);
@@ -1419,6 +1440,9 @@ SYSCALL_DEFINE2(umount, char __user *, name, int, flags)
 	if (!check_mnt(mnt))
 		goto dput_and_out;
 	if (mnt->mnt.mnt_flags & MNT_LOCKED)
+		goto dput_and_out;
+	retval = -EPERM;
+	if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
 		goto dput_and_out;
 
 	retval = do_umount(mnt, flags);
@@ -1496,6 +1520,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
 			continue;
 
 		for (s = r; s; s = next_mnt(s, r)) {
+			struct mount *t = NULL;
 			if (!(flag & CL_COPY_UNBINDABLE) &&
 			    IS_MNT_UNBINDABLE(s)) {
 				s = skip_mnt_tree(s);
@@ -1517,7 +1542,14 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
 				goto out;
 			lock_mount_hash();
 			list_add_tail(&q->mnt_list, &res->mnt_list);
-			attach_mnt(q, parent, p->mnt_mp);
+			mnt_set_mountpoint(parent, p->mnt_mp, q);
+			if (!list_empty(&parent->mnt_mounts)) {
+				t = list_last_entry(&parent->mnt_mounts,
+					struct mount, mnt_child);
+				if (t->mnt_mp != p->mnt_mp)
+					t = NULL;
+			}
+			attach_shadowed(q, parent, t);
 			unlock_mount_hash();
 		}
 	}
@@ -1937,7 +1969,13 @@ static int do_remount(struct path *path, int flags, int mnt_flags,
 	}
 	if ((mnt->mnt.mnt_flags & MNT_LOCK_NODEV) &&
 	    !(mnt_flags & MNT_NODEV)) {
-		return -EPERM;
+		/* Was the nodev implicitly added in mount? */
+		if ((mnt->mnt_ns->user_ns != &init_user_ns) &&
+		    !(sb->s_type->fs_flags & FS_USERNS_DEV_MOUNT)) {
+			mnt_flags |= MNT_NODEV;
+		} else {
+			return -EPERM;
+		}
 	}
 	if ((mnt->mnt.mnt_flags & MNT_LOCK_NOSUID) &&
 	    !(mnt_flags & MNT_NOSUID)) {
@@ -2803,6 +2841,9 @@ SYSCALL_DEFINE2(pivot_root, const char __user *, new_root,
 		goto out4; /* not attached */
 	/* make sure we can reach put_old from new_root */
 	if (!is_path_reachable(old_mnt, old.dentry, &new))
+		goto out4;
+	/* make certain new is below the root */
+	if (!is_path_reachable(new_mnt, new.dentry, &root))
 		goto out4;
 	root_mp->m_count++; /* pin it so it won't go away */
 	lock_mount_hash();

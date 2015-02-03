@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Sat Sep 13 03:11:33 2014
- *                 Full Compile MD5 Checksum 81d1dc071f09e844b7694a9d7010032b
+ * Date:           Generated on              Wed Nov 19 03:12:52 2014
+ *                 Full Compile MD5 Checksum 090c477e923b422fcfb8d82b056c5fac
  *                   (minus title and desc)  
- *                 MD5 Checksum              8011b86e52a731b78eada82a643ab85a
+ *                 MD5 Checksum              3f553d4cd3bba7438ffdad1405cbf563
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -183,7 +183,7 @@
 /* SUN_TOP_CTRL :: STRAP_VALUE_0 :: strap_boot_shape [09:05] */
 #define BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_MASK      0x000003e0
 #define BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_SHIFT     5
-#define BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_DEFAULT   0x00000002
+#define BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_DEFAULT   0x0000000b
 
 /* SUN_TOP_CTRL :: STRAP_VALUE_0 :: strap_pcie_sata [04:04] */
 #define BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_pcie_sata_MASK       0x00000010

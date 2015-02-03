@@ -140,6 +140,7 @@ int brcm_sata3_phy_spd_get(const struct sata_brcm_pdata *pdata, int port)
 
 	return val & SPD_SETTING_MASK;
 }
+EXPORT_SYMBOL(brcm_sata3_phy_spd_get);
 
 void brcm_sata3_phy_spd_set(struct sata_brcm_pdata *pdata, int port, int val)
 {
@@ -151,6 +152,7 @@ void brcm_sata3_phy_spd_set(struct sata_brcm_pdata *pdata, int port, int val)
 	tmp |= (val & SPD_SETTING_MASK) << SPD_SETTING_SHIFT(port);
 	pdata->phy_force_spd[port / SPD_SETTING_WIDTH] = tmp;
 }
+EXPORT_SYMBOL(brcm_sata3_phy_spd_set);
 
 static void _brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 			       int enable)
@@ -286,3 +288,4 @@ void brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 err:
 	return;
 }
+EXPORT_SYMBOL(brcm_sata3_phy_cfg);

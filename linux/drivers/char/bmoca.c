@@ -236,6 +236,8 @@ struct moca_priv_data {
 	struct clk		*clk;
 	struct clk		*phy_clk;
 	struct clk		*cpu_clk;
+	struct clk		*wol_clk;
+
 
 	int			refcount;
 	unsigned long		start_time;
@@ -263,6 +265,9 @@ struct moca_priv_data {
 	struct notifier_block	pm_notifier;
 	enum moca_pm_states	state;
 	struct completion	suspend_complete;
+
+	/* wol */
+	int     wol_irq;
 };
 
 static const struct moca_regs regs_11_plus = {
@@ -564,9 +569,14 @@ static void moca_hw_init(struct moca_priv_data *priv, int action)
 			goto clk_err_chk;
 		}
 		clk_status = clk_prepare_enable(priv->cpu_clk);
+		if (clk_status != 0) {
+			dev_err(priv->dev, "moca cpu clk enable failed\n");
+			goto clk_err_chk;
+		}
+
+		clk_status = clk_prepare_enable(priv->wol_clk);
 		if (clk_status != 0)
 			dev_err(priv->dev, "moca cpu clk enable failed\n");
-
 clk_err_chk:
 		priv->enabled = clk_status ? 0 : 1;
 	}
@@ -615,6 +625,7 @@ clk_err_chk:
 		clk_disable_unprepare(priv->cpu_clk);
 		clk_disable_unprepare(priv->phy_clk);
 		clk_disable_unprepare(priv->clk);
+		clk_disable_unprepare(priv->wol_clk);
 	}
 }
 
@@ -1909,9 +1920,9 @@ static long moca_file_ioctl(struct file *file, unsigned int cmd,
 				priv->running = 1;
 		}
 		break;
+
 #ifdef CONFIG_PM
 	case MOCA_IOCTL_PM_SUSPEND:
-	case MOCA_IOCTL_PM_WOL:
 		if (priv->state == MOCA_SUSPENDING_WAITING_ACK)
 			complete(&priv->suspend_complete);
 		ret = 0;
@@ -1944,7 +1955,18 @@ static long moca_file_ioctl(struct file *file, unsigned int cmd,
 			ret = -EIO;
 		break;
 	case MOCA_IOCTL_WOL:
-		priv->wol_enabled = (int)arg;
+		if (arg) {
+			device_set_wakeup_enable(&priv->pdev->dev, 1);
+			if (!priv->wol_enabled)
+				enable_irq_wake(priv->wol_irq);
+			priv->wol_enabled = 1;
+		} else {
+			device_set_wakeup_enable(&priv->pdev->dev, 0);
+			/* Avoid unbalanced disable_irq_wake calls */
+			if (priv->wol_enabled)
+				disable_irq_wake(priv->wol_irq);
+			priv->wol_enabled = 0;
+		}
 		dev_info(priv->dev, "WOL is %s\n",
 			priv->wol_enabled ? "enabled" : "disabled");
 		ret = 0;
@@ -2241,6 +2263,13 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 		priv->phy_clk = NULL;
 	}
 
+	priv->wol_clk = of_clk_get_by_name(of_node, "sw_mocawol");
+	if (IS_ERR(priv->wol_clk)) {
+		dev_err(&pdev->dev,
+			"can't find mocawol clk\n");
+		priv->wol_clk = NULL;
+	}
+
 	status = of_property_read_u32(of_node, "hw-rev", &pd.hw_rev);
 	if (status)
 		goto err;
@@ -2289,9 +2318,23 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 	of_property_read_u32(of_node, "i2c-addr", &pd.bcm3450_i2c_addr);
 	of_property_read_u32(of_node, "use-dma", &pd.use_dma);
 	of_property_read_u32(of_node, "use-spi", &pd.use_spi);
-	pd.chip_id = (BRCM_CHIP_ID() << 16) | (BRCM_CHIP_REV() + 0xa0);
+
+	/* Try to read the chip-id property.  If not present, fall back to
+	 * reading it from the chip family ID register.
+	 */
+	if (of_property_read_u32(of_node, "chip-id", &pd.chip_id)) {
+		val = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
+		if (val >> 28)
+			/* 4-digit chip ID */
+			pd.chip_id = (val >> 16) << 16;
+		else
+			/* 5-digit chip ID */
+			pd.chip_id = (val >> 8) << 8;
+		pd.chip_id |= (BRCM_CHIP_REV() + 0xa0);
+	}
 
 	status = platform_device_add_data(pdev, &pd, sizeof(pd));
+
 err:
 	return status;
 
@@ -2512,6 +2555,15 @@ static int moca_unregister_pm_notifier(struct moca_priv_data *priv)
 }
 #endif
 
+static irqreturn_t moca_wol_isr(int irq, void *dev_id)
+{
+	struct moca_priv_data *priv = dev_id;
+
+	pm_wakeup_event(&priv->pdev->dev, 0);
+
+	return IRQ_HANDLED;
+}
+
 static int moca_probe(struct platform_device *pdev)
 {
 	struct moca_priv_data *priv;
@@ -2596,12 +2648,15 @@ static int moca_probe(struct platform_device *pdev)
 	priv->base = ioremap(mres->start, mres->end - mres->start + 1);
 	priv->irq = ires->start;
 
+	priv->wol_irq = platform_get_irq(pdev, 1);
+	if (priv->wol_irq < 0)
+		dev_err(&pdev->dev, "can't find IRQs\n");
+
 	if (pd->bcm3450_i2c_base)
 		priv->i2c_base = ioremap(pd->bcm3450_i2c_base,
 			sizeof(struct bsc_regs));
 
 	/* leave core in reset until we get an ioctl */
-
 	moca_hw_reset(priv);
 
 	if (request_irq(priv->irq, moca_interrupt, 0, "moca",
@@ -2610,6 +2665,14 @@ static int moca_probe(struct platform_device *pdev)
 		err = -EIO;
 		goto bad2;
 	}
+
+	/* Request the WOL interrupt line and advertise suspend if available */
+	priv->wol_enabled = 0;
+	err = devm_request_irq(&pdev->dev, priv->wol_irq, moca_wol_isr, 0,
+			       "mocawol", priv);
+	if (!err && !(priv->wol_irq < 0))
+		device_set_wakeup_capable(&pdev->dev, 1);
+
 	moca_hw_init(priv, MOCA_ENABLE);
 	moca_disable_irq(priv);
 	moca_msg_reset(priv);
@@ -2657,6 +2720,7 @@ static int moca_remove(struct platform_device *pdev)
 	struct clk *clk = priv->clk;
 	struct clk *phy_clk = priv->phy_clk;
 	struct clk *cpu_clk = priv->cpu_clk;
+	struct clk *wol_clk = priv->wol_clk;
 	int err = 0;
 
 	if (priv->dev)
@@ -2672,6 +2736,7 @@ static int moca_remove(struct platform_device *pdev)
 	clk_put(cpu_clk);
 	clk_put(phy_clk);
 	clk_put(clk);
+	clk_put(wol_clk);
 
 #ifdef CONFIG_PM
 	err = moca_unregister_pm_notifier(priv);

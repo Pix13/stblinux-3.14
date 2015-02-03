@@ -18,7 +18,7 @@
 #
 
 SAVEVARS	:= PATH SHELL HOME USER MFLAGS MAKEFLAGS MAKELEVEL \
-		MAKEOVERRIDES TERM DISPLAY
+		MAKEOVERRIDES TERM DISPLAY CCACHE_DIR V VERBOSE
 unexport $(shell perl -w bin/cleanenv.pl $(SAVEVARS))
 
 # don't pass command line options like SUBDIRS

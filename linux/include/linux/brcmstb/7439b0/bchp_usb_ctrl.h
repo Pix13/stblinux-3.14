@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Wed Sep 10 03:17:46 2014
- *                 Full Compile MD5 Checksum bfac34df160f8054857a7ea0bbd94466
+ * Date:           Generated on              Fri Dec 19 03:17:34 2014
+ *                 Full Compile MD5 Checksum 9e27b6ad4c64ff5a28f048a17a7bb056
  *                   (minus title and desc)  
- *                 MD5 Checksum              bc531cb90a66d368cc07fecf313dea26
+ *                 MD5 Checksum              a1a4b86f7693c062faaafa50c5ca64ce
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -699,7 +699,7 @@
 /* USB_CTRL :: UTMI_CTL_1 :: POWER_UP_FSM_SPEED_P1 [24:24] */
 #define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_P1_MASK        0x01000000
 #define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_P1_SHIFT       24
-#define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_P1_DEFAULT     0x00000001
+#define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_P1_DEFAULT     0x00000000
 
 /* USB_CTRL :: UTMI_CTL_1 :: BC10_DM_PU_P1 [23:23] */
 #define BCHP_USB_CTRL_UTMI_CTL_1_BC10_DM_PU_P1_MASK                0x00800000
@@ -768,7 +768,7 @@
 /* USB_CTRL :: UTMI_CTL_1 :: POWER_UP_FSM_SPEED [08:08] */
 #define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_MASK           0x00000100
 #define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_SHIFT          8
-#define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_DEFAULT        0x00000001
+#define BCHP_USB_CTRL_UTMI_CTL_1_POWER_UP_FSM_SPEED_DEFAULT        0x00000000
 
 /* USB_CTRL :: UTMI_CTL_1 :: BC10_DM_PU [07:07] */
 #define BCHP_USB_CTRL_UTMI_CTL_1_BC10_DM_PU_MASK                   0x00000080

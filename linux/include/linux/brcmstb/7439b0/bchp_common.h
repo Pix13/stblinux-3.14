@@ -21,10 +21,10 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Sun Oct 19 03:14:20 2014
- *                 Full Compile MD5 Checksum d1baa5f0ed598f24342ba4ac189a74f9
+ * Date:           Generated on              Fri Dec 19 03:17:11 2014
+ *                 Full Compile MD5 Checksum 9e27b6ad4c64ff5a28f048a17a7bb056
  *                   (minus title and desc)  
- *                 MD5 Checksum              305baf671474fef408540184d05e24f5
+ *                 MD5 Checksum              a1a4b86f7693c062faaafa50c5ca64ce
  *
  * Compiled with:  RDB Utility               combo_header.pl
  *                 RDB Parser                3.0
@@ -1112,7 +1112,7 @@
 #define BCHP_DMISC_REG_START                               0x00680000
 #define BCHP_DMISC_REG_END                                 0x0068001c
 #define BCHP_MVP_TOP_0_REG_START                           0x00688000
-#define BCHP_MVP_TOP_0_REG_END                             0x0068802c
+#define BCHP_MVP_TOP_0_REG_END                             0x00688038
 #define BCHP_SIOB_0_REG_START                              0x00688200
 #define BCHP_SIOB_0_REG_END                                0x006882fc
 #define BCHP_HSCL_0_REG_START                              0x00688400

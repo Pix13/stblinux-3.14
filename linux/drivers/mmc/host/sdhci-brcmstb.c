@@ -31,9 +31,29 @@
 #define SDIO_CFG_REG(x, y)	(x + BCHP_SDIO_0_CFG_##y -	\
 				BCHP_SDIO_0_CFG_REG_START)
 
+#if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM74371A0)
+/*
+ * HW7445-1183
+ * Setting the RESET_ALL or RESET_DATA bits will hang the SDIO
+ * core so don't allow these bits to be set. This workaround
+ * allows the driver to be used for development and testing
+ * but will prevent recovery from normally recoverable errors
+ * and should NOT be used in production systems.
+ */
+static void sdhci_brcmstb_writeb(struct sdhci_host *host, u8 val, int reg)
+{
+	if (reg == SDHCI_SOFTWARE_RESET)
+		val &= ~(SDHCI_RESET_ALL | SDHCI_RESET_DATA);
+	writeb(val, host->ioaddr + reg);
+}
+
+static struct sdhci_ops sdhci_brcmstb_ops = {
+	.write_b	= sdhci_brcmstb_writeb,
+};
+#endif
+
 static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
 };
-
 
 #if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7145B0) ||		\
 	defined(CONFIG_BCM7250B0) || defined(CONFIG_BCM7364A0) ||	\
@@ -132,8 +152,13 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 	}
 	res = clk_prepare_enable(clk);
 	if (res)
-		return res;
+		goto undo_clk_get;
 
+/* Only enable reset workaround for 7439a0 and 74371a0 senior */
+#if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM74371A0)
+	if (BRCM_CHIP_ID() == 0x7439)
+		sdhci_brcmstb_pdata.ops = &sdhci_brcmstb_ops;
+#endif
 	host = sdhci_pltfm_init(pdev, &sdhci_brcmstb_pdata, 0);
 	if (IS_ERR(host)) {
 		res = PTR_ERR(host);
@@ -157,6 +182,8 @@ undo_pltfm_init:
 	sdhci_pltfm_free(pdev);
 undo_clk_prep:
 	clk_disable_unprepare(clk);
+undo_clk_get:
+	clk_put(clk);
 	return res;
 }
 
@@ -167,6 +194,7 @@ static int sdhci_brcmstb_remove(struct platform_device *pdev)
 	int res;
 	res = sdhci_pltfm_unregister(pdev);
 	clk_disable_unprepare(pltfm_host->clk);
+	clk_put(pltfm_host->clk);
 	return res;
 }
 

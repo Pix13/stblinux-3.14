@@ -224,6 +224,8 @@ static int bcm7xxx_28nm_config_init(struct phy_device *phydev)
 		break;
 	case 0xe0:
 	case 0xf0:
+	/* Rev G0 introduces a roll over */
+	case 0x10:
 		ret = bcm7xxx_28nm_e0_plus_afe_config_init(phydev);
 		break;
 	default:
@@ -393,6 +395,7 @@ static struct phy_driver bcm7xxx_driver[] = {
 	BCM7XXX_28NM_GPHY(PHY_ID_BCM7366, "Broadcom BCM7366"),
 	BCM7XXX_28NM_GPHY(PHY_ID_BCM74371, "Broadcom BCM74371"),
 	BCM7XXX_28NM_GPHY(PHY_ID_BCM7439, "Broadcom BCM7439"),
+	BCM7XXX_28NM_GPHY(PHY_ID_BCM7439_2, "Broadcom BCM7439 (2)"),
 	BCM7XXX_28NM_GPHY(PHY_ID_BCM7445, "Broadcom BCM7445"),
 	BCM7XXX_28NM_GPHY(PHY_ID_BCM7455, "Broadcom BCM7455"),
 {

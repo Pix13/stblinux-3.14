@@ -53,23 +53,6 @@ enum {
 	CPU_RESET_CONFIG_REG		= 2,
 };
 
-#if (defined(CONFIG_BCM7445D0) || defined(CONFIG_BCM7439A0) || \
-	defined(CONFIG_BCM7366B0))
-/* HW7445-1290, HW7439-463, HW7366-422: 2nd'ary CPU cores may fail to boot
- * ---
- *
- * There is a design flaw with the BPCM logic, which requires a manual
- * software sequencing during CPU power-on/power-off.
- *
- * See HW7445-1743: BPCM is still not correct; let's keep the workaround
- * enabled for now
- * TODO: we may need the workaround on all chips
- */
-#define USE_MANUAL_MODE 1
-#else
-#define USE_MANUAL_MODE 0
-#endif
-
 static void __iomem *cpubiuctrl_block;
 static void __iomem *hif_cont_block;
 static u32 cpu0_pwr_zone_ctrl_reg;
@@ -106,12 +89,6 @@ static u32 pwr_ctrl_rd(u32 cpu)
 {
 	void __iomem *base = pwr_ctrl_get_base(cpu);
 	return readl_relaxed(base);
-}
-
-static void pwr_ctrl_wr(u32 cpu, u32 val)
-{
-	void __iomem *base = pwr_ctrl_get_base(cpu);
-	writel(val, base);
 }
 
 static void pwr_ctrl_set(unsigned int cpu, u32 val, u32 mask)
@@ -168,12 +145,10 @@ void brcmstb_cpu_boot(u32 cpu)
 	/* Mark this CPU as "up" */
 	per_cpu_sw_state_wr(cpu, 1);
 
-	pr_info("SMP: Booting CPU%d...\n", cpu);
-
 	/*
-	* set the reset vector to point to the secondary_startup
-	* routine
-	*/
+	 * set the reset vector to point to the secondary_startup
+	 * routine
+	 */
 	cpu_set_boot_addr(cpu, virt_to_phys(brcmstb_secondary_startup));
 
 	/* unhalt the cpu */
@@ -186,35 +161,22 @@ void brcmstb_cpu_power_on(u32 cpu)
 	 * The secondary cores power was cut, so we must go through
 	 * power-on initialization.
 	 */
-	pr_info("SMP: Powering up CPU%d...\n", cpu);
+	pwr_ctrl_set(cpu, ZONE_MAN_ISO_CNTL_MASK, 0xffffff00);
+	pwr_ctrl_set(cpu, ZONE_MANUAL_CONTROL_MASK, -1);
+	pwr_ctrl_set(cpu, ZONE_RESERVED_1_MASK, -1);
 
-	if (USE_MANUAL_MODE) {
-		pr_info("SMP: Using manual power-on sequence\n");
+	pwr_ctrl_set(cpu, ZONE_MAN_MEM_PWR_MASK, -1);
 
-		pwr_ctrl_set(cpu, ZONE_MAN_ISO_CNTL_MASK, 0xffffff00);
-		pwr_ctrl_set(cpu, ZONE_MANUAL_CONTROL_MASK, -1);
-		pwr_ctrl_set(cpu, ZONE_RESERVED_1_MASK, -1);
+	if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_MEM_PWR_STATE_MASK))
+		panic("ZONE_MEM_PWR_STATE_MASK set timeout");
 
-		pwr_ctrl_set(cpu, ZONE_MAN_MEM_PWR_MASK, -1);
+	pwr_ctrl_set(cpu, ZONE_MAN_CLKEN_MASK, -1);
 
-		if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_MEM_PWR_STATE_MASK))
-			panic("ZONE_MEM_PWR_STATE_MASK set timeout");
+	if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_DPG_PWR_STATE_MASK))
+		panic("ZONE_DPG_PWR_STATE_MASK set timeout");
 
-		pwr_ctrl_set(cpu, ZONE_MAN_CLKEN_MASK, -1);
-
-		if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_DPG_PWR_STATE_MASK))
-			panic("ZONE_DPG_PWR_STATE_MASK set timeout");
-
-		pwr_ctrl_clr(cpu, ZONE_MAN_ISO_CNTL_MASK, -1);
-		pwr_ctrl_set(cpu, ZONE_MAN_RESET_CNTL_MASK, -1);
-	} else {
-		/* Request zone power up */
-		pwr_ctrl_wr(cpu, ZONE_PWR_UP_REQ_MASK);
-
-		/* Wait for the power up FSM to complete */
-		if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_PWR_ON_STATE_MASK))
-			panic("ZONE_PWR_ON_STATE_MASK set timeout");
-	}
+	pwr_ctrl_clr(cpu, ZONE_MAN_ISO_CNTL_MASK, -1);
+	pwr_ctrl_set(cpu, ZONE_MAN_RESET_CNTL_MASK, -1);
 }
 
 int brcmstb_cpu_get_power_state(u32 cpu)
@@ -226,16 +188,6 @@ int brcmstb_cpu_get_power_state(u32 cpu)
 void __ref brcmstb_cpu_die(u32 cpu)
 {
 	v7_exit_coherency_flush(all);
-
-	/* Prevent all interrupts from reaching this CPU. */
-	arch_local_irq_disable();
-
-	/*
-	 * Final full barrier to ensure everything before this instruction has
-	 * quiesced.
-	 */
-	isb();
-	dsb();
 
 	/*
 	 * NOTE: Inlined version of per_cpu_sw_state_wr(). The barriers and
@@ -252,14 +204,12 @@ void __ref brcmstb_cpu_die(u32 cpu)
 	wfi();
 
 	/* We should never get here... */
-	panic("Spurious interrupt on CPU %d received!\n", cpu);
+	while (1)
+		;
 }
 
 int brcmstb_cpu_kill(u32 cpu)
 {
-	u32 tmp;
-
-#if USE_MANUAL_MODE
 	/*
 	 * Ordinarily, the hardware forbids power-down of CPU0 (which is good
 	 * because it is the boot CPU), but this is not true when using BPCM
@@ -270,48 +220,26 @@ int brcmstb_cpu_kill(u32 cpu)
 		pr_warn("SMP: refusing to power off CPU0\n");
 		return 1;
 	}
-#endif
-
-	pr_info("SMP: Powering down CPU%d...\n", cpu);
 
 	while (per_cpu_sw_state_rd(cpu))
 		;
 
-	if (USE_MANUAL_MODE) {
-		pr_info("SMP: Using manual power-off sequence\n");
+	pwr_ctrl_set(cpu, ZONE_MANUAL_CONTROL_MASK, -1);
+	pwr_ctrl_clr(cpu, ZONE_MAN_RESET_CNTL_MASK, -1);
+	pwr_ctrl_clr(cpu, ZONE_MAN_CLKEN_MASK, -1);
+	pwr_ctrl_set(cpu, ZONE_MAN_ISO_CNTL_MASK, -1);
+	pwr_ctrl_clr(cpu, ZONE_MAN_MEM_PWR_MASK, -1);
 
-		pwr_ctrl_set(cpu, ZONE_MANUAL_CONTROL_MASK, -1);
-		pwr_ctrl_clr(cpu, ZONE_MAN_RESET_CNTL_MASK, -1);
-		pwr_ctrl_clr(cpu, ZONE_MAN_CLKEN_MASK, -1);
-		pwr_ctrl_set(cpu, ZONE_MAN_ISO_CNTL_MASK, -1);
-		pwr_ctrl_clr(cpu, ZONE_MAN_MEM_PWR_MASK, -1);
+	if (pwr_ctrl_wait_tmout(cpu, 0, ZONE_MEM_PWR_STATE_MASK))
+		panic("ZONE_MEM_PWR_STATE_MASK clear timeout");
 
-		if (pwr_ctrl_wait_tmout(cpu, 0, ZONE_MEM_PWR_STATE_MASK))
-			panic("ZONE_MEM_PWR_STATE_MASK clear timeout");
+	pwr_ctrl_clr(cpu, ZONE_RESERVED_1_MASK, -1);
 
-		pwr_ctrl_clr(cpu, ZONE_RESERVED_1_MASK, -1);
+	if (pwr_ctrl_wait_tmout(cpu, 0, ZONE_DPG_PWR_STATE_MASK))
+		panic("ZONE_DPG_PWR_STATE_MASK clear timeout");
 
-		if (pwr_ctrl_wait_tmout(cpu, 0, ZONE_DPG_PWR_STATE_MASK))
-			panic("ZONE_DPG_PWR_STATE_MASK clear timeout");
-	} else {
-		/* Program zone reset */
-		pwr_ctrl_wr(cpu, ZONE_RESET_STATE_MASK |
-				 ZONE_BLK_RST_ASSERT_MASK |
-				 ZONE_PWR_DN_REQ_MASK);
-
-		/* Verify zone reset */
-		tmp = pwr_ctrl_rd(cpu);
-		if (!(tmp & ZONE_RESET_STATE_MASK))
-			pr_err("%s: Zone reset bit for CPU %d not asserted!\n",
-				__func__, cpu);
-
-		/* Wait for power down */
-		if (pwr_ctrl_wait_tmout(cpu, 1, ZONE_PWR_OFF_STATE_MASK))
-			panic("ZONE_PWR_OFF_STATE_MASK set timeout");
-	}
-
-	/* Settle-time from Broadcom-internal DVT reference code */
-	udelay(7);
+	/* Flush pipeline before resetting CPU */
+	mb();
 
 	/* Assert reset on the CPU */
 	cpu_rst_cfg_set(cpu, 1);

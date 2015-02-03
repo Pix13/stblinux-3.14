@@ -205,7 +205,7 @@ static int __netlink_deliver_tap_skb(struct sk_buff *skb,
 		nskb->protocol = htons((u16) sk->sk_protocol);
 		nskb->pkt_type = netlink_is_kernel(sk) ?
 				 PACKET_KERNEL : PACKET_USER;
-
+		skb_reset_network_header(nskb);
 		ret = dev_queue_xmit(nskb);
 		if (unlikely(ret > 0))
 			ret = net_xmit_errno(ret);
@@ -636,7 +636,7 @@ static unsigned int netlink_poll(struct file *file, struct socket *sock,
 		while (nlk->cb_running && netlink_dump_space(nlk)) {
 			err = netlink_dump(sk);
 			if (err < 0) {
-				sk->sk_err = err;
+				sk->sk_err = -err;
 				sk->sk_error_report(sk);
 				break;
 			}
@@ -707,7 +707,7 @@ static int netlink_mmap_sendmsg(struct sock *sk, struct msghdr *msg,
 	 * after validation, the socket and the ring may only be used by a
 	 * single process, otherwise we fall back to copying.
 	 */
-	if (atomic_long_read(&sk->sk_socket->file->f_count) > 2 ||
+	if (atomic_long_read(&sk->sk_socket->file->f_count) > 1 ||
 	    atomic_read(&nlk->mapped) > 1)
 		excl = false;
 
@@ -2448,7 +2448,7 @@ static int netlink_recvmsg(struct kiocb *kiocb, struct socket *sock,
 	    atomic_read(&sk->sk_rmem_alloc) <= sk->sk_rcvbuf / 2) {
 		ret = netlink_dump(sk);
 		if (ret) {
-			sk->sk_err = ret;
+			sk->sk_err = -ret;
 			sk->sk_error_report(sk);
 		}
 	}
