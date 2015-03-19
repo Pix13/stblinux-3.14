@@ -102,7 +102,9 @@ static char *term_string_buffer = (char *)NULL;
 
 static int tcap_initialized;
 
-#if !defined (__linux__) && !defined (NCURSES_VERSION)
+/* Add in workaround for LSB not having termcap global symbols */
+#if !defined (__linux__) && !defined (NCURSES_VERSION) || \
+	defined (__LSB_VERSION__)
 #  if defined (__EMX__) || defined (NEED_EXTERN_PC)
 extern 
 #  endif /* __EMX__ || NEED_EXTERN_PC */

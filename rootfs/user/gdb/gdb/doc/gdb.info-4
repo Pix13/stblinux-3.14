@@ -8753,22 +8753,3 @@ Annotation Interface: (annotate)Limitations.).
 lines beginning '^Z^Z' (where '^Z' denotes a 'control-z' character) are
 annotations; the rest is output from GDB.
 
-
-File: gdb.info,  Node: Server Prefix,  Next: Prompting,  Prev: Annotations Overview,  Up: Annotations
-
-28.2 The Server Prefix
-======================
-
-If you prefix a command with 'server ' then it will not affect the
-command history, nor will it affect GDB's notion of which command to
-repeat if <RET> is pressed on a line by itself.  This means that
-commands can be run behind a user's back by a front-end in a transparent
-manner.
-
-   The 'server ' prefix does not affect the recording of values into the
-value history; to print a value without recording it into the value
-history, use the 'output' command instead of the 'print' command.
-
-   Using this prefix also disables confirmation requests (*note
-confirmation requests::).
-

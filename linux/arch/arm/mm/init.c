@@ -22,6 +22,7 @@
 #include <linux/memblock.h>
 #include <linux/dma-contiguous.h>
 #include <linux/sizes.h>
+#include <linux/cma.h>
 
 #include <asm/mach-types.h>
 #include <asm/memblock.h>
@@ -122,6 +123,9 @@ void show_mem(unsigned int filter)
 	printk("%d pages of RAM\n", total);
 	printk("%d free pages\n", free);
 	printk("%d reserved pages\n", reserved);
+#ifdef CONFIG_CMA
+	printk("%lu cma reserved pages\n", totalcma_pages);
+#endif
 	printk("%d slab pages\n", slab);
 	printk("%d pages shared\n", shared);
 	printk("%d pages swap cached\n", cached);

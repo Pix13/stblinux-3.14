@@ -189,8 +189,7 @@ config DB8500_CPUFREQ_COOLING
 config INTEL_POWERCLAMP
 	tristate "Intel PowerClamp idle injection driver"
 	depends on THERMAL
-	depends on X86
-	depends on CPU_SUP_INTEL
+	depends on (X86 && CPU_SUP_INTEL) || ARM
 	help
 	  Enable this to enable Intel PowerClamp idle injection driver. This
 	  enforce idle time which results in more package C-state residency. The
@@ -221,6 +220,10 @@ config ACPI_INT3403_THERMAL
 	  the user or use this information for making decisions. For example,
 	  the Intel Thermal Daemon can use this information to allow the user
 	  to select his laptop to run without turning on the fans.
+
+config BRCMSTB_THERMAL
+	tristate "Broadcom STB AVS TMON thermal driver"
+	depends on ARCH_BRCMSTB
 
 menu "Texas Instruments thermal drivers"
 source "drivers/thermal/ti-soc-thermal/Kconfig"

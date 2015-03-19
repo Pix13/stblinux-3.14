@@ -47,6 +47,8 @@ struct bcm_sf2_port_status {
 	bool enabled;
 
 	struct ethtool_eee eee;
+
+	u32 vlan_ctl_mask;
 };
 
 struct bcm_sf2_priv {
@@ -104,14 +106,21 @@ static inline void name##_writel(struct bcm_sf2_priv *priv,		\
  * using the REG_DIR_DATA_{READ,WRITE} ancillary registers. The 'indir_lock'
  * spinlock is automatically grabbed and released to provide relative
  * atomiticy with latched reads/writes.
+ *
+ * For reads, we first need to read the regular 32-bits register, and then
+ * issue a read to the REG_DIR_DATA_READ register and assemble the 64-bits
+ * quantity.
+ *
+ * For writes, it is the opposite, we need to write to REG_DIR_DATA_WRITE and
+ * then to the regular 32-bits register.
  */
 #define SF2_IO64_MACRO(name) \
 static inline u64 name##_readq(struct bcm_sf2_priv *priv, u32 off)	\
 {									\
 	u32 indir, dir;							\
 	spin_lock(&priv->indir_lock);					\
-	indir = reg_readl(priv, REG_DIR_DATA_READ);			\
 	dir = __raw_readl(priv->name + off);				\
+	indir = reg_readl(priv, REG_DIR_DATA_READ);			\
 	spin_unlock(&priv->indir_lock);					\
 	return (u64)indir << 32 | dir;					\
 }									\

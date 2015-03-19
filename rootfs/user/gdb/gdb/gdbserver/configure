@@ -1340,7 +1340,8 @@ Optional Packages:
                           plus --with-ust-lib=PATH/lib
   --with-ust-include=PATH Specify directory for installed UST include files
   --with-ust-lib=PATH   Specify the directory for the installed UST library
-  --with-pkgversion=PKG   Use PKG in the version string in place of "GDB"
+  --with-pkgversion=PKG   Use PKG in the version string in place of "Linaro
+                          GDB"
   --with-bugurl=URL       Direct users to URL to report a bug
   --with-libthread-db=PATH
                           use given libthread_db directly
@@ -5399,7 +5400,7 @@ if test "${with_pkgversion+set}" = set; then :
       *)   PKGVERSION="($withval) " ;;
      esac
 else
-  PKGVERSION="(GDB) "
+  PKGVERSION="(Linaro GDB) "
 
 fi
 
@@ -5417,7 +5418,7 @@ if test "${with_bugurl+set}" = set; then :
 	   ;;
      esac
 else
-  BUGURL="http://www.gnu.org/software/gdb/bugs/"
+  BUGURL="http://bugs.launchpad.net/gdb-linaro/"
 
 fi
 

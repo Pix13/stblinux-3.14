@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
+/* A Bison parser, made by GNU Bison 2.7.  */
 
 /* Bison implementation for Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "2.7.12-4996"
+#define YYBISON_VERSION "2.7"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -390,21 +390,12 @@ typedef short int yytype_int16;
 # endif
 #endif
 
-#ifndef __attribute__
-/* This feature is available in gcc versions 2.5 and later.  */
-# if (! defined __GNUC__ || __GNUC__ < 2 \
-      || (__GNUC__ == 2 && __GNUC_MINOR__ < 5))
-#  define __attribute__(Spec) /* empty */
-# endif
-#endif
-
 /* Suppress unused-variable warnings by "using" E.  */
 #if ! defined lint || defined __GNUC__
 # define YYUSE(E) ((void) (E))
 #else
 # define YYUSE(E) /* empty */
 #endif
-
 
 /* Identity function, used to suppress warnings about constant conditions.  */
 #ifndef lint
@@ -1051,7 +1042,11 @@ yy_symbol_value_print (yyoutput, yytype, yyvaluep)
 # else
   YYUSE (yyoutput);
 # endif
-  YYUSE (yytype);
+  switch (yytype)
+    {
+      default:
+        break;
+    }
 }
 
 
@@ -1441,7 +1436,12 @@ yydestruct (yymsg, yytype, yyvaluep)
     yymsg = "Deleting";
   YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
 
-  YYUSE (yytype);
+  switch (yytype)
+    {
+
+      default:
+        break;
+    }
 }
 
 
@@ -1725,7 +1725,7 @@ yyreduce:
   switch (yyn)
     {
         case 4:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 242 "f-exp.y"
     { write_exp_elt_opcode(OP_TYPE);
 			  write_exp_elt_type((yyvsp[(1) - (1)].tval));
@@ -1733,55 +1733,55 @@ yyreduce:
     break;
 
   case 5:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 248 "f-exp.y"
     { }
     break;
 
   case 6:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 253 "f-exp.y"
     { write_exp_elt_opcode (UNOP_IND); }
     break;
 
   case 7:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 257 "f-exp.y"
     { write_exp_elt_opcode (UNOP_ADDR); }
     break;
 
   case 8:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 261 "f-exp.y"
     { write_exp_elt_opcode (UNOP_NEG); }
     break;
 
   case 9:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 265 "f-exp.y"
     { write_exp_elt_opcode (UNOP_LOGICAL_NOT); }
     break;
 
   case 10:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 269 "f-exp.y"
     { write_exp_elt_opcode (UNOP_COMPLEMENT); }
     break;
 
   case 11:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 273 "f-exp.y"
     { write_exp_elt_opcode (UNOP_SIZEOF); }
     break;
 
   case 12:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 282 "f-exp.y"
     { start_arglist (); }
     break;
 
   case 13:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 284 "f-exp.y"
     { write_exp_elt_opcode (OP_F77_UNDETERMINED_ARGLIST);
 			  write_exp_elt_longcst ((LONGEST) end_arglist ());
@@ -1789,25 +1789,25 @@ yyreduce:
     break;
 
   case 15:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 293 "f-exp.y"
     { arglist_len = 1; }
     break;
 
   case 16:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 297 "f-exp.y"
     { arglist_len = 1; }
     break;
 
   case 17:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 301 "f-exp.y"
     { arglist_len++; }
     break;
 
   case 18:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 307 "f-exp.y"
     { write_exp_elt_opcode (OP_F90_RANGE); 
 			  write_exp_elt_longcst (NONE_BOUND_DEFAULT);
@@ -1815,7 +1815,7 @@ yyreduce:
     break;
 
   case 19:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 313 "f-exp.y"
     { write_exp_elt_opcode (OP_F90_RANGE);
 			  write_exp_elt_longcst (HIGH_BOUND_DEFAULT);
@@ -1823,7 +1823,7 @@ yyreduce:
     break;
 
   case 20:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 319 "f-exp.y"
     { write_exp_elt_opcode (OP_F90_RANGE);
 			  write_exp_elt_longcst (LOW_BOUND_DEFAULT);
@@ -1831,7 +1831,7 @@ yyreduce:
     break;
 
   case 21:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 325 "f-exp.y"
     { write_exp_elt_opcode (OP_F90_RANGE);
 			  write_exp_elt_longcst (BOTH_BOUND_DEFAULT);
@@ -1839,13 +1839,13 @@ yyreduce:
     break;
 
   case 22:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 331 "f-exp.y"
     { }
     break;
 
   case 23:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 335 "f-exp.y"
     { write_exp_elt_opcode(OP_COMPLEX);
 			  write_exp_elt_type (parse_f_type->builtin_complex_s16);
@@ -1853,7 +1853,7 @@ yyreduce:
     break;
 
   case 24:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 341 "f-exp.y"
     { write_exp_elt_opcode (UNOP_CAST);
 			  write_exp_elt_type ((yyvsp[(2) - (4)].tval));
@@ -1861,7 +1861,7 @@ yyreduce:
     break;
 
   case 25:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 347 "f-exp.y"
     { write_exp_elt_opcode (STRUCTOP_STRUCT);
                           write_exp_string ((yyvsp[(3) - (3)].sval));
@@ -1869,127 +1869,127 @@ yyreduce:
     break;
 
   case 26:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 355 "f-exp.y"
     { write_exp_elt_opcode (BINOP_REPEAT); }
     break;
 
   case 27:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 359 "f-exp.y"
     { write_exp_elt_opcode (BINOP_EXP); }
     break;
 
   case 28:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 363 "f-exp.y"
     { write_exp_elt_opcode (BINOP_MUL); }
     break;
 
   case 29:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 367 "f-exp.y"
     { write_exp_elt_opcode (BINOP_DIV); }
     break;
 
   case 30:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 371 "f-exp.y"
     { write_exp_elt_opcode (BINOP_ADD); }
     break;
 
   case 31:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 375 "f-exp.y"
     { write_exp_elt_opcode (BINOP_SUB); }
     break;
 
   case 32:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 379 "f-exp.y"
     { write_exp_elt_opcode (BINOP_LSH); }
     break;
 
   case 33:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 383 "f-exp.y"
     { write_exp_elt_opcode (BINOP_RSH); }
     break;
 
   case 34:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 387 "f-exp.y"
     { write_exp_elt_opcode (BINOP_EQUAL); }
     break;
 
   case 35:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 391 "f-exp.y"
     { write_exp_elt_opcode (BINOP_NOTEQUAL); }
     break;
 
   case 36:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 395 "f-exp.y"
     { write_exp_elt_opcode (BINOP_LEQ); }
     break;
 
   case 37:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 399 "f-exp.y"
     { write_exp_elt_opcode (BINOP_GEQ); }
     break;
 
   case 38:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 403 "f-exp.y"
     { write_exp_elt_opcode (BINOP_LESS); }
     break;
 
   case 39:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 407 "f-exp.y"
     { write_exp_elt_opcode (BINOP_GTR); }
     break;
 
   case 40:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 411 "f-exp.y"
     { write_exp_elt_opcode (BINOP_BITWISE_AND); }
     break;
 
   case 41:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 415 "f-exp.y"
     { write_exp_elt_opcode (BINOP_BITWISE_XOR); }
     break;
 
   case 42:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 419 "f-exp.y"
     { write_exp_elt_opcode (BINOP_BITWISE_IOR); }
     break;
 
   case 43:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 423 "f-exp.y"
     { write_exp_elt_opcode (BINOP_LOGICAL_AND); }
     break;
 
   case 44:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 428 "f-exp.y"
     { write_exp_elt_opcode (BINOP_LOGICAL_OR); }
     break;
 
   case 45:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 432 "f-exp.y"
     { write_exp_elt_opcode (BINOP_ASSIGN); }
     break;
 
   case 46:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 436 "f-exp.y"
     { write_exp_elt_opcode (BINOP_ASSIGN_MODIFY);
 			  write_exp_elt_opcode ((yyvsp[(2) - (3)].opcode));
@@ -1997,7 +1997,7 @@ yyreduce:
     break;
 
   case 47:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 442 "f-exp.y"
     { write_exp_elt_opcode (OP_LONG);
 			  write_exp_elt_type ((yyvsp[(1) - (1)].typed_val).type);
@@ -2006,7 +2006,7 @@ yyreduce:
     break;
 
   case 48:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 449 "f-exp.y"
     { YYSTYPE val;
 			  parse_number ((yyvsp[(1) - (1)].ssym).stoken.ptr, (yyvsp[(1) - (1)].ssym).stoken.length, 0, &val);
@@ -2017,7 +2017,7 @@ yyreduce:
     break;
 
   case 49:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 458 "f-exp.y"
     { write_exp_elt_opcode (OP_DOUBLE);
 			  write_exp_elt_type (parse_f_type->builtin_real_s8);
@@ -2026,7 +2026,7 @@ yyreduce:
     break;
 
   case 52:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 471 "f-exp.y"
     { write_exp_elt_opcode (OP_LONG);
 			  write_exp_elt_type (parse_f_type->builtin_integer);
@@ -2036,7 +2036,7 @@ yyreduce:
     break;
 
   case 53:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 479 "f-exp.y"
     { write_exp_elt_opcode (OP_BOOL);
 			  write_exp_elt_longcst ((LONGEST) (yyvsp[(1) - (1)].lval));
@@ -2045,7 +2045,7 @@ yyreduce:
     break;
 
   case 54:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 486 "f-exp.y"
     {
 			  write_exp_elt_opcode (OP_STRING);
@@ -2055,7 +2055,7 @@ yyreduce:
     break;
 
   case 55:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 494 "f-exp.y"
     { struct symbol *sym = (yyvsp[(1) - (1)].ssym).sym;
 
@@ -2096,7 +2096,7 @@ yyreduce:
     break;
 
   case 58:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 538 "f-exp.y"
     {
 		  /* This is where the interesting stuff happens.  */
@@ -2141,145 +2141,145 @@ yyreduce:
     break;
 
   case 59:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 581 "f-exp.y"
     { push_type (tp_pointer); (yyval.voidval) = 0; }
     break;
 
   case 60:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 583 "f-exp.y"
     { push_type (tp_pointer); (yyval.voidval) = (yyvsp[(2) - (2)].voidval); }
     break;
 
   case 61:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 585 "f-exp.y"
     { push_type (tp_reference); (yyval.voidval) = 0; }
     break;
 
   case 62:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 587 "f-exp.y"
     { push_type (tp_reference); (yyval.voidval) = (yyvsp[(2) - (2)].voidval); }
     break;
 
   case 64:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 592 "f-exp.y"
     { (yyval.voidval) = (yyvsp[(2) - (3)].voidval); }
     break;
 
   case 65:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 594 "f-exp.y"
     { push_type (tp_function); }
     break;
 
   case 66:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 596 "f-exp.y"
     { push_type (tp_function); }
     break;
 
   case 67:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 600 "f-exp.y"
     { (yyval.voidval) = 0; }
     break;
 
   case 68:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 602 "f-exp.y"
     { xfree ((yyvsp[(2) - (3)].tvec)); (yyval.voidval) = 0; }
     break;
 
   case 69:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 607 "f-exp.y"
     { (yyval.tval) = (yyvsp[(1) - (1)].tsym).type; }
     break;
 
   case 70:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 609 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_integer; }
     break;
 
   case 71:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 611 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_integer_s2; }
     break;
 
   case 72:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 613 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_character; }
     break;
 
   case 73:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 615 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_logical_s8; }
     break;
 
   case 74:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 617 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_logical; }
     break;
 
   case 75:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 619 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_logical_s2; }
     break;
 
   case 76:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 621 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_logical_s1; }
     break;
 
   case 77:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 623 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_real; }
     break;
 
   case 78:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 625 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_real_s8; }
     break;
 
   case 79:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 627 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_real_s16; }
     break;
 
   case 80:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 629 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_complex_s8; }
     break;
 
   case 81:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 631 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_complex_s16; }
     break;
 
   case 82:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 633 "f-exp.y"
     { (yyval.tval) = parse_f_type->builtin_complex_s32; }
     break;
 
   case 83:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 638 "f-exp.y"
     { (yyval.tvec) = (struct type **) xmalloc (sizeof (struct type *) * 2);
 		  (yyval.ivec)[0] = 1;	/* Number of types in vector */
@@ -2288,7 +2288,7 @@ yyreduce:
     break;
 
   case 84:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 643 "f-exp.y"
     { int len = sizeof (struct type *) * (++((yyvsp[(1) - (3)].ivec)[0]) + 1);
 		  (yyval.tvec) = (struct type **) xrealloc ((char *) (yyvsp[(1) - (3)].tvec), len);
@@ -2297,13 +2297,13 @@ yyreduce:
     break;
 
   case 85:
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 650 "f-exp.y"
     {  (yyval.sval) = (yyvsp[(1) - (1)].ssym).stoken; }
     break;
 
 
-/* Line 1787 of yacc.c  */
+/* Line 1792 of yacc.c  */
 #line 2309 "f-exp.c"
       default: break;
     }
@@ -2535,7 +2535,7 @@ yyreturn:
 }
 
 
-/* Line 2050 of yacc.c  */
+/* Line 2055 of yacc.c  */
 #line 663 "f-exp.y"
 
 

@@ -1457,6 +1457,7 @@ eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
 $as_echo "$ac_try_echo"; } >&5
   (eval "$ac_cpp conftest.$ac_ext") 2>conftest.err
   ac_status=$?
+  sed -i "/unrecognized gcc version/d" conftest.err
   if test -s conftest.err; then
     grep -v '^ *+' conftest.err >conftest.er1
     cat conftest.er1 >&5

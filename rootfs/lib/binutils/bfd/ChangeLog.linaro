@@ -1,3 +1,70 @@
+2014-10-24  Will Newton  <will.newton@linaro.org>
+
+	Linaro binutils 2.24-2014.11-2 released.
+
+	* version.h: Update version.
+
+2014-10-24  Will Newton  <will.newton@linaro.org>
+
+	* version.h: Bump version.
+
+2014-10-24  Will Newton  <will.newton@linaro.org>
+
+	Linaro binutils 2.24-2014.11-1 released.
+
+	* version.h: Update version.
+
+2014-10-24  Will Newton  <will.newton@linaro.org>
+
+	* version.h: Bump version.
+
+2014-10-24  Will Newton  <will.newton@linaro.org>
+
+	Linaro binutils 2.24-2014.11 released.
+
+	* version.h: Update version.
+
+2014-09-16  Terry Guo  <terry.guo@arm.com>
+
+	* elf32-arm.c (elf32_arm_merge_eabi_attributes): Return false if
+	failed to merge.
+
+2014-10-20  Will Newton  <will.newton@linaro.org>
+
+	* version.h: Reformat version to avoid issue in BZ #665.
+
+2014-08-29  Will Newton  <will.newton@linaro.org>
+
+	* version.h: Bump version.
+
+2014-08-29  Will Newton  <will.newton@linaro.org>
+
+	Linaro binutils 2.24-2014.09 released.
+
+	* version.h: Update version.
+
+2014-08-26  Jiong Wang  <jiong.wang@arm.com>
+
+	* elfnn-aarch64.c (elfNN_aarch64_check_relocs): Initialize non_got_ref
+	properly for MOVW_G0/1/2_NC and MOVW_G3.  Reject them when linking
+	shared library.
+	(elfNN_aarch64_gc_sweep_hook): Add check on these relocs.
+
+2014-08-20  Will Newton  <will.newton@linaro.org>
+
+	* config.bfd: Default armeb-*-eabi* to big endian.
+
+2014-08-21  Tony Wang  <tony.wang@arm.com>
+
+	* elf32-arm.c (elf32_arm_final_link_relocate): Implement
+	the veneer routine for R_ARM_THM_JUMP19.
+	(arm_type_of_stub): Add conditional clause for R_ARM_THM_JUMP19
+	(elf32_arm_size_stub): Ditto.
+
+2014-08-01  Will Newton  <will.newton@linaro.org>
+
+	* version.h: Bump version.
+
 2014-08-01  Will Newton  <will.newton@linaro.org>
 
 	Linaro binutils 2.24-2014.08 released.

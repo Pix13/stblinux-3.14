@@ -197,8 +197,8 @@ AC_CHECK_TYPES([Elf32_auxv_t, Elf64_auxv_t], [], [],
 #include <elf.h>
 )
 
-ACX_PKGVERSION([GDB])
-ACX_BUGURL([http://www.gnu.org/software/gdb/bugs/])
+ACX_PKGVERSION([Linaro GDB])
+ACX_BUGURL([http://bugs.launchpad.net/gdb-linaro/])
 AC_DEFINE_UNQUOTED([PKGVERSION], ["$PKGVERSION"], [Additional package description])
 AC_DEFINE_UNQUOTED([REPORT_BUGS_TO], ["$REPORT_BUGS_TO"], [Bug reporting address])
 

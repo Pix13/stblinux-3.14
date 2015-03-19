@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -31,6 +32,7 @@ enum cmd_index {
 	CMD_GETPROT,
 	CMD_SETPROT,
 	CMD_UNITTEST,
+	CMD_RESET,
 	CMD_RESETALL,
 	CMD_MMAP,
 	CMD_VERSION,
@@ -59,6 +61,8 @@ static const struct cmd_arg_desc cmds[] = {
 		"setprot",  "<pg_prot val>",                             1 },
 	{ CMD_UNITTEST,
 		"unittest", "",                                          0 },
+	{ CMD_RESET,
+		"reset",    "<cmadevidx>",                               1 },
 	{ CMD_RESETALL,
 		"resetall", "",                                          0 },
 	{ CMD_MMAP,
@@ -257,7 +261,18 @@ done:
 	return ret;
 }
 
-static void run_unit_tests(int fd)
+static bool exists_region(int fd, uint32_t cma_idx)
+{
+	uint64_t addr;
+	uint32_t len;
+	int32_t memc;
+	int ret;
+
+	ret = cma_get_phys_info(fd, cma_idx, &addr, &len, &memc);
+	return !ret;
+}
+
+static void __run_unit_tests(int fd, uint32_t cma_idx)
 {
 	int i;
 	uint64_t addr[32];
@@ -266,35 +281,44 @@ static void run_unit_tests(int fd)
 	uint64_t y;
 	int32_t z;
 
+	/* === TEST CASE 0 ===
+	 * This isn't really a test per se, but we do need the region to
+	 * exist and to be reset to be sure the unit tests will work.
+	 */
+	if (!exists_region(fd, cma_idx))
+		return;
+	printf("Resetting CMA region %u for tests.\n", cma_idx);
+	reset_all(fd, cma_idx);  /* contains its own asserts */
+
 	/* === TEST CASE 1 === */
 
 	printf("t: alloc (1) region\n");
 	len[0] = 0x1000;
 	len[1] = 0x1000;
-	assert(cma_get_mem(fd, 1, len[0], 0, &addr[0]) == 0);
+	assert(cma_get_mem(fd, cma_idx, len[0], 0, &addr[0]) == 0);
 	printf("ok\n\n");
 
 	printf("t: verify (1) region allocated\n");
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 1);
 	printf("ok\n\n");
 
 	printf("t: free (1) region\n");
-	assert(cma_put_mem(fd, 1, addr[0], len[0]) == 0);
+	assert(cma_put_mem(fd, cma_idx, addr[0], len[0]) == 0);
 	printf("ok\n\n");
 
 	/* === TEST CASE 2 === */
 
-	printf("t: alloc (2) regions w/ 1MB alignment\n");
+	printf("t: alloc (2) regions w/ 16MB alignment\n");
 	for (i = 0; i < 2; i++) {
 		len[i] = 0x1000;
-		assert(cma_get_mem(fd, 1, len[i], 1 * 1024 * 1024, &addr[i])
+		assert(cma_get_mem(fd, cma_idx, len[i], 16 * 1024 * 1024, &addr[i])
 			== 0);
 	}
 	printf("ok\n\n");
 
 	printf("t: verify (2) regions allocated\n");
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 2);
 	printf("ok\n\n");
 
@@ -304,16 +328,16 @@ static void run_unit_tests(int fd)
 		uint64_t addr;
 		uint32_t num_bytes;
 
-		assert(cma_get_region_info(fd, 1, i, &memc, &addr, &num_bytes)
+		assert(cma_get_region_info(fd, cma_idx, i, &memc, &addr, &num_bytes)
 			== 0);
-		assert((addr % (1 * 1024 * 1024)) == 0);
+		assert((addr % (16 * 1024 * 1024)) == 0);
 		assert(num_bytes == len[i]);
 	}
 	printf("ok\n\n");
 
 	printf("t: free (2) region\n");
 	for (i = 0; i < 2; i++)
-		assert(cma_put_mem(fd, 1, addr[i], len[i]) == 0);
+		assert(cma_put_mem(fd, cma_idx, addr[i], len[i]) == 0);
 	printf("ok\n\n");
 
 	/* === TEST CASE 3 === */
@@ -322,18 +346,18 @@ static void run_unit_tests(int fd)
 	len[0] = 0x1000;
 	len[1] = 0x2000;
 	for (i = 0; i < 2; i++)
-		assert(cma_get_mem(fd, 1, len[i], 0, &addr[i]) == 0);
+		assert(cma_get_mem(fd, cma_idx, len[i], 0, &addr[i]) == 0);
 	for (i = 0; i < 2; i++)
-		assert(cma_put_mem(fd, 1, addr[i], len[i]) == 0);
+		assert(cma_put_mem(fd, cma_idx, addr[i], len[i]) == 0);
 	printf("ok\n\n");
 
 	/* === TEST CASE 4 === */
 
 	printf("t: alloc and attempt free with mismatched length\n");
 	len[0] = 0x1000;
-	assert(cma_get_mem(fd, 1, len[0], 0, &addr[0]) == 0);
-	assert(cma_put_mem(fd, 1, addr[0], len[0] + 1) == -EINVAL);
-	assert(cma_put_mem(fd, 1, addr[0], len[0]) == 0);
+	assert(cma_get_mem(fd, cma_idx, len[0], 0, &addr[0]) == 0);
+	assert(cma_put_mem(fd, cma_idx, addr[0], len[0] + 1) == -EINVAL);
+	assert(cma_put_mem(fd, cma_idx, addr[0], len[0]) == 0);
 	printf("ok\n\n");
 
 	/* === TEST CASE 5 === */
@@ -341,14 +365,14 @@ static void run_unit_tests(int fd)
 	printf("t: alloc (5) and free in same order\n");
 	for (i = 0; i < 5; i++) {
 		len[i] = (i + 1) * 0x1000;
-		assert(cma_get_mem(fd, 1, len[i], 0, &addr[i]) == 0);
+		assert(cma_get_mem(fd, cma_idx, len[i], 0, &addr[i]) == 0);
 	}
 	for (i = 0; i < 5; i++)
-		assert(cma_put_mem(fd, 1, addr[i], len[i]) == 0);
+		assert(cma_put_mem(fd, cma_idx, addr[i], len[i]) == 0);
 	printf("ok\n\n");
 
 	printf("t: verify (0) regions allocated\n");
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 0);
 	printf("ok\n\n");
 
@@ -357,14 +381,14 @@ static void run_unit_tests(int fd)
 	printf("t: alloc (5) and free in reverse order\n");
 	for (i = 0; i < 5; i++) {
 		len[i] = (i + 1) * 0x1000;
-		assert(cma_get_mem(fd, 1, len[i], 0, &addr[i]) == 0);
+		assert(cma_get_mem(fd, cma_idx, len[i], 0, &addr[i]) == 0);
 	}
 	for (i = 4; i >= 0; i--)
-		assert(cma_put_mem(fd, 1, addr[i], len[i]) == 0);
+		assert(cma_put_mem(fd, cma_idx, addr[i], len[i]) == 0);
 	printf("ok\n\n");
 
 	printf("t: verify (0) regions allocated\n");
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 0);
 	printf("ok\n\n");
 
@@ -373,27 +397,27 @@ static void run_unit_tests(int fd)
 	printf("t: alloc (3), free middle\n");
 	for (i = 0; i < 3; i++) {
 		len[i] = (i + 1) * 0x1000;
-		assert(cma_get_mem(fd, 1, len[i], 0, &addr[i]) == 0);
+		assert(cma_get_mem(fd, cma_idx, len[i], 0, &addr[i]) == 0);
 	}
-	assert(cma_put_mem(fd, 1, addr[1], len[1]) == 0);
+	assert(cma_put_mem(fd, cma_idx, addr[1], len[1]) == 0);
 	printf("ok\n\n");
 
 	printf("t: verify (2) regions allocated\n");
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 2);
 	printf("ok\n\n");
 
 	printf("t: free the remaining (2) regions, verify (0) regions\n");
-	assert(cma_put_mem(fd, 1, addr[0], len[0]) == 0);
-	assert(cma_put_mem(fd, 1, addr[2], len[2]) == 0);
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_put_mem(fd, cma_idx, addr[0], len[0]) == 0);
+	assert(cma_put_mem(fd, cma_idx, addr[2], len[2]) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 0);
 	printf("ok\n\n");
 
 	/* === TEST CASE 8 === */
 
 	printf("t: attempt retrieval of invalid region info\n");
-	assert(cma_get_region_info(fd, 1, 42, &z, &y, &x) == -EINVAL);
+	assert(cma_get_region_info(fd, cma_idx, 42, &z, &y, &x) == -EINVAL);
 	printf("ok\n\n");
 
 	/* === TEST CASE 9 === */
@@ -405,32 +429,32 @@ static void run_unit_tests(int fd)
 	printf("t: alloc (1) region and free a chunk from the middle\n");
 	len[0] = 0x100000;
 	len[1] = 0x1000;
-	assert(cma_get_mem(fd, 1, len[0], 0, &addr[0]) == 0);
-	assert(cma_put_mem(fd, 1, addr[0] + 0x1000, len[1]) == 0);
-	assert(cma_get_num_regions(fd, 1, &x) == 0);
+	assert(cma_get_mem(fd, cma_idx, len[0], 0, &addr[0]) == 0);
+	assert(cma_put_mem(fd, cma_idx, addr[0] + 0x1000, len[1]) == 0);
+	assert(cma_get_num_regions(fd, cma_idx, &x) == 0);
 	assert(x == 2);
 	{
 		int32_t  reg_memc;
 		uint64_t reg_addr;
 		uint32_t reg_numbytes;
 
-		assert(cma_get_region_info(fd, 1, 0, &reg_memc, &reg_addr,
+		assert(cma_get_region_info(fd, cma_idx, 0, &reg_memc, &reg_addr,
 					   &reg_numbytes) == 0);
 		assert(reg_addr == addr[0]);
 		assert(reg_numbytes == 0x1000);
 
-		assert(cma_get_region_info(fd, 1, 1, &reg_memc, &reg_addr,
+		assert(cma_get_region_info(fd, cma_idx, 1, &reg_memc, &reg_addr,
 					   &reg_numbytes) == 0);
 		assert(reg_addr == (addr[0] + 0x2000));
 		assert(reg_numbytes == (len[0] - 0x2000));
 
-		assert(cma_put_mem(fd, 1, addr[0], 0x1000) == 0);
-		assert(cma_put_mem(fd, 1, addr[0] + 0x2000,
+		assert(cma_put_mem(fd, cma_idx, addr[0], 0x1000) == 0);
+		assert(cma_put_mem(fd, cma_idx, addr[0] + 0x2000,
 				   len[0] - 0x2000) == 0);
 	}
 	printf("ok\n\n");
 
-	printf("UNIT TEST PASSED!\n");
+	printf("UNIT TEST PASSED! (region %u)\n", cma_idx);
 }
 
 static void test_bfr_gen(uint32_t *bfr, uint32_t bfr_sz)
@@ -440,6 +464,14 @@ static void test_bfr_gen(uint32_t *bfr, uint32_t bfr_sz)
 
 	for (i = 0; i < bfr_sz / sizeof(uint32_t); i++)
 		curr[i] = i;
+}
+
+static void run_unit_tests(int fd)
+{
+	uint32_t i;
+	for (i = 0; i < CMA_NUM_RANGES; i++)
+		__run_unit_tests(fd, i);
+	printf("\nAll unit tests passed.\n");
 }
 
 static int test_bfr_chk(uint32_t *bfr, uint32_t bfr_sz)
@@ -781,6 +813,13 @@ int main(int argc, char *argv[])
 	}
 	case CMD_UNITTEST: {
 		run_unit_tests(fd);
+		break;
+	}
+	case CMD_RESET: {
+		uint32_t cma_idx;
+
+		sscanf(cmd_argv[0], "%u", &cma_idx);
+		reset_all(fd, cma_idx);
 		break;
 	}
 	case CMD_RESETALL: {

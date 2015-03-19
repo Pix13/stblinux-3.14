@@ -3334,19 +3334,13 @@ parse_sys_reg (char **str, struct hash_control *sys_regs, int imple_defined_p)
 	return PARSE_FAIL;
       else
 	{
-	  /* Parse S<op0>_<op1>_<Cn>_<Cm>_<op2>, the implementation defined
-	     registers.  */
+	  /* Parse S<op0>_<op1>_<Cn>_<Cm>_<op2>.  */
 	  unsigned int op0, op1, cn, cm, op2;
-	  if (sscanf (buf, "s%u_%u_c%u_c%u_%u", &op0, &op1, &cn, &cm, &op2) != 5)
+
+	  if (sscanf (buf, "s%u_%u_c%u_c%u_%u", &op0, &op1, &cn, &cm, &op2)
+	      != 5)
 	    return PARSE_FAIL;
-	  /* The architecture specifies the encoding space for implementation
-	     defined registers as:
-	     op0  op1  CRn   CRm   op2
-	     1x   xxx  1x11  xxxx  xxx
-	     For convenience GAS accepts a wider encoding space, as follows:
-	     op0  op1  CRn   CRm   op2
-	     1x   xxx  xxxx  xxxx  xxx  */
-	  if ((op0 != 2 && op0 != 3) || op1 > 7 || cn > 15 || cm > 15 || op2 > 7)
+	  if (op0 > 3 || op1 > 7 || cn > 15 || cm > 15 || op2 > 7)
 	    return PARSE_FAIL;
 	  value = (op0 << 14) | (op1 << 11) | (cn << 7) | (cm << 3) | op2;
 	}
@@ -3946,11 +3940,11 @@ output_info (const char *format, ...)
 static void
 output_operand_error_record (const operand_error_record *record, char *str)
 {
-  int idx = record->detail.index;
-  const aarch64_opcode *opcode = record->opcode;
-  enum aarch64_opnd opd_code = (idx != -1 ? opcode->operands[idx]
-				: AARCH64_OPND_NIL);
   const aarch64_operand_error *detail = &record->detail;
+  int idx = detail->index;
+  const aarch64_opcode *opcode = record->opcode;
+  enum aarch64_opnd opd_code = (idx >= 0 ? opcode->operands[idx]
+				: AARCH64_OPND_NIL);
 
   switch (detail->kind)
     {
@@ -3962,20 +3956,22 @@ output_operand_error_record (const operand_error_record *record, char *str)
     case AARCH64_OPDE_RECOVERABLE:
     case AARCH64_OPDE_FATAL_SYNTAX_ERROR:
     case AARCH64_OPDE_OTHER_ERROR:
-      gas_assert (idx >= 0);
       /* Use the prepared error message if there is, otherwise use the
 	 operand description string to describe the error.  */
       if (detail->error != NULL)
 	{
-	  if (detail->index == -1)
+	  if (idx < 0)
 	    as_bad (_("%s -- `%s'"), detail->error, str);
 	  else
 	    as_bad (_("%s at operand %d -- `%s'"),
-		    detail->error, detail->index + 1, str);
+		    detail->error, idx + 1, str);
 	}
       else
-	as_bad (_("operand %d should be %s -- `%s'"), idx + 1,
+	{
+	  gas_assert (idx >= 0);
+	  as_bad (_("operand %d should be %s -- `%s'"), idx + 1,
 		aarch64_get_operand_desc (opd_code), str);
+	}
       break;
 
     case AARCH64_OPDE_INVALID_VARIANT:
@@ -4080,28 +4076,28 @@ output_operand_error_record (const operand_error_record *record, char *str)
       if (detail->data[0] != detail->data[1])
 	as_bad (_("%s out of range %d to %d at operand %d -- `%s'"),
 		detail->error ? detail->error : _("immediate value"),
-		detail->data[0], detail->data[1], detail->index + 1, str);
+		detail->data[0], detail->data[1], idx + 1, str);
       else
 	as_bad (_("%s expected to be %d at operand %d -- `%s'"),
 		detail->error ? detail->error : _("immediate value"),
-		detail->data[0], detail->index + 1, str);
+		detail->data[0], idx + 1, str);
       break;
 
     case AARCH64_OPDE_REG_LIST:
       if (detail->data[0] == 1)
 	as_bad (_("invalid number of registers in the list; "
 		  "only 1 register is expected at operand %d -- `%s'"),
-		detail->index + 1, str);
+		idx + 1, str);
       else
 	as_bad (_("invalid number of registers in the list; "
 		  "%d registers are expected at operand %d -- `%s'"),
-	      detail->data[0], detail->index + 1, str);
+	      detail->data[0], idx + 1, str);
       break;
 
     case AARCH64_OPDE_UNALIGNED:
       as_bad (_("immediate value should be a multiple of "
 		"%d at operand %d -- `%s'"),
-	      detail->data[0], detail->index + 1, str);
+	      detail->data[0], idx + 1, str);
       break;
 
     default:
@@ -4646,6 +4642,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_Rs:
 	case AARCH64_OPND_Ra:
 	case AARCH64_OPND_Rt_SYS:
+	case AARCH64_OPND_PAIRREG:
 	  po_int_reg_or_fail (1, 0);
 	  break;
 
@@ -5967,12 +5964,15 @@ tc_aarch64_regname_to_dw2regnum (char *regname)
     case REG_TYPE_SP_64:
     case REG_TYPE_R_32:
     case REG_TYPE_R_64:
+      return reg->number;
+
     case REG_TYPE_FP_B:
     case REG_TYPE_FP_H:
     case REG_TYPE_FP_S:
     case REG_TYPE_FP_D:
     case REG_TYPE_FP_Q:
-      return reg->number;
+      return reg->number + 64;
+
     default:
       break;
     }
@@ -7202,6 +7202,7 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"all", AARCH64_ANY, NULL},
   {"cortex-a53",	AARCH64_ARCH_V8, "Cortex-A53"},
   {"cortex-a57",	AARCH64_ARCH_V8, "Cortex-A57"},
+  {"thunderx",		AARCH64_ARCH_V8, "Cavium ThunderX"},
   {"xgene-1", AARCH64_ARCH_V8, "APM X-Gene 1"},
   {"generic", AARCH64_ARCH_V8, NULL},
 
@@ -7238,6 +7239,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"crc",		AARCH64_FEATURE (AARCH64_FEATURE_CRC, 0)},
   {"crypto",		AARCH64_FEATURE (AARCH64_FEATURE_CRYPTO, 0)},
   {"fp",		AARCH64_FEATURE (AARCH64_FEATURE_FP, 0)},
+  {"lse",		AARCH64_FEATURE (AARCH64_FEATURE_LSE, 0)},
   {"simd",		AARCH64_FEATURE (AARCH64_FEATURE_SIMD, 0)},
   {NULL,		AARCH64_ARCH_NONE}
 };

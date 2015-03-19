@@ -37,6 +37,8 @@
 #include <asm/suspend.h>
 #include <asm/setup.h>
 
+#include <linux/brcmstb/brcmstb.h>
+
 #include "brcmstb.h"
 #include "pm-brcmstb.h"
 #include "aon_defs.h"
@@ -93,6 +95,10 @@ enum bsp_initiate_command {
 
 static struct brcmstb_pm_control ctrl;
 static suspend_state_t suspend_state;
+
+#define MAX_EXCLUDE				16
+static int num_exclusions;
+static struct dma_region exclusions[MAX_EXCLUDE];
 
 extern const unsigned long brcmstb_pm_do_s2_sz;
 extern asmlinkage int brcmstb_pm_do_s2(void __iomem *aon_ctrl_base,
@@ -186,6 +192,12 @@ static int brcmstb_pm_handshake(void)
 	ret = do_bsp_initiate_command(BSP_CLOCK_STOP);
 	if (ret)
 		pr_err("BSP handshake failed\n");
+
+	/*
+	 * HACK: BSP may have internal race on the CLOCK_STOP command.
+	 * Avoid touching the BSP for a few milliseconds.
+	 */
+	mdelay(3);
 
 	return ret;
 }
@@ -502,6 +514,9 @@ static int brcmstb_pm_s3_main_memory_hash(struct brcmstb_s3_params *params,
 	if (nregs < 0)
 		return nregs;
 
+	/* Flush out before hashing main memory */
+	flush_cache_all();
+
 	/* Get base pointers */
 	descs_pa = params_pa + offsetof(struct brcmstb_s3_params, descriptors);
 	descs = (struct mcpb_dma_desc *)params->descriptors;
@@ -515,6 +530,21 @@ static int brcmstb_pm_s3_main_memory_hash(struct brcmstb_s3_params *params,
 	return 0;
 }
 
+int brcmstb_pm_mem_exclude(phys_addr_t addr, size_t len)
+{
+	if (num_exclusions >= MAX_EXCLUDE) {
+		pr_err("exclusion list is full\n");
+		return -ENOSPC;
+	}
+
+	exclusions[num_exclusions].addr = addr;
+	exclusions[num_exclusions].len = len;
+	num_exclusions++;
+
+	return 0;
+}
+EXPORT_SYMBOL(brcmstb_pm_mem_exclude);
+
 /*
  * This function is called on a new stack, so don't allow inlining (which will
  * generate stack references on the old stack)
@@ -526,16 +556,13 @@ static noinline int brcmstb_pm_s3_finish(void)
 	phys_addr_t reentry = virt_to_phys(&cpu_resume);
 	u32 flags = 0;
 	enum bsp_initiate_command cmd;
-	int i, ret;
-	/* exempt S3 parameters from hashing */
-	struct dma_region except[] = {
-		{
-			.addr = params_pa,
-			.len = sizeof(*params),
-		},
-	};
+	int i, ret, num_exclude;
 
-	flush_cache_all();
+	ret = brcmstb_pm_mem_exclude(params_pa, sizeof(*params));
+	if (ret) {
+		pr_err("failed to add parameter exclusion region\n");
+		return ret;
+	}
 
 	/* Clear parameter structure */
 	memset(params, 0, sizeof(*params));
@@ -552,9 +579,13 @@ static noinline int brcmstb_pm_s3_finish(void)
 		return -EIO;
 	}
 
+	/* Reset exclusion regions */
+	num_exclude = num_exclusions;
+	num_exclusions = 0;
+
 	/* Hash main memory */
-	ret = brcmstb_pm_s3_main_memory_hash(params, params_pa, except,
-					     ARRAY_SIZE(except));
+	ret = brcmstb_pm_s3_main_memory_hash(params, params_pa, exclusions,
+					     num_exclude);
 	if (ret)
 		return ret;
 

@@ -39,6 +39,7 @@
 #include <linux/bitmap.h>
 #include <linux/highmem.h>
 #include <linux/dma-contiguous.h>
+#include <linux/cma.h>
 #include <linux/sizes.h>
 #include <linux/vme.h>
 #include <asm/div64.h>
@@ -289,7 +290,7 @@ void __init cma_reserve(void)
 		pr_debug("try to reserve 0x%pa in 0x%pa-0x%pa\n", &size,
 				&bank->start, &bank_end);
 		rc = dma_contiguous_reserve_area(size, bank->start,
-				bank_end, &tmp_cma_area);
+				bank_end, &tmp_cma_area, 0);
 		if (rc) {
 			pr_err("reservation failed (bank=0x%pa-0x%pa,size=0x%pa,rc=%d)\n",
 				&bank->start, &bank_end, &size, rc);

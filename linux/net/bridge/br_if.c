@@ -139,6 +139,9 @@ static void del_nbp(struct net_bridge_port *p)
 	br_stp_disable_port(p);
 	spin_unlock_bh(&br->lock);
 
+	if (dev->netdev_ops->ndo_br_leave)
+		dev->netdev_ops->ndo_br_leave(dev, br);
+
 	br_ifinfo_notify(RTM_DELLINK, p);
 
 	nbp_vlan_flush(p);
@@ -226,7 +229,7 @@ static struct net_bridge_port *new_nbp(struct net_bridge *br,
 	p->port_no = index;
 	p->flags = BR_LEARNING | BR_FLOOD;
 	br_init_port(p);
-	p->state = BR_STATE_DISABLED;
+	br_set_state(p, BR_STATE_DISABLED);
 	br_stp_port_timer_init(p);
 	br_multicast_add_port(p);
 
@@ -395,6 +398,9 @@ int br_add_if(struct net_bridge *br, struct net_device *dev)
 
 	spin_lock_bh(&br->lock);
 	changed_addr = br_stp_recalculate_bridge_id(br);
+
+	if (dev->netdev_ops->ndo_br_join)
+		dev->netdev_ops->ndo_br_join(dev, br);
 
 	if (netif_running(dev) && netif_oper_up(dev) &&
 	    (br->dev->flags & IFF_UP))

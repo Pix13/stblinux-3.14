@@ -112,12 +112,13 @@ extern void warn_slowpath_null(const char *file, const int line);
 #endif
 
 #ifndef HAVE_ARCH_BUG_ON
-#define BUG_ON(condition) do { if (condition) ; } while(0)
+#define BUG_ON(condition) do { if (unlikely(condition)) BUG(); } while(0)
 #endif
 
 #ifndef HAVE_ARCH_WARN_ON
 #define WARN_ON(condition) ({						\
 	int __ret_warn_on = !!(condition);				\
+	(void)__ret_warn_on;						\
 	unlikely(__ret_warn_on);					\
 })
 #endif
@@ -125,6 +126,8 @@ extern void warn_slowpath_null(const char *file, const int line);
 #ifndef WARN
 #define WARN(condition, format...) ({					\
 	int __ret_warn_on = !!(condition);				\
+	if (0 && (__ret_warn_on))					\
+		printk(format);						\
 	unlikely(__ret_warn_on);					\
 })
 #endif

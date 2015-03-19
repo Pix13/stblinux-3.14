@@ -37,6 +37,8 @@ struct dsa_slave_priv {
 	int			old_link;
 	int			old_pause;
 	int			old_duplex;
+
+	struct net_bridge	*bridge_dev;
 };
 
 /* dsa.c */

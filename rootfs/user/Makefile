@@ -173,6 +173,7 @@ dir_$(CONFIG_USER_MOUNT_UMOUNT)             += mount
 dir_$(CONFIG_USER_MP3PLAY_MP3PLAY)          += mp3play
 dir_$(CONFIG_USER_MSNTP_MSNTP)              += msntp
 dir_$(CONFIG_USER_MUSICBOX_MUSICBOX)        += musicbox
+dir_$(CONFIG_USER_MMCUTILS)                 += mmc-utils
 dir_$(CONFIG_USER_NETFLASH_NETFLASH)        += netflash
 dir_$(CONFIG_USER_NET_TOOLS_ARP)            += net
 dir_$(CONFIG_USER_NET_TOOLS_HOSTNAME)       += net
@@ -332,6 +333,7 @@ dir_$(CONFIG_USER_ZEBRA_ZEBRA_ZEBRA)        += zebra
 dir_$(CONFIG_USER_LTT_TRACEDAEMON)          += LTTDaemon
 dir_$(CONFIG_USER_ETHCTL)                   += ethctl
 dir_$(CONFIG_USER_PERF)                     += $(ROOTDIR)/$(LINUXDIR)/tools/perf
+dir_$(CONFIG_USER_TMON)			    += $(ROOTDIR)/$(LINUXDIR)/tools/thermal/tmon
 
 # dir_y += games
 

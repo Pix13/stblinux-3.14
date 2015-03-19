@@ -14,6 +14,7 @@
 #include <linux/phy.h>
 #include <linux/of_net.h>
 #include <linux/of_mdio.h>
+#include <linux/if_bridge.h>
 #include "dsa_priv.h"
 
 /* slave mii_bus handling ***************************************************/
@@ -59,11 +60,18 @@ static int dsa_slave_init(struct net_device *dev)
 	return 0;
 }
 
+static inline bool dsa_port_is_bridged(struct dsa_slave_priv *p)
+{
+	return !!p->bridge_dev;
+}
+
 static int dsa_slave_open(struct net_device *dev)
 {
 	struct dsa_slave_priv *p = netdev_priv(dev);
 	struct net_device *master = p->parent->dst->master_netdev;
 	struct dsa_switch *ds = p->parent;
+	u8 stp_state = dsa_port_is_bridged(p) ?
+		BR_STATE_BLOCKING : BR_STATE_FORWARDING;
 	int err;
 
 	if (!(master->flags & IFF_UP))
@@ -91,6 +99,9 @@ static int dsa_slave_open(struct net_device *dev)
 		if (err)
 			goto clear_promisc;
 	}
+
+	if (ds->drv->br_set_stp_state)
+		ds->drv->br_set_stp_state(ds, p->port, stp_state);
 
 	if (p->phy)
 		phy_start(p->phy);
@@ -131,6 +142,9 @@ static int dsa_slave_close(struct net_device *dev)
 
 	if (ds->drv->port_disable)
 		ds->drv->port_disable(ds, p->port);
+
+	if (ds->drv->br_set_stp_state)
+		ds->drv->br_set_stp_state(ds, p->port, BR_STATE_DISABLED);
 
 	return 0;
 }
@@ -191,6 +205,71 @@ static int dsa_slave_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		return phy_mii_ioctl(p->phy, ifr, cmd);
 
 	return -EOPNOTSUPP;
+}
+
+/* Return a bitmask of all ports being currently bridged. Note that on
+ * leave, the mask will still return the bitmask of ports currently bridged,
+ * prior to port removal, and this is exactly what we want.
+ */
+static u32 dsa_slave_br_port_mask(struct dsa_switch *ds, struct net_bridge *br)
+{
+	struct dsa_slave_priv *p;
+	unsigned int port;
+	u32 mask = 0;
+
+	for (port = 0; port < DSA_MAX_PORTS; port++) {
+		if (!((1 << port) & ds->phys_port_mask))
+			continue;
+
+		p = netdev_priv(ds->ports[port]);
+
+		if ((ds->ports[port]->priv_flags & IFF_BRIDGE_PORT) &&
+		    (p->bridge_dev == br))
+			mask |= 1 << port;
+	}
+
+	return mask;
+}
+
+static void dsa_slave_br_join(struct net_device *dev, struct net_bridge *br)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct dsa_switch *ds = p->parent;
+
+	p->bridge_dev = br;
+
+	if (ds->drv->br_join)
+		ds->drv->br_join(ds, p->port,
+				 dsa_slave_br_port_mask(ds, br));
+}
+
+static void dsa_slave_br_leave(struct net_device *dev, struct net_bridge *br)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct dsa_switch *ds = p->parent;
+
+	if (ds->drv->br_leave)
+		ds->drv->br_leave(ds, p->port,
+				  dsa_slave_br_port_mask(ds, p->bridge_dev));
+
+	p->bridge_dev = NULL;
+
+	/* Port left the bridge, put in BR_STATE_DISABLED by the bridge layer,
+	 * so allow it to be in BR_STATE_FORWARDING to be kept functional
+	 */
+	if (ds->drv->br_set_stp_state)
+		ds->drv->br_set_stp_state(ds, p->port, BR_STATE_FORWARDING);
+}
+
+static void dsa_slave_br_set_stp_state(struct net_device *dev,
+				       struct net_bridge *br,
+				       unsigned int state)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct dsa_switch *ds = p->parent;
+
+	if (ds->drv->br_set_stp_state)
+		ds->drv->br_set_stp_state(ds, p->port, state);
 }
 
 
@@ -383,6 +462,9 @@ static const struct net_device_ops brcm_netdev_ops = {
 	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
 	.ndo_set_mac_address	= dsa_slave_set_mac_address,
 	.ndo_do_ioctl		= dsa_slave_ioctl,
+	.ndo_br_join		= dsa_slave_br_join,
+	.ndo_br_leave		= dsa_slave_br_leave,
+	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
 };
 #endif
 #ifdef CONFIG_NET_DSA_TAG_DSA
@@ -395,6 +477,9 @@ static const struct net_device_ops dsa_netdev_ops = {
 	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
 	.ndo_set_mac_address	= dsa_slave_set_mac_address,
 	.ndo_do_ioctl		= dsa_slave_ioctl,
+	.ndo_br_join		= dsa_slave_br_join,
+	.ndo_br_leave		= dsa_slave_br_leave,
+	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
 };
 #endif
 #ifdef CONFIG_NET_DSA_TAG_EDSA
@@ -407,6 +492,9 @@ static const struct net_device_ops edsa_netdev_ops = {
 	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
 	.ndo_set_mac_address	= dsa_slave_set_mac_address,
 	.ndo_do_ioctl		= dsa_slave_ioctl,
+	.ndo_br_join		= dsa_slave_br_join,
+	.ndo_br_leave		= dsa_slave_br_leave,
+	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
 };
 #endif
 #ifdef CONFIG_NET_DSA_TAG_TRAILER
@@ -419,6 +507,9 @@ static const struct net_device_ops trailer_netdev_ops = {
 	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
 	.ndo_set_mac_address	= dsa_slave_set_mac_address,
 	.ndo_do_ioctl		= dsa_slave_ioctl,
+	.ndo_br_join		= dsa_slave_br_join,
+	.ndo_br_leave		= dsa_slave_br_leave,
+	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
 };
 #endif
 
@@ -441,6 +532,9 @@ static const struct net_device_ops dummy_netdev_ops = {
 	.ndo_set_rx_mode	= dsa_slave_set_rx_mode,
 	.ndo_set_mac_address	= dsa_slave_set_mac_address,
 	.ndo_do_ioctl		= dsa_slave_ioctl,
+	.ndo_br_join		= dsa_slave_br_join,
+	.ndo_br_leave		= dsa_slave_br_leave,
+	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
 };
 
 static void dsa_slave_adjust_link(struct net_device *dev)

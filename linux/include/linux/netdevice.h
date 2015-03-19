@@ -56,6 +56,8 @@ struct device;
 struct phy_device;
 /* 802.11 specific */
 struct wireless_dev;
+
+struct net_bridge;
 					/* source back-compat hooks */
 #define SET_ETHTOOL_OPS(netdev,ops) \
 	( (netdev)->ethtool_ops = (ops) )
@@ -1034,6 +1036,13 @@ struct net_device_ops {
 						       __be16 proto, u16 vid);
 	int			(*ndo_vlan_rx_kill_vid)(struct net_device *dev,
 						        __be16 proto, u16 vid);
+	void			(*ndo_br_join)(struct net_device *dev,
+					       struct net_bridge *br);
+	void			(*ndo_br_leave)(struct net_device *dev,
+						struct net_bridge *br);
+	void			(*ndo_br_set_stp_state)(struct net_device *dev,
+							struct net_bridge *br,
+							unsigned int state);
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	void                    (*ndo_poll_controller)(struct net_device *dev);
 	int			(*ndo_netpoll_setup)(struct net_device *dev,

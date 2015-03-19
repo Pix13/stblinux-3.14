@@ -38,7 +38,8 @@
    other system header files; just include the system's <stdint.h>.
    Ideally we should test __BIONIC__ here, but it is only defined after
    <sys/cdefs.h> has been included; hence test __ANDROID__ instead.  */
-#if defined __ANDROID__ \
+/* Change by Broadcom 2013-11-07: LSB does the same thing as Android */
+#if (defined __LSB_VERSION__ || defined __ANDROID__) \
     && defined _SYS_TYPES_H_ && !defined _SSIZE_T_DEFINED_
 # @INCLUDE_NEXT@ @NEXT_STDINT_H@
 #else
@@ -632,5 +633,5 @@ typedef int _verify_intmax_size[sizeof (intmax_t) == sizeof (uintmax_t)
 #endif
 
 #endif /* _@GUARD_PREFIX@_STDINT_H */
-#endif /* !(defined __ANDROID__ && ...) */
+#endif /* !((defined __LSB_VERSION__ || defined __ANDROID__) && ...) */
 #endif /* !defined _@GUARD_PREFIX@_STDINT_H && !defined _GL_JUST_INCLUDE_SYSTEM_STDINT_H */

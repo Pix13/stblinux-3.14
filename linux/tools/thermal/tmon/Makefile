@@ -2,8 +2,8 @@ VERSION = 1.0
 
 BINDIR=usr/bin
 WARNFLAGS=-Wall -Wshadow -W -Wformat -Wimplicit-function-declaration -Wimplicit-int
-CFLAGS= -O1 ${WARNFLAGS} -fstack-protector
-CC=gcc
+CFLAGS+= -O1 ${WARNFLAGS} -fstack-protector
+CC?=gcc
 
 CFLAGS+=-D VERSION=\"$(VERSION)\"
 LDFLAGS+=
@@ -16,12 +16,18 @@ INSTALL_CONFIGFILE=install -m 644 -p
 CONFIG_FILE=
 CONFIG_PATH=
 
+TMON_LIBS=-lm -lpanel -lpthread
+ifeq ($(USE_NCURSESW),1)
+TMON_LIBS += -lncursesw
+else
+TMON_LIBS += -lncurses
+endif
 
 OBJS = tmon.o tui.o sysfs.o pid.o
 OBJS +=
 
 tmon: $(OBJS) Makefile tmon.h
-	$(CC) ${CFLAGS} $(LDFLAGS) $(OBJS)  -o $(TARGET) -lm -lpanel -lncursesw  -lpthread
+	$(CC) ${CFLAGS} $(LDFLAGS) $(OBJS)  -o $(TARGET) $(TMON_LIBS)
 
 valgrind: tmon
 	 sudo valgrind -v --track-origins=yes --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./$(TARGET)  1> /dev/null

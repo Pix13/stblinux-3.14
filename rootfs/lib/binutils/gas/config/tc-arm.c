@@ -247,6 +247,8 @@ static arm_feature_set selected_cpu = ARM_ARCH_NONE;
 /* Must be long enough to hold any of the names in arm_cpus.  */
 static char selected_cpu_name[16];
 
+extern FLONUM_TYPE generic_floating_point_number;
+
 /* Return if no cpu was selected on command-line.  */
 static bfd_boolean
 no_cpu_selected (void)
@@ -3089,7 +3091,7 @@ add_to_lit_pool (unsigned int nbytes)
       imm1 = inst.operands[1].imm;
       imm2 = (inst.operands[1].regisimm ? inst.operands[1].reg
 	       : inst.reloc.exp.X_unsigned ? 0
-	       : ((int64_t) inst.operands[1].imm) >> 32);
+	       : ((bfd_int64_t) inst.operands[1].imm) >> 32);
       if (target_big_endian)
 	{
 	  imm1 = imm2;
@@ -4792,6 +4794,31 @@ is_quarter_float (unsigned imm)
   return (imm & 0x7ffff) == 0 && ((imm & 0x7e000000) ^ bs) == 0;
 }
 
+
+/* Detect the presence of a floating point or integer zero constant,
+   i.e. #0.0 or #0.  */
+
+static bfd_boolean
+parse_ifimm_zero (char **in)
+{
+  int error_code;
+
+  if (!is_immediate_prefix (**in))
+    return FALSE;
+
+  ++*in;
+  error_code = atof_generic (in, ".", EXP_CHARS,
+                             &generic_floating_point_number);
+
+  if (!error_code
+      && generic_floating_point_number.sign == '+'
+      && (generic_floating_point_number.low
+          > generic_floating_point_number.leader))
+    return TRUE;
+
+  return FALSE;
+}
+
 /* Parse an 8-bit "quarter-precision" floating point number of the form:
    0baBbbbbbc defgh000 00000000 00000000.
    The zero and minus-zero cases need special handling, since they can't be
@@ -6265,6 +6292,7 @@ enum operand_parse_code
 
   OP_RNDQ_I0,   /* Neon D or Q reg, or immediate zero.  */
   OP_RVSD_I0,	/* VFP S or D reg, or immediate zero.  */
+  OP_RSVD_FI0, /* VFP S or D reg, or floating point immediate zero.  */
   OP_RR_RNSC,   /* ARM reg or Neon scalar.  */
   OP_RNSDQ_RNSC, /* Vector S, D or Q reg, or Neon scalar.  */
   OP_RNDQ_RNSC, /* Neon D or Q reg, or Neon scalar.  */
@@ -6546,6 +6574,22 @@ parse_operands (char *str, const unsigned int *pattern, bfd_boolean thumb)
 
 	case OP_RVSD_I0:
 	  po_reg_or_goto (REG_TYPE_VFSD, try_imm0);
+	  break;
+
+	case OP_RSVD_FI0:
+	  {
+	    po_reg_or_goto (REG_TYPE_VFSD, try_ifimm0);
+	    break;
+	    try_ifimm0:
+	    if (parse_ifimm_zero (&str))
+	      inst.operands[i].imm = 0;
+	    else
+	    {
+	      inst.error
+	        = _("only floating point zero is allowed as immediate value");
+	      goto failure;
+	    }
+	  }
 	  break;
 
 	case OP_RR_RNSC:
@@ -7616,7 +7660,7 @@ move_or_literal_pool (int i, enum lit_type t, bfd_boolean mode_3)
 			   ? inst.operands[1].reg
 			   : inst.reloc.exp.X_unsigned
 			     ? 0
-			     : ((int64_t)((int) immlo)) >> 32;
+			     : ((bfd_int64_t)((int) immlo)) >> 32;
 	  int cmode = neon_cmode_for_move_imm (immlo, immhi, FALSE, &immbits,
 					       &op, 64, NT_invtype);
 
@@ -19391,8 +19435,8 @@ static const struct asm_opcode insns[] =
  nCE(vnmul,     _vnmul,   3, (RVSD, RVSD, RVSD), vfp_nsyn_nmul),
  nCE(vnmla,     _vnmla,   3, (RVSD, RVSD, RVSD), vfp_nsyn_nmul),
  nCE(vnmls,     _vnmls,   3, (RVSD, RVSD, RVSD), vfp_nsyn_nmul),
- nCE(vcmp,      _vcmp,    2, (RVSD, RVSD_I0),    vfp_nsyn_cmp),
- nCE(vcmpe,     _vcmpe,   2, (RVSD, RVSD_I0),    vfp_nsyn_cmp),
+ nCE(vcmp,      _vcmp,    2, (RVSD, RSVD_FI0),    vfp_nsyn_cmp),
+ nCE(vcmpe,     _vcmpe,   2, (RVSD, RSVD_FI0),    vfp_nsyn_cmp),
  NCE(vpush,     0,       1, (VRSDLST),          vfp_nsyn_push),
  NCE(vpop,      0,       1, (VRSDLST),          vfp_nsyn_pop),
  NCE(vcvtz,     0,       2, (RVSD, RVSD),       vfp_nsyn_cvtz),
@@ -24185,6 +24229,8 @@ static const struct arm_cpu_option_table arm_cpus[] =
 								  "Cortex-A12"),
   ARM_CPU_OPT ("cortex-a15",	ARM_ARCH_V7VE,   FPU_ARCH_NEON_VFP_V4,
 								  "Cortex-A15"),
+  ARM_CPU_OPT ("cortex-a17",	ARM_ARCH_V7VE,   FPU_ARCH_NEON_VFP_V4,
+								  "Cortex-A17"),
   ARM_CPU_OPT ("cortex-a53",    ARM_ARCH_V8A,    FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
 								  "Cortex-A53"),
   ARM_CPU_OPT ("cortex-a57",    ARM_ARCH_V8A,    FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,

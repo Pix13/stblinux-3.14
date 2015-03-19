@@ -1,9 +1,3 @@
-2014-02-09  Jan Kratochvil  <jan.kratochvil@redhat.com>
-
-	Fix Python stack corruption.
-	* python/py-linetable.c (ltpy_get_pcs_for_line, ltpy_has_line): Use
-	gdb_py_longest.
-
 2013-12-19  Keven Boell  <keven.boell@intel.com>
 
 	* cp-namespace.c (cp_lookup_nested_symbol): Enable

@@ -251,6 +251,14 @@ do-djunpack:
 	-rm -f proto-toplev/djunpack.bat
 	mv djunpack.new proto-toplev/djunpack.bat
 
+.PHONY: do-linaro-gdb-texinfo
+do-linaro-gdb-texinfo:
+	echo "==> Updating gdb.texinfo for Linaro"
+	sed < gdb/doc/gdb.texinfo > gdb/doc/gdb.texinfo.new \
+		-e 's/gdb-@value{GDBVN}/gdb-linaro-@value{GDBVN}/'
+	-rm -f gdb/doc/gdb.texinfo
+	mv gdb/doc/gdb.texinfo.new gdb/doc/gdb.texinfo
+
 TEXINFO_SUPPORT= texinfo/texinfo.tex
 DIST_SUPPORT= $(DEVO_SUPPORT) $(TEXINFO_SUPPORT)
 
@@ -293,6 +301,20 @@ gdb.tar: $(DIST_SUPPORT) $(GDB_SUPPORT_DIRS) gdb
 	$(MAKE) -f $(SELF) gdb-tar TOOL=gdb \
 		MD5PROG="$(MD5PROG)" \
 		SUPPORT_FILES="$(GDB_SUPPORT_DIRS)"
+
+.PHONY: gdb-linaro.tar.bz2
+gdb-linaro.tar.bz2: $(DIST_SUPPORT) $(GDB_SUPPORT_DIRS) gdb
+	$(MAKE) -f $(SELF) do-linaro-gdb-texinfo gdb-taz \
+		TOOL=gdb PACKAGE=gdb-linaro \
+		MD5PROG="$(MD5PROG)" \
+		SUPPORT_FILES="$(GDB_SUPPORT_DIRS) ChangeLog.linaro"
+
+.PHONY: gdb-linaro.tar
+gdb-linaro.tar: $(DIST_SUPPORT) $(GDB_SUPPORT_DIRS) gdb
+	$(MAKE) -f $(SELF) do-linaro-gdb-texinfo gdb-tar \
+		TOOL=gdb PACKAGE=gdb-linaro \
+		MD5PROG="$(MD5PROG)" \
+		SUPPORT_FILES="$(GDB_SUPPORT_DIRS) ChangeLog.linaro"
 
 # Corresponding to the CVS "sim" module.
 .PHONY: sim.tar.bz2

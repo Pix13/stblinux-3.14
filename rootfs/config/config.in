@@ -689,6 +689,9 @@ comment 'PCI utilities'
 bool 'lspci'			CONFIG_USER_PCIUTILS_LSPCI
 bool 'setpci'			CONFIG_USER_PCIUTILS_SETPCI
 
+comment 'MMC utilities'
+bool 'mmcutils'			CONFIG_USER_MMCUTILS
+
 endmenu
 
 
@@ -886,6 +889,7 @@ bool 'Oprofile'				CONFIG_USER_PROFILE_OPROFILE
 bool 'LTTng'				CONFIG_USER_LTT_CONTROL
 bool 'perf'				CONFIG_USER_PERF
 bool 'trace-cmd'			CONFIG_USER_TRACECMD
+bool 'tmon'				CONFIG_USER_TMON
 
 endmenu
 
@@ -904,6 +908,10 @@ if [ "$CONFIG_USER_PERF" = "y" ]; then
 	define_bool CONFIG_LIB_LIBELF y
 	define_bool CONFIG_LIB_LIBSSP y
 	define_bool CONFIG_LIB_BINUTILS_OBJDUMP y
+fi
+
+if [ "$CONFIG_USER_TMON" = "y" ]; then
+	define_bool CONFIG_LIB_NCURSES y
 fi
 
 #############################################################################

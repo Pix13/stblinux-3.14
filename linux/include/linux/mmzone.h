@@ -78,10 +78,15 @@ extern int page_group_by_mobility_disabled;
 #define NR_MIGRATETYPE_BITS (PB_migrate_end - PB_migrate + 1)
 #define MIGRATETYPE_MASK ((1UL << NR_MIGRATETYPE_BITS) - 1)
 
-static inline int get_pageblock_migratetype(struct page *page)
+#define get_pageblock_migratetype(page)					\
+	get_pfnblock_flags_mask(page, page_to_pfn(page),		\
+			PB_migrate_end, MIGRATETYPE_MASK)
+
+static inline int get_pfnblock_migratetype(struct page *page, unsigned long pfn)
 {
 	BUILD_BUG_ON(PB_migrate_end - PB_migrate != 2);
-	return get_pageblock_flags_mask(page, PB_migrate_end, MIGRATETYPE_MASK);
+	return get_pfnblock_flags_mask(page, pfn, PB_migrate_end,
+					MIGRATETYPE_MASK);
 }
 
 struct free_area {
@@ -391,6 +396,21 @@ struct zone {
 	int			compact_order_failed;
 #endif
 
+#ifdef CONFIG_CMA
+	unsigned long total_cma_pages;
+	unsigned long managed_cma_pages;
+	/*
+	 * Number of allocation attempt on each normal/cma type
+	 * without switching type. max_try_(normal/cma) maintain
+	 * pre-calculated counter and replenish nr_try_(normal/cma)
+	 * with each of them whenever both of them are 0.
+	 */
+	int nr_try_normal;
+	int nr_try_cma;
+	int max_try_normal;
+	int max_try_cma;
+#endif
+
 	ZONE_PADDING(_pad1_)
 
 	/* Fields commonly accessed by the page reclaim scanner */
@@ -499,6 +519,15 @@ struct zone {
 	 * optimization. Protected by zone->lock.
 	 */
 	int			nr_migrate_reserve_block;
+
+#ifdef CONFIG_MEMORY_ISOLATION
+	/*
+	 * Number of isolated pageblock. It is used to solve incorrect
+	 * freepage counting problem due to racy retrieving migratetype
+	 * of pageblock. Protected by zone->lock.
+	 */
+	unsigned long		nr_isolate_pageblock;
+#endif
 
 	/*
 	 * rarely used fields:

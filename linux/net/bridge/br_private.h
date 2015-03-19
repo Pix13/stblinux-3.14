@@ -737,6 +737,7 @@ void br_netfilter_rtable_init(struct net_bridge *);
 
 /* br_stp.c */
 void br_log_state(const struct net_bridge_port *p);
+void br_set_state(struct net_bridge_port *p, unsigned int state);
 struct net_bridge_port *br_get_port(struct net_bridge *br, u16 port_no);
 void br_init_port(struct net_bridge_port *p);
 void br_become_designated_port(struct net_bridge_port *p);

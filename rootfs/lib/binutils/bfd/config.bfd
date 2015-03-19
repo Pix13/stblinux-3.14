@@ -323,7 +323,7 @@ case "${targ}" in
     targ_defvec=bfd_elf32_littlearm_vec
     targ_selvecs=bfd_elf32_bigarm_vec
     ;;
-  armeb-*-elf | arm*b-*-linux-*)
+  armeb-*-elf | arm*b-*-linux-* | armeb-*-eabi*)
     targ_defvec=bfd_elf32_bigarm_vec
     targ_selvecs=bfd_elf32_littlearm_vec
     ;;

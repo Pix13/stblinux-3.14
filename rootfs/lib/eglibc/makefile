@@ -62,7 +62,9 @@ romfs-rootfs::
 romfs-toolchain::
 	mkdir -p temp/{bin,lib,sbin}
 	cp -df $(GCCSYSROOT)/lib/*.so* temp/lib
-	rm temp/lib/libgcc*.so*  # gets installed elsewhere
+	# FIXME: libgcc was removed from sysroot in stbgcc-4.8-1.1, eventually
+	# delete the next line
+	rm -f temp/lib/libgcc*.so*
 	cp $(GCCSYSROOT)/usr/bin/ldd temp/bin/ldd
 	cp $(GCCSYSROOT)/sbin/ldconfig temp/sbin/ldconfig
 

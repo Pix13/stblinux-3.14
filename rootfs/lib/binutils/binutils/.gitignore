@@ -1,5 +1,7 @@
 /addr2line
 /ar
+/bfdtest1
+/bfdtest2
 /bin2c
 /coffdump
 /cxxfilt

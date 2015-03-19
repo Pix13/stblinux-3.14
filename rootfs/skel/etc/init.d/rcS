@@ -6,13 +6,23 @@ echo "Mounting virtual filesystems"
 mkdir -p /sys /proc /dev
 mount -t proc proc /proc
 mount -t sysfs sys /sys
-mount -t debugfs debugfs /sys/kernel/debug
+if grep -qs debugfs /proc/filesystems; then
+	mount -t debugfs debugfs /sys/kernel/debug
+fi
 grep -q devtmpfs /proc/mounts || mount -t devtmpfs none /dev
 mkdir -p /dev/pts
 mount -t devpts devpts /dev/pts
 mount -t tmpfs -o mode=01777 tmpfs /tmp
 mkdir -p /dev/shm
 mount -t tmpfs -o noexec,nosuid,nodev,mode=1777 shm /dev/shm
+
+if [ -e /etc/sysctl.conf ]; then
+	for conf in /etc/sysctl.conf /etc/sysctl.d/*.conf; do
+		if [ -r "$conf" ]; then
+			sysctl -p "$conf" > /dev/null
+		fi
+	done
+fi
 
 echo "/sbin/stbhotplug" > /proc/sys/kernel/hotplug
 

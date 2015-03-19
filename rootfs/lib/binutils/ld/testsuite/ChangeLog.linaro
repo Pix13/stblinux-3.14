@@ -1,3 +1,40 @@
+2014-09-16  Terry Guo  <terry.guo@arm.com>
+
+	* ld-arm/attr-merge-arch-2.d: New test case.
+	* ld-arm/attr-merge-arch-2a.s: New test case source file.
+	* ld-arm/attr-merge-arch-2b.s: Likewise.
+	* ld-arm/arm-elf.exp: Run new test case.
+
+2014-08-26  Jiong Wang  <jiong.wang@arm.com>
+
+	* ld-aarch64/copy-relocs-so.s: New test file.
+	* ld-aarch64/copy-relocs-exe.s: Likewise.
+	* ld-aarch64/copy-relocs.d: New expectation file.
+	* ld-aarch64/emit-relocs-264-bad.d: New test file.
+	* ld-aarch64/emit-relocs-266-bad.d: Likewise.
+	* ld-aarch64/emit-relocs-268-bad.d: Likewise.
+	* ld-aarch64/emit-relocs-269-bad.d: Likewise.
+	* ld-aarch64/aarch64-elf.exp: Run new added test.
+
+2014-08-26  Nick Clifton  <nickc@redhat.com>
+
+	* ld-aarch64/eh-frame-foo.s: Use 8-byte offset for X30.
+	* ld-aarch64/eh-frame-bar.s: Likewise.
+	* ld-aarch64/eh-frame.d: Updated to match current readelf output.
+	* ld-elf/eh5.d: Allow any register names.
+
+2014-08-21  Tony Wang  <tony.wang@arm.com>
+
+	* ld-arm/jump-reloc-veneers-cond.s: New test.
+	* ld-arm/farcall-cond-thumb-arm.s: Ditto.
+	* ld-arm/jump-reloc-veneers-cond-short.d: Expected output
+	for target without a veneer generation.
+	* ld-arm/jump-reloc-veneers-cond-long.d: Expected output
+	for target with a veneer generation.
+	* ld-arm/farcall-cond-thumb-arm.d: Expected output for
+	inter working veneer generation.
+	* ld-arm/arm-elf.exp: Add tests for conditional branch veneer.
+
 2014-07-15  Jiong Wang  <jiong.wang@arm.com>
 
 	* ld-aarch64/emit-relocs-local-addend.d: Use target linker script.

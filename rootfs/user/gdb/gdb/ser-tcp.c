@@ -35,6 +35,19 @@
 #include <sys/ioctl.h>  /* For FIONBIO.  */
 #endif
 
+/* workaround for FIONBIO not being present in LSB headers */
+#ifdef __LSB_VERSION__
+#  if defined __i386__
+#    define FIONBIO         0x5421
+#  elif defined __ia64__
+#    define FIONBIO         0x5421
+#  elif defined __x86_64__
+#    define FIONBIO         0x5421
+#  else
+#    error FIONBIO not known for this arch
+#  endif
+#endif
+
 #include <sys/time.h>
 
 #ifdef USE_WIN32API

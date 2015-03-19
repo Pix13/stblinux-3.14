@@ -1,3 +1,50 @@
+2014-03-13  Richard Earnshaw  <rearnsha@arm.com>
+	    Jiong Wang  <Jiong.Wang@arm.com>
+
+	* doc/c-aarch64.texi: Clean up some formatting issues.
+	(AArch64 Options): Document -mcpu and -march.
+	(AArch64 Extensions): New node.
+
+2014-10-21  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-aarch64.c (output_operand_error_record): Move down
+	assertion of idx being non-negative. Use local variables when
+	available.
+
+2014-09-03  Jiong Wang  <jiong.wang@arm.com>
+
+	* config/tc-aarch64.c (parse_sys_reg): Remove the restriction on op0
+	field.
+
+	* config/tc-aarch64.c (parse_operands): Recognize PAIRREG.
+	(aarch64_features): Add entry for lse extension.
+
+2014-09-17  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-arm.c (move_or_literal_pool, add_to_lit_pool): Use
+	bfd_int64_t instead of int64_t.
+
+2014-09-09  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
+
+	* config/tc-arm.c (arm_cpus): Add cortex-a17.
+
+2014-08-22  Richard Henderson  <rth@redhat.com>
+
+	* config/tc-aarch64.c (tc_aarch64_regname_to_dw2regnum): Fix
+	register number for vector register types.
+	* config/tc-aarch64.h (DWARF2_LINE_MIN_INSN_LENGTH): Set to 4.
+	(DWARF2_CIE_DATA_ALIGNMENT): Set to -8.
+
+	* config/tc-aarch64.c (tc_aarch64_regname_to_dw2regnum): Fix
+	register number for vector register types.
+
+2014-08-20  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
+
+	* config/tc-arm.c (parse_ifimm_zero): New function.
+	(enum operand_parse_code): Add OP_RSVD_FI0 value.
+	(parse_operands): Handle OP_RSVD_FI0.
+	(asm_opcode_insns): Use RSVD_FI0 for second operand of vcmp, vcmpe.
+
 2014-07-15  Jiong Wang  <jiong.wang@arm.com>
 
 	* config/tc-arm.c (add_to_lit_pool): Use "inst.operands[1].imm" for

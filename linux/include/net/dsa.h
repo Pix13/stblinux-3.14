@@ -226,6 +226,14 @@ struct dsa_switch_driver {
 				struct ethtool_eee *e);
 	int	(*get_eee)(struct dsa_switch *ds, int port,
 				struct ethtool_eee *e);
+
+	/*
+	 * Bridging support
+	 */
+	void	(*br_join)(struct dsa_switch *ds, int port, u32 br_port_mask);
+	void	(*br_leave)(struct dsa_switch *ds, int port, u32 br_port_mask);
+	void	(*br_set_stp_state)(struct dsa_switch *ds, int port,
+				    unsigned int state);
 };
 
 void register_switch_driver(struct dsa_switch_driver *type);

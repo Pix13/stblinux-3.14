@@ -214,10 +214,11 @@ sub def($$$)
 	}
 }
 
-# This "get" function sets global variables $tgt, $chip, $be, $suffix
-# and doesn't return anything.
+# This returns a tuple containing ($tgt, $chip, $be, $suffix).
 sub get_tgt($)
 {
+	my ($tgt, $chip, $be, $suffix);
+
 	($tgt) = (@_);
 
 	if(! defined($tgt)) {
@@ -230,6 +231,17 @@ sub get_tgt($)
 	($chip, $be, $suffix) = ($1, defined($2) ? 1 : 0,
 		defined($3) ? $3 : "");
 
+	return ($tgt, $chip, $be, $suffix);
+}
+
+# This actually populates three different things: $linux_defaults,
+# $linux_new_defaults, and $arch_config_options{"ARCH"}.  This will later be
+# handled better.
+sub populate_linux_defaults($$)
+{
+	my @mods = @{$_[0]};
+	my $chip = $_[1];
+
 	# Original plan: if using a semi-multiplatform kernel we need a new
 	# way to tell if the chip is MIPS or ARM.  Suggest adding new
 	# metadata under include/linux/brcmstb/7*
@@ -239,24 +251,22 @@ sub get_tgt($)
 	# include/linux/brcmstb is ARM.
 	if(-d "$LINUXDIR/include/linux/brcmstb/${chip}") {
 		$linux_defaults = "$LINUXDIR/arch/arm/configs/brcmstb_defconfig";
-		$linux_new_defaults = "$LINUXDIR/arch/arm/configs/brcmstb_new_defconfig";
+		if (grep(/^hardened$/, @mods)) {
+			$linux_defaults =~ s/defconfig$/hardened_defconfig/;
+		}
 		$arch_config_options{"ARCH"} = "arm";
-		return;
-	}
-	$linux_defaults = "$LINUXDIR/arch/mips/configs/bcm${chip}_defconfig";
-	if(-e $linux_defaults) {
-		$linux_new_defaults = $linux_defaults;
-		$linux_new_defaults =~ s/defconfig$/new_defconfig/;
+	} elsif(-e "$LINUXDIR/arch/mips/configs/bcm${chip}_defconfig") {
+		$linux_defaults = "$LINUXDIR/arch/mips/configs/bcm${chip}_defconfig";
 		$arch_config_options{"ARCH"} = "mips";
-		return;
+	} else {
+		print "\n";
+		print "ERROR: No Linux configuration for $chip\n";
+		print "Attempted to open: $LINUXDIR/arch/arm/configs/brcmstb_defconfig,\n";
+		print "                   $linux_defaults\n";
+		print "\n";
+		exit 1;
 	}
-
-	print "\n";
-	print "ERROR: No Linux configuration for $chip\n";
-	print "Attempted to open: $LINUXDIR/arch/arm/configs/brcmstb_defconfig,\n";
-	print "                   $linux_defaults\n";
-	print "\n";
-	exit 1;
+	($linux_new_defaults = $linux_defaults) =~ s/defconfig$/new_defconfig/;
 }
 
 ################################################
@@ -304,6 +314,63 @@ sub expand_modifiers($$)
 		unshift @a, $x;
 	}
 	return join('-',@a);
+}
+
+################################################
+# sub gen_modifiers($chip, $suffix)
+#
+# DESCRIPTION:
+#   Generates the list of modifiers for a given chip and suffix.
+# PARAMS:
+#   $chip is a valid chip name, see the output of the chiplist cmd
+#   $suffix is a hyphenated string of modifiers before processing.
+# RETURNS:
+#   Array of modifiers.
+################################################
+sub gen_modifiers($$)
+{
+	my ($chip, $suffix) = @_;
+	my @mods = ();
+
+	# set default modifiers for each chip
+
+	my $shortchip = $chip;
+	if($shortchip =~ /^\d{3,}/) {
+		$shortchip =~ s/[^\d].*//;
+	}
+
+	if(defined($defsuf{$shortchip})) {
+		$suffix = $defsuf{$shortchip}.$suffix;
+	}
+
+	# The %implies hash indicates what modifiers imply other modifiers.
+	# If X implies Y-Z, then the modications will be applied in this
+	# order: Y,Z,X.
+	my %implies = ('pal' => 'small-nonet-nousb-nohdd',
+		       'ikos' => 'small-kdebug-nousb-nomtd-nohdd',
+		       'kgdb' => 'kdebug',
+	    );
+
+	# Munge the '%implies' hash so that its values become array refs.
+	map { $_ = [split /-/] } values %implies;
+
+	my $old_suffix = $suffix;
+	$suffix = expand_modifiers(\%implies, $suffix);
+
+	# print "info: '$old_suffix' expanded to '$suffix'.\n";
+
+	# allow stacking more than one modifier (e.g. -small-nohdd-nousb)
+	while(defined($suffix) && ($suffix ne "")) {
+		if($suffix !~ m/^-([^-]+)(-\S+)?/) {
+			print "\n";
+			print "ERROR: Invalid modifier '$suffix' in '$tgt'\n";
+			print "\n";
+			exit 1;
+		}
+		(my $mod, $suffix) = ($1, $2);
+		push(@mods, $mod);
+	}
+	return @mods;
 }
 
 sub get_chiplist()
@@ -416,7 +483,9 @@ sub cmd_badcmd($)
 sub cmd_defaults($)
 {
 	my ($cmd) = @_;
-	get_tgt(shift @ARGV);
+	($tgt, $chip, $be, $suffix) = get_tgt(shift @ARGV);
+	my @mods = gen_modifiers($chip, $suffix);
+	populate_linux_defaults(\@mods, $chip);
 
 	# clean up the build system if switching targets
 	# "quick" mode (skip distclean) is for testing only
@@ -475,12 +544,14 @@ sub cmd_defaults($)
 	# basic hardware support
 
 	# MOCA
-	$vendor{"CONFIG_USER_MOCA_MOCA1"} = "n";
-	$vendor{"CONFIG_USER_MOCA_NONE"} = "n";
-	$vendor{"CONFIG_USER_MOCA_MOCA2"} = "y";
-	$vendor{"CONFIG_USER_MOCA_GEN1"} = "n";
-	$vendor{"CONFIG_USER_MOCA_GEN2"} = "n";
-	$vendor{"CONFIG_USER_MOCA_GEN3"} = "y";
+	if (defined($linux{"CONFIG_BRCM_MOCA"})) {
+		$vendor{"CONFIG_USER_MOCA_MOCA1"} = "n";
+		$vendor{"CONFIG_USER_MOCA_NONE"} = "n";
+		$vendor{"CONFIG_USER_MOCA_MOCA2"} = "y";
+		$vendor{"CONFIG_USER_MOCA_GEN1"} = "n";
+		$vendor{"CONFIG_USER_MOCA_GEN2"} = "n";
+		$vendor{"CONFIG_USER_MOCA_GEN3"} = "y";
+	}
 
 	if (defined($linux{"CONFIG_PM"})) {
 		$vendor{"CONFIG_USER_BRCM_PM"} = "y";
@@ -490,44 +561,10 @@ sub cmd_defaults($)
 		$vendor{"CONFIG_USER_I2C_TOOLS"} = "y";
 	}
 
-	# set default modifiers for each chip
-
-	my $shortchip = $chip;
-	if($shortchip =~ /^\d{3,}/) {
-		$shortchip =~ s/[^\d].*//;
-	}
-
-	if(defined($defsuf{$shortchip})) {
-		$suffix = $defsuf{$shortchip}.$suffix;
-	}
-
-	# The %implies hash indicates what modifiers imply other modifiers.
-	# If X implies Y-Z, then the modications will be applied in this
-	# order: Y,Z,X.
-	my %implies = ('pal' => 'small-nonet-nousb-nohdd',
-		       'ikos' => 'small-kdebug-nousb-nomtd-nohdd',
-		       'kgdb' => 'kdebug',
-	    );
-
-	# Munge the '%implies' hash so that its values become array refs.
-	map { $_ = [split /-/] } values %implies;
-
-	my $old_suffix = $suffix;
-	$suffix = expand_modifiers(\%implies, $suffix);
-
-	# print "info: '$old_suffix' expanded to '$suffix'.\n";
-
 	my (%vendor_w, %busybox_w, %linux_o, %vendor_o, %busybox_o);
 
-	# allow stacking more than one modifier (e.g. -small-nohdd-nousb)
-	while(defined($suffix) && ($suffix ne "")) {
-		if($suffix !~ m/^-([^-]+)(-\S+)?/) {
-			print "\n";
-			print "ERROR: Invalid modifier '$suffix' in '$tgt'\n";
-			print "\n";
-			exit 1;
-		}
-		(my $mod, $suffix) = ($1, $2);
+	foreach (@mods) {
+		my $mod = $_;
 
 		if($mod eq "small") {
 
@@ -763,6 +800,8 @@ sub cmd_defaults($)
 			$arch_config_options{"LIBCDIR"} = "eglibc";
 		} elsif($mod eq "uclibc" || $mod eq "uClibc") {
 			$arch_config_options{"LIBCDIR"} = "uClibc";
+		} elsif($mod eq "hardened") {
+			# this is just a defconfig select for now; do nothing.
 		} else {
 			print "\n";
 			print "ERROR: Unrecognized suffix '$mod' in '$tgt'\n";
@@ -886,7 +925,9 @@ sub cmd_defaults($)
 
 sub cmd_save_defaults()
 {
-	get_tgt(shift @ARGV);
+	($tgt, $chip, $be, $suffix) = get_tgt(shift @ARGV);
+	my @mods = gen_modifiers($chip, $suffix);
+	populate_linux_defaults(\@mods, $chip);
 
 	read_cfg($linux_config, \%linux);
 	read_cfg($eglibc_config, \%eglibc);

@@ -1,3 +1,27 @@
+2014-09-03  Jiong Wang  <jiong.wang@arm.com>
+
+	* gas/aarch64/illegal.s: Update testcase.
+	* gas/aarch64/illegal.d: Likewise.
+	* gas/aarch64/sysreg-1.s: Likewise.
+	* gas/aarch64/sysreg-1.d: Likewise.
+
+	* gas/aarch64/lse-atomic.d: New.
+	* gas/aarch64/lse-atomic.s: Likewise.
+	* gas/aarch64/illegal-lse.d: Likewise.
+	* gas/aarch64/illegal-lse.l: Likewise.
+	* gas/aarch64/illegal-lse.s: Likewise.
+	* gas/aarch64/diagnostic.s: Check processor feature detect for lse
+	instruction.
+	* gas/aarch64/diagnostic.l: Likewise.
+
+2014-08-20  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
+
+	* gas/arm/ual-vcmp.s: New file.
+	* gas/arm/ual-vcmp.d: Likewise.
+	* gas/arm/vcmp-zero-bad.s: Likewise.
+	* gas/arm/vcmp-zero-bad.d: Likewise.
+	* gas/arm/vcmp-zero-bad.l: Likewise.
+
 2014-07-08  Jiong Wang  <jiong.wang@arm.com>
 
 	* gas/arm/ldconst.s: Add test cases for symbol literal.

@@ -41,6 +41,20 @@
 #  include <sys/ioctl.h>
 #endif /* GWINSZ_IN_SYS_IOCTL */
 
+
+/* workaround for TIOCSWINSZ not being present in LSB spec */
+#if !defined (TIOCSWINSZ)
+#  if defined __i386__
+#    define TIOCSWINSZ      0x5414
+#  elif defined __ia64__
+#    define TIOCSWINSZ      0x5414
+#  elif defined __x86_64__
+#    define TIOCSWINSZ      0x5414
+#  else
+#    error TIOCSWINSZ not known for this arch
+#  endif
+#endif
+
 #include "rltty.h"
 #include "readline.h"
 #include "rlprivate.h"

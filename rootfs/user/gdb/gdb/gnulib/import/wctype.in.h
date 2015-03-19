@@ -39,9 +39,14 @@
    BSD/OS 4.0.1 has a bug: <stddef.h>, <stdio.h> and <time.h> must be
    included before <wchar.h>.  */
 # include <stddef.h>
+/* exclude a few items when using LSBCC */
+#ifndef __LSB_VERSION__
 # include <stdio.h>
+#endif
 # include <time.h>
+#ifndef __LSB_VERSION__
 # include <wchar.h>
+#endif
 #endif
 
 /* Include the original <wctype.h> if it exists.

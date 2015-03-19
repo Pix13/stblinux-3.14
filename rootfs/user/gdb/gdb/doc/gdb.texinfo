@@ -36777,7 +36777,7 @@ enjoyable members of the Free Software Community.  We will miss them.
 The @value{GDBN} 4 release includes an already-formatted reference card, ready
 for printing with PostScript or Ghostscript, in the @file{gdb}
 subdirectory of the main source directory@footnote{In
-@file{gdb-@value{GDBVN}/gdb/refcard.ps} of the version @value{GDBVN}
+@file{gdb-linaro-@value{GDBVN}/gdb/refcard.ps} of the version @value{GDBVN}
 release.}.  If you can use PostScript or Ghostscript with your printer,
 you can print the reference card immediately with @file{refcard.ps}.
 
@@ -36805,7 +36805,7 @@ and @TeX{} (or @code{texi2roff}) to typeset the printed version.
 
 @value{GDBN} includes an already formatted copy of the on-line Info
 version of this manual in the @file{gdb} subdirectory.  The main Info
-file is @file{gdb-@value{GDBVN}/gdb/gdb.info}, and it refers to
+file is @file{gdb-linaro-@value{GDBVN}/gdb/gdb.info}, and it refers to
 subordinate files matching @samp{gdb.info*} in the same directory.  If
 necessary, you can print out these files, or read them with any editor;
 but they are easier to read using the @code{info} subsystem in @sc{gnu}
@@ -36817,7 +36817,7 @@ Info formatting programs, such as @code{texinfo-format-buffer} or
 @code{makeinfo}.
 
 If you have @code{makeinfo} installed, and are in the top level
-@value{GDBN} source directory (@file{gdb-@value{GDBVN}}, in the case of
+@value{GDBN} source directory (@file{gdb-linaro-@value{GDBVN}}, in the case of
 version @value{GDBVN}), you can make the Info file by typing:
 
 @smallexample
@@ -36847,7 +36847,7 @@ directory.
 If you have @TeX{} and a @sc{dvi} printer program installed, you can
 typeset and print this manual.  First switch to the @file{gdb}
 subdirectory of the main source directory (for example, to
-@file{gdb-@value{GDBVN}/gdb}) and type:
+@file{gdb-linaro-@value{GDBVN}/gdb}) and type:
 
 @smallexample
 make gdb.dvi
@@ -36967,40 +36967,40 @@ The @value{GDBN} distribution includes all the source code you need for
 appending the version number to @samp{gdb}.
 
 For example, the @value{GDBN} version @value{GDBVN} distribution is in the
-@file{gdb-@value{GDBVN}} directory.  That directory contains:
+@file{gdb-linaro-@value{GDBVN}} directory.  That directory contains:
 
 @table @code
-@item gdb-@value{GDBVN}/configure @r{(and supporting files)}
+@item gdb-linaro-@value{GDBVN}/configure @r{(and supporting files)}
 script for configuring @value{GDBN} and all its supporting libraries
 
-@item gdb-@value{GDBVN}/gdb
+@item gdb-linaro-@value{GDBVN}/gdb
 the source specific to @value{GDBN} itself
 
-@item gdb-@value{GDBVN}/bfd
+@item gdb-linaro-@value{GDBVN}/bfd
 source for the Binary File Descriptor library
 
-@item gdb-@value{GDBVN}/include
+@item gdb-linaro-@value{GDBVN}/include
 @sc{gnu} include files
 
-@item gdb-@value{GDBVN}/libiberty
+@item gdb-linaro-@value{GDBVN}/libiberty
 source for the @samp{-liberty} free software library
 
-@item gdb-@value{GDBVN}/opcodes
+@item gdb-linaro-@value{GDBVN}/opcodes
 source for the library of opcode tables and disassemblers
 
-@item gdb-@value{GDBVN}/readline
+@item gdb-linaro-@value{GDBVN}/readline
 source for the @sc{gnu} command-line interface
 
-@item gdb-@value{GDBVN}/glob
+@item gdb-linaro-@value{GDBVN}/glob
 source for the @sc{gnu} filename pattern-matching subroutine
 
-@item gdb-@value{GDBVN}/mmalloc
+@item gdb-linaro-@value{GDBVN}/mmalloc
 source for the @sc{gnu} memory-mapped malloc package
 @end table
 
 The simplest way to configure and build @value{GDBN} is to run @file{configure}
 from the @file{gdb-@var{version-number}} source directory, which in
-this example is the @file{gdb-@value{GDBVN}} directory.
+this example is the @file{gdb-linaro-@value{GDBVN}} directory.
 
 First switch to the @file{gdb-@var{version-number}} source directory
 if you are not already in it; then run @file{configure}.  Pass the
@@ -37010,7 +37010,7 @@ argument.
 For example:
 
 @smallexample
-cd gdb-@value{GDBVN}
+cd gdb-linaro-@value{GDBVN}
 ./configure @var{host}
 make
 @end smallexample
@@ -37037,7 +37037,7 @@ sh configure @var{host}
 
 If you run @file{configure} from a directory that contains source
 directories for multiple libraries or programs, such as the
-@file{gdb-@value{GDBVN}} source directory for version @value{GDBVN},
+@file{gdb-linaro-@value{GDBVN}} source directory for version @value{GDBVN},
 @file{configure}
 creates configuration files for every directory level underneath (unless
 you tell it not to, with the @samp{--norecursion} option).
@@ -37082,10 +37082,10 @@ separate directory for a Sun 4 like this:
 
 @smallexample
 @group
-cd gdb-@value{GDBVN}
+cd gdb-linaro-@value{GDBVN}
 mkdir ../gdb-sun4
 cd ../gdb-sun4
-../gdb-@value{GDBVN}/configure sun4
+../gdb-linaro-@value{GDBVN}/configure sun4
 make
 @end group
 @end smallexample
@@ -37099,7 +37099,7 @@ directory @file{gdb-sun4/libiberty}, and @value{GDBN} itself in
 
 Make sure that your path to the @file{configure} script has just one
 instance of @file{gdb} in it.  If your path to @file{configure} looks
-like @file{../gdb-@value{GDBVN}/gdb/configure}, you are configuring only
+like @file{../gdb-linaro-@value{GDBVN}/gdb/configure}, you are configuring only
 one subdirectory of @value{GDBN}, not the whole package.  This leads to
 build errors about missing include files such as @file{bfd/bfd.h}.
 
@@ -37116,8 +37116,8 @@ called @file{configure} (or one of its subdirectories).
 
 The @code{Makefile} that @file{configure} generates in each source
 directory also runs recursively.  If you type @code{make} in a source
-directory such as @file{gdb-@value{GDBVN}} (or in a separate configured
-directory configured with @samp{--srcdir=@var{dirname}/gdb-@value{GDBVN}}), you
+directory such as @file{gdb-linaro-@value{GDBVN}} (or in a separate configured
+directory configured with @samp{--srcdir=@var{dirname}/gdb-linaro-@value{GDBVN}}), you
 will build all the required libraries, and then build GDB.
 
 When you have multiple hosts or targets configured in separate
@@ -37165,7 +37165,7 @@ Invalid configuration `i986v': machine `i986v' not recognized
 
 @noindent
 @code{config.sub} is also distributed in the @value{GDBN} source
-directory (@file{gdb-@value{GDBVN}}, for version @value{GDBVN}).
+directory (@file{gdb-linaro-@value{GDBVN}}, for version @value{GDBVN}).
 
 @node Configure Options
 @section @file{configure} Options

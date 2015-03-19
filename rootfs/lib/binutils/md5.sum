@@ -54,7 +54,7 @@ d41d8cd98f00b204e9800998ecf8427e  bfd/doc/elfcode.texi
 51139f6af786e74446d01ec49807fc28  bfd/doc/elf.texi
 6dd9da257666139a061d6905349d9614  bfd/doc/core.texi
 618e250b9ac8c51108984e66cb0751bc  bfd/doc/makefile.vms
-3de065ad89fb3808d2ed8ace21e924a9  bfd/doc/bfdver.texi
+3a68ec8e27ac296de86c1c3972cdedb7  bfd/doc/bfdver.texi
 73fb54bccbe394235ae4b770ad285169  bfd/doc/bfdt.texi
 87862cb3a4d559ae6f8837193037a762  bfd/doc/targets.texi
 0d105bd0e18efa7595b1701b46865f4a  bfd/doc/coffcode.texi
@@ -137,9 +137,9 @@ c20668386e938fbaacb5ecd125d06645  bfd/elf32-metag.c
 3995e5ae01438c7d2c7fbbc12700a1f0  bfd/elf32-score.h
 ab66a599ed123961cf9dcf461e71940e  bfd/elf32-xstormy16.c
 dfdcefebca7b70b1490a6b26ccacdea7  bfd/cpu-m68k.c
-092dbbb4302cca17531be888d92813a8  bfd/bfd-in.h
+ba2512681e942b4134bd15ca1774ef55  bfd/bfd-in.h
 c552fd4edbac068d0780ef556247177a  bfd/aout-cris.c
-2cfb29c135beef58a7cbfe0807c0c42e  bfd/ChangeLog.linaro
+53d1f3325c21274f79f6b207efe0111f  bfd/ChangeLog.linaro
 d6dd30badb43ff7dfe3b0da57c4d170b  bfd/TODO
 aef3fda9505a0cbb54b73573fd797044  bfd/elf32-i860.c
 939bf09f26199a237e93b8270b66bff8  bfd/coff-arm.c
@@ -176,7 +176,7 @@ f4b49bafc009ac138827570a4fdde406  bfd/sysdep.h
 115e023b5b903e7f6cd7d5477aa99dd1  bfd/cpu-tilepro.c
 7944adcc0e356862a28598769de73fc4  bfd/cpu-tic54x.c
 8b735739122823a277e225a45fd2fa80  bfd/coffswap.h
-84a29f7995d72dc274832a04d114d858  bfd/bfd-in2.h
+aab636341af953fa47e9f23ad4d1fdab  bfd/bfd-in2.h
 546e2d7c5c9da674ed7600fa87823b1c  bfd/cpu-lm32.c
 35f9dd9fcbb65e7434dcce08bb16183f  bfd/elf32-moxie.c
 1fc6bf93a05ca32a3c1cc60bebfe5520  bfd/coff-stgo32.c
@@ -207,7 +207,7 @@ ae5eedddd31cbdc1cf1ab6e1d701dac3  bfd/elf32-m68hc1x.h
 c84019afb88cf1094d5542cd1baf552a  bfd/hppabsd-core.c
 b87c03c4dbdb7c2469bb565c0695487d  bfd/vms-misc.c
 168eb4e7f79237249cc976f8a3d4f13d  bfd/stabs.c
-a68f76fddfe2236bd69339d113f39970  bfd/config.bfd
+b85f264b1a97bbe24631e3d5fba2a9b4  bfd/config.bfd
 e65fcc0e9242ddf2063b573b70bdddbd  bfd/nlm32-sparc.c
 23470288bbe1673ee25b04b3a582b457  bfd/coff-rs6000.c
 408ef1462276b75d3708877103c85eb8  bfd/.gitignore
@@ -263,7 +263,7 @@ e5062a411407a4e8f94cfe0e931990f8  bfd/epoc-pei-arm.c
 0a804555fdf294155b0555571edbb984  bfd/som.c
 7dba15a9568e388261655fac84be612a  bfd/sparcnetbsd.c
 7d710529ca3fafb2bb57132df24957e3  bfd/ChangeLog-2004
-cb44d058b0470dbfa77f812d598b9057  bfd/version.h
+f3f8c0207bd22dcb028926717c8445d8  bfd/version.h
 4f9c0de80ce9266b55bb00bed21c9389  bfd/coff-we32k.c
 c4c8506fbbb13d46f47d292e0ac3a3e6  bfd/srec.c
 03ea9182aa386b08ea2c6d5cb852395c  bfd/nlmcode.h
@@ -330,7 +330,7 @@ a8efc0160cd42c1c38aa452387c2aa15  bfd/peXXigen.c
 a1df35b230a12d1664dc2fe61adbbe5d  bfd/i386mach3.c
 8582c054475f2d547af273c8df0858ef  bfd/cpu-d10v.c
 f9d7123c139b25de478c6221908315f5  bfd/liboasys.h
-7684e7227bd859b94a50dff19e2ace1a  bfd/ChangeLog
+455726f48b2c4cdb8fb78a18b9d88189  bfd/ChangeLog
 29257ce696471fd92d98cc2b5aca10a1  bfd/coff-mcore.c
 92cea4128ffe579f16d01cb75ea6512e  bfd/dwarf2.c
 ecc29d34033b2054df07ec870266a82c  bfd/elfxx-aarch64.h
@@ -395,7 +395,7 @@ c302ee6fa46b0207b8afb617f8d9effd  bfd/hp300hpux.c
 ab61804e1d5adeef7a190158af639583  bfd/elf-hppa.h
 61223783ade40fecb9e0dd5a8fddb8b6  bfd/cpu-m10300.c
 546640a80c1b867a387381e1eee30607  bfd/cpu-iq2000.c
-f999f830fafe33215472b4dbd5eecd28  bfd/elfnn-aarch64.c
+bf2c20721e38fdd6d5a1902d17ec3c1d  bfd/elfnn-aarch64.c
 1c74bfe93f1fe779fe093320c36b4443  bfd/cpu-moxie.c
 50d3f1577ee0ba388baa9b63b8e1db9c  bfd/aout-sparcle.c
 2fbfcc1c89eadcc94bc0291669e60ea5  bfd/elf32-mep.c
@@ -420,7 +420,7 @@ bd60ab18d463bec320c63c90dc70bd2d  bfd/coff-i386.c
 82178b4c95a87335d7e8beceef9307a8  bfd/cpu-h8500.c
 5078b3985212bed5ac3c79b3b9497571  bfd/host-aout.c
 e10350123329061cf3ae2dd4bacf141c  bfd/configure.host
-9ebafef665761262a7e74ce5ce1b7895  bfd/elf32-arm.c
+43e0be78bc300b30d3575cd86e250440  bfd/elf32-arm.c
 a0050d52ab1b2135fb09e5ffd2b41125  bfd/cpu-i960.c
 719871ed0893d4495b12c12bdcb40ee3  bfd/elf32-cr16c.c
 055f2557915c3dab9e5e303d131755be  bfd/elf32-microblaze.c
@@ -562,27 +562,27 @@ e30cdf08d8264e27b35b920b411fc763  binutils/is-ranlib.c
 017cb343118f23960102353e723e248f  binutils/rcparse.c
 55ab3daa80f760713f599d6d78eda158  binutils/configure.tgt
 26cb8cb8be4004880405a865ab227895  binutils/windint.h
-e3a76e39db66dd0058289d96d9735fe4  binutils/readelf.c
-f225db904fd9c2126ec1f7f4bb2aac46  binutils/doc/ar.1
-e66f8b44c99fab27adb58450f25fbba2  binutils/doc/objcopy.1
-1cee3c2058144a76ab89a12363bc7b4b  binutils/doc/objdump.1
-846b25ae2246930d47e5defa8e2d05cc  binutils/doc/readelf.1
-545ec15a2d390cc819867d344596106d  binutils/doc/windmc.1
-78af9228acf55268be4f6378ae8848f3  binutils/doc/addr2line.1
-dbb71c30b4f80bfdf715412337938081  binutils/doc/cxxfilt.man
-678c02cf60dbd4fb69d93d49ad2ad467  binutils/doc/windres.1
-4abeb355efc0a1dd03f45d52143f519e  binutils/doc/nlmconv.1
+2148e3e130d873ebd165285772b37bf4  binutils/readelf.c
+b99dadf4c6f43ece947b330cbe51e0de  binutils/doc/ar.1
+97c40e93e4d632ffa3042f86cd61725d  binutils/doc/objcopy.1
+be8ada058fa6e2e8a5fa2fb4497fe26b  binutils/doc/objdump.1
+9258cdd578ef5b3e88316c5e1e16db2a  binutils/doc/readelf.1
+3f65e7f5258d08fc549f5513353a7e32  binutils/doc/windmc.1
+ecf45721af233cb1f0c488ae7e5b2094  binutils/doc/addr2line.1
+d1bcd5c813a7aff6f10c1d55b48e020f  binutils/doc/cxxfilt.man
+42dae1f34824d86266e86a4ed9a262c7  binutils/doc/windres.1
+d21787971f08d4a3c1d6d6182b82be9a  binutils/doc/nlmconv.1
 95077f6bd14dcc541b28ae6bbe31feda  binutils/doc/Makefile.am
-6f4cc7ee482de98e317815176204120f  binutils/doc/strip.1
-27aed11304cdaf203215fa0349b3ddbb  binutils/doc/elfedit.1
+1ea31c9eb78483b160752fa736936b4d  binutils/doc/strip.1
+9db0613578c67d92f26c752b31990066  binutils/doc/elfedit.1
 e1eda31b2bf339a7350f0f2c0ff86b0f  binutils/doc/Makefile.in
-55bd8f8c6d409e434064bcd03c28002b  binutils/doc/ranlib.1
+99a3900f3d425fb3cfe2a2571658bccc  binutils/doc/ranlib.1
 f5d86f2eb4947e72f025ed2c30b3f234  binutils/doc/binutils.texi
-f7dea8a7284cc9146877253a071e7130  binutils/doc/nm.1
-3e2e68ab5e398657a41d525d9b6d8a31  binutils/doc/dlltool.1
+22f573f0922a6a3d9d29ed8ebef1928c  binutils/doc/nm.1
+28cc6fe6bbc362061ce6ea596d0727bb  binutils/doc/dlltool.1
 072910d553f79906db69fa7c0e956bba  binutils/doc/fdl.texi
-396fa9fba8c0cc0893bc60ff89ad11ba  binutils/doc/size.1
-be1fc93447d952000a9f41b6f3bd12e4  binutils/doc/strings.1
+9a55064684800430852091032a8ab119  binutils/doc/size.1
+05a91018ac536721b06f0c9a7e3e7897  binutils/doc/strings.1
 e94c10d2d3d8f865d29ca3d566a60f11  binutils/doc/binutils.info
 643e479106db7f7394bc1a4f92a6a430  binutils/od-xcoff.c
 4de019a5400a7a46b3c9b8731eea6c8e  binutils/deflex.l
@@ -601,6 +601,7 @@ bd2a7b178bc99b071345fbadcb432cc2  binutils/mcparse.c
 7115be14c8b77fc6818ecaa35c808c1f  binutils/resbin.c
 31cb252b9399425c57e9c67473d97856  binutils/size.c
 45ab6bf6d01e8657c32d92be97606dac  binutils/unwind-ia64.c
+dd2782e5a13d3f54580484087804b2df  binutils/ChangeLog.linaro
 36cdea5da1faecbd48e77c35b9461dd9  binutils/od-macho.c
 7f70cb7526702ffa33d0b54b796467b0  binutils/rescoff.c
 dd0c596b4fff65e796b81488e246fa3e  binutils/coffgrok.c
@@ -897,7 +898,7 @@ e13d6d7c54dbeb04e97472df7f7c1f55  binutils/sysinfo.c
 2d29de50003b7c54a5128a110b9b9e14  binutils/arparse.h
 de7262725ff8255b497c6ec474ee5702  binutils/sysinfo.h
 f1ebf3bc6dbd28c98fec4d0dcd68606b  binutils/config.in
-bf95ef7a77854ce467c7296bedc0463e  binutils/objdump.c
+262ed314f2f1879d3646f7b470b7f7eb  binutils/objdump.c
 2dd7641476b40f8f5552fd10fdb258bd  binutils/srconv.c
 65e18dc2381e9ad657577905b819d47e  binutils/Makefile.am
 363dcd5e20a8cb4f1895781b337c1085  binutils/elfcomm.c
@@ -937,9 +938,9 @@ d262be1d9a2c4444b69408ce94ffb41a  binutils/dllwrap.c
 406c15089c0ef118534921eaf8b2548b  binutils/filemode.c
 0ea66d70682ec876032a878491019649  binutils/mclex.c
 4b06fd68360694182530fae1fbaf90ba  binutils/strings.c
-5811f44f9d21905cd9d0acd8c380918c  binutils/dwarf.c
+d95ae32bc5451b025eb6091bfc0edcc0  binutils/dwarf.c
 4f0360cef23292671ee629a27420bd73  binutils/winduni.h
-7d76dab6835251ac73c064583711e252  binutils/dwarf.h
+a933713fa55a37dafabf2a6676bb3d07  binutils/dwarf.h
 0c2674eae7fc8c1eafe79d5951d7d9d3  binutils/MAINTAINERS
 fe6b1f5559a24115448d6214f411de79  binutils/ChangeLog-2009
 9c5690783556157ca109d8c93b7d6c1a  binutils/ChangeLog-2006
@@ -1151,7 +1152,7 @@ bced6e5aa32a4be292180262dd07bdda  gas/doc/c-msp430.texi
 6dfd81dddefef9a868a4d24586645cef  gas/doc/c-bfin.texi
 2f7a82cd48663d8f6500621ffea0c556  gas/doc/c-epiphany.texi
 7af989936deb2e3760522fc162ec9259  gas/doc/c-vax.texi
-f097d64848e1f56b0740a701fc96985f  gas/doc/as.1
+fc250f3ee52e0043cef3040346bbc6d7  gas/doc/as.1
 144f3a5e1f087233fe3475d27b437b54  gas/doc/c-rl78.texi
 87d2fcfe57756225c08b9d2ccd229e9c  gas/doc/c-i860.texi
 3248632580915cd57af57dcce6152999  gas/doc/c-nios2.texi
@@ -1175,7 +1176,7 @@ d0a93f332e415e73e7a28c4f4f57b755  gas/doc/as.texinfo
 787db471fcef39b22ca25c2bceed9cf3  gas/doc/c-v850.texi
 e024f59ca3f757b635640f51638e69eb  gas/doc/c-tilegx.texi
 b0d1f51e100d05dd909fe8346e3236d3  gas/doc/c-i370.texi
-609651c9d0aed2d78deaec9108049005  gas/doc/as.info
+ff79bba5965a117a2c04a0b11dbad41f  gas/doc/as.info
 a71d967d31e9e0bc6e62a619bdcbaba7  gas/doc/c-tic6x.texi
 e4ee964a361b5f6f06eb08c4291de8c6  gas/doc/internals.texi
 ba35f5e8ce25efb33c7de10fe31ac8e8  gas/doc/c-ns32k.texi
@@ -1184,7 +1185,7 @@ ba35f5e8ce25efb33c7de10fe31ac8e8  gas/doc/c-ns32k.texi
 072910d553f79906db69fa7c0e956bba  gas/doc/fdl.texi
 7589390b27572cc4bc6b2bb728dc9071  gas/doc/c-sh64.texi
 8d09cb3a65045f0dccb56a48eea432dd  gas/doc/c-metag.texi
-539b9c7c2f02ab49cb7d5e7aa54c28d0  gas/doc/c-aarch64.texi
+5783591ae6037758a3f52904c8d27bc9  gas/doc/c-aarch64.texi
 1c2d955aee5a2d6f7885439d15d1fbf0  gas/doc/c-arm.texi
 8542b9c6a35aecb541c2d205daf70bbb  gas/doc/c-tic54x.texi
 4bd02f776ca2d6cc9365b0172319575b  gas/doc/c-arc.texi
@@ -1232,7 +1233,7 @@ db47b28f7582ba2b4cf1cb90b02f8a06  gas/config/obj-evax.c
 82ca3755ce16eb16d66b0cb0d9cbeff6  gas/config/m68k-parse.y
 aa8fabcf3d3093365a232271033ff216  gas/config/te-interix.h
 6f1cbb58c799c8ad2a1b1334f628a858  gas/config/obj-elf.c
-d36455b66730ce3ab9480a3b0b26efd6  gas/config/tc-aarch64.h
+2da0482853ddd417dcc2b704bf880121  gas/config/tc-aarch64.h
 fb09c0f990d8f75495bf425c717d41ce  gas/config/obj-coff.h
 f9cad0069f8a7b2f076a80c6309f2ebb  gas/config/tc-pdp11.h
 4bc0bc8c1efbcd528e7945ed695720d5  gas/config/tc-microblaze.h
@@ -1266,11 +1267,11 @@ df9261bbdee1d39086f7ff8048d935bf  gas/config/tc-cris.h
 8246d23301617d83e841d414f32797ce  gas/config/tc-z80.h
 ec060c6c4a1cbaa48252bff5ecd87b20  gas/config/bfin-defs.h
 b45ff30a0c7192d2bd7c4479f8cfbbf3  gas/config/obj-macho.h
-e5f0c15917f90b5d3e1c50b36a8bb344  gas/config/tc-arm.c
+b13a0cc8035629291e4d418af162f4cd  gas/config/tc-arm.c
 8c3a6eaafb147c13879e98b73e17b2f5  gas/config/tc-hppa.h
 ddcfb423af714b681c81611d1f7d1292  gas/config/obj-elf.h
 797e197f24c46a767478c28bc5dfece6  gas/config/m68k-parse.h
-85263ab736ba8696dbbd0e69fc670033  gas/config/tc-aarch64.c
+7ce0b0698c859828fe538cd1707a38f3  gas/config/tc-aarch64.c
 67e306cfe64c96a4797f4e06978647e8  gas/config/tc-crx.h
 1bc31c6cab3996a70557f19b791bfd2e  gas/config/xtensa-istack.h
 5ba13db883834de33b7a3c24116ede95  gas/config/te-psos.h
@@ -1429,7 +1430,7 @@ b31ff52a3e0405a9ce018c551399e80a  gas/config/tc-sh64.h
 39da59e7e8e3c3bce29730ab9337f21e  gas/ChangeLog-0203
 4ea7ac4d931713b4c4266bf1e01c540c  gas/itbl-parse.c
 17e961bd7664effaa115dbe1752cc76a  gas/flonum-konst.c
-1f4641b05f3d77d19d52a1ed9904dba8  gas/ChangeLog.linaro
+b443a1be4a8936d0f88c41740cf353b1  gas/ChangeLog.linaro
 5b72e9fbef33882696552d87e7ce38a5  gas/compress-debug.h
 c8e21390fc2415e6603e21d7e44ce2d8  gas/bignum.h
 6c8d6099ae64334a6bb30e8adc4083d8  gas/atof-generic.c
@@ -1446,7 +1447,7 @@ fc4425d40063c53e442434ed3c2f018c  gas/bfin-parse.c
 71907dceeec0327c1c5e30e3532f9989  gas/testsuite/ChangeLog-9303
 63be8f223de1fb2204bbcea923f61fc0  gas/testsuite/ChangeLog-2005
 38cd7f7a84a9c8c043414f368de2a7b4  gas/testsuite/config/default.exp
-ecce98ce216197441f90cb6bb0821e84  gas/testsuite/ChangeLog.linaro
+41b5cfd62301f103befb227b7f934e62  gas/testsuite/ChangeLog.linaro
 30764ced5c424e3c2c384059cbe2a227  gas/testsuite/lib/dounssym
 5725f8e58e03bd6026f3e2721e1db22e  gas/testsuite/lib/doboth
 aad4965bf0067bf9fb71acc19f7877d4  gas/testsuite/lib/dostriptest
@@ -4022,6 +4023,7 @@ a3e8ca7ce6c1659a4f208f93ca59923b  gas/testsuite/gas/arm/attr-march-armv4xm.d
 435c117c9005017199d72237ccbde734  gas/testsuite/gas/arm/thumb2_mul-bad.d
 655d7b07a2b3ad09ec2c2f73ef62c42f  gas/testsuite/gas/arm/neon-ldst-align-bad.s
 1326ce6b75a387e327f3d73bb72a90d8  gas/testsuite/gas/arm/mapmisc.s
+d784ccb64fbb8a771629379f5d7c1bce  gas/testsuite/gas/arm/vcmp-zero-bad.s
 de5fe0f4dfd28d5fede3b39249598ac5  gas/testsuite/gas/arm/attr-names.d
 4e5e9ef32c8f8085bd7604edb5b2fc83  gas/testsuite/gas/arm/missing.l
 09c399798b6f6226bc9392701984d84d  gas/testsuite/gas/arm/noarm.d
@@ -4124,6 +4126,7 @@ b4988a9934cfe174162bc72eb0467d52  gas/testsuite/gas/arm/vfpv3-32drs.s
 def73f8262f150a831c8979059596787  gas/testsuite/gas/arm/mapsecs.s
 66f63ac197796c6bfb8c61d92a4555b8  gas/testsuite/gas/arm/barrier.d
 31de3f9f62eb079c5e3496430d928d6d  gas/testsuite/gas/arm/srs-t2.s
+cf47a8a2a86f756cbda63dadff649c55  gas/testsuite/gas/arm/vcmp-zero-bad.l
 36aa24953c581a47f9e7d295b11d5952  gas/testsuite/gas/arm/wince.d
 cc4d24f6d336534b6a1e95e551db5cba  gas/testsuite/gas/arm/arm-it-bad-3.l
 d01c65524ef1105873380d5dad846f8a  gas/testsuite/gas/arm/msr-imm.d
@@ -4138,6 +4141,7 @@ c8d6215ce605370ee139a0bd642c0001  gas/testsuite/gas/arm/sp-pc-validations-bad.l
 12345b0b2762761ddbd1b17b3fa98fe4  gas/testsuite/gas/arm/vstr-bad.s
 a2dc515af8e77f4724ee3790181e6e46  gas/testsuite/gas/arm/sp-pc-validations-bad-t.d
 0f5de36e674295930c09c998d4ab690b  gas/testsuite/gas/arm/local_label_wince.d
+5ff3643b88b23fd474cfdf3cc64de4fa  gas/testsuite/gas/arm/vcmp-zero-bad.d
 8ae0560f8be6f8f105a25e08d52d7921  gas/testsuite/gas/arm/arch4t.s
 bb62e8f179de2a2ea394591ed5cc4c40  gas/testsuite/gas/arm/attr-march-armv6-m+os.d
 8e6fe776255925819b636d1b13e16070  gas/testsuite/gas/arm/thumb-b-bad.l
@@ -4196,6 +4200,7 @@ dd0fd7c207d00fa114e7ef7da8268cef  gas/testsuite/gas/arm/strex-t.d
 602b437bcb68889786d1cb4f9de7259c  gas/testsuite/gas/arm/thumbv6k.d
 0cd6f6942e28d13d317d04c27b71eb03  gas/testsuite/gas/arm/armv8-a-bad.s
 8dfd0e82f441b176be452d05d68dac49  gas/testsuite/gas/arm/target-reloc-1.d
+32b888decbf605f7ecd6938967bda766  gas/testsuite/gas/arm/ual-vcmp.d
 0867271152e5ddc12f99cd30be0bcaac  gas/testsuite/gas/arm/iwmmxt-bad.s
 d67e1f24d3706e898eac385a305df6ce  gas/testsuite/gas/arm/bundle-lock.d
 e1cface84f4bb1ab52fba3267edfd23a  gas/testsuite/gas/arm/insn-error-t.s
@@ -4277,6 +4282,7 @@ a99305a71d6c0a360ca32c2f508f97ca  gas/testsuite/gas/arm/armv8-a+simd.s
 e7f619829adde372edf6705e5583f2e0  gas/testsuite/gas/arm/mrs-msr-arm-v7-a-bad.s
 6894e0da633e5dcd9797ef7a78ca72a9  gas/testsuite/gas/arm/vldmw-bad.s
 0c77a6a3842652ddcb0c68991a005c49  gas/testsuite/gas/arm/float.d
+959e65c806d57471b3870c114671c5e8  gas/testsuite/gas/arm/ual-vcmp.s
 486b5daf97a9aa5237994e81dbe99daf  gas/testsuite/gas/arm/depr-swp.s
 adf77b53329675daba18c16e17a6520d  gas/testsuite/gas/arm/got_prel.s
 7b3523400eda6b7484d0cd117e593228  gas/testsuite/gas/arm/ldrd-unpredictable.l
@@ -5108,6 +5114,7 @@ cbf6a8eeb8d716f4361bcae12933e92f  gas/testsuite/gas/microblaze/special_reg.d
 f2d006143974e9dff026dc90bd8f1715  gas/testsuite/gas/microblaze/endian_le_elf.d
 295c9a3c2c07b10eab0955254c233bd2  gas/testsuite/gas/microblaze/allinsn.exp
 bc7eb6230cc8bacf58b9bf5909907300  gas/testsuite/gas/microblaze/endian.s
+22b7a303fda6a400de2dbfa0994e1f3e  gas/testsuite/gas/aarch64/lse-atomic.s
 88015f84ca32d7e63a833d1751315691  gas/testsuite/gas/aarch64/neon-vfp-reglist-post.d
 6679ba43cb558e46294f3b4270d032cb  gas/testsuite/gas/aarch64/verbose-error.l
 f8217c89d36e1f4bdc2b18498a95f63d  gas/testsuite/gas/aarch64/neon-vfp-reglist.s
@@ -5122,7 +5129,7 @@ e46c5b3292601e19890fdf4b87f069c1  gas/testsuite/gas/aarch64/floatdp2.s
 41bb1427e289731fa3b5d3f2aa21abd8  gas/testsuite/gas/aarch64/ldst-reg-imm-post-ind.s
 50484600c7a37e52af326a1efb6c2e0e  gas/testsuite/gas/aarch64/msr.d
 fae22db532716a67e63b1346c8bc9c94  gas/testsuite/gas/aarch64/neon-ins.d
-32493e2b7a1935d3f3e11e3aabf92f30  gas/testsuite/gas/aarch64/diagnostic.l
+f4b49da716d001a9140380fcc44a4df0  gas/testsuite/gas/aarch64/diagnostic.l
 322e4646f68ee08c58ee4f62e74d823c  gas/testsuite/gas/aarch64/int-insns.s
 d955277ede99f7fd49b86a370b4cfb43  gas/testsuite/gas/aarch64/bitfield-no-aliases.d
 7a6424343fe8ae2d71aa557cace416f6  gas/testsuite/gas/aarch64/system.d
@@ -5130,11 +5137,11 @@ d955277ede99f7fd49b86a370b4cfb43  gas/testsuite/gas/aarch64/bitfield-no-aliases.
 ad4b93bdc726fefd21817b7df26b3cdd  gas/testsuite/gas/aarch64/rm-simd-ext.l
 26b67f2c3bd2569781f276c35c952814  gas/testsuite/gas/aarch64/mapmisc.s
 b1af7128b0fff2d1893c8470faaddda6  gas/testsuite/gas/aarch64/ldst-reg-pair.d
-1cbcda5192c9056d6f488c472b0f5b1c  gas/testsuite/gas/aarch64/diagnostic.s
+e1548e8fdc1de87d3b020987467676ae  gas/testsuite/gas/aarch64/diagnostic.s
 ba1a7dc42541dc6346b729e9df9f0132  gas/testsuite/gas/aarch64/reloc-insn.s
 63768c78a27fb6ad23c44dd6eff537da  gas/testsuite/gas/aarch64/adr_1.s
 cb2698ed670f419a09541e11fde1c092  gas/testsuite/gas/aarch64/crc32.s
-0c47ae1d8f5a69e0e687dca3438a4f99  gas/testsuite/gas/aarch64/sysreg-1.d
+821f6c2d335ee2aaf24f5e507d4b567e  gas/testsuite/gas/aarch64/sysreg-1.d
 4da48bd3f084df3d36675dbc440be58a  gas/testsuite/gas/aarch64/adr_1.d
 87f3e53a18241b91aa9f2cd87a9a20a5  gas/testsuite/gas/aarch64/mapping4.s
 e62e6065e9d1eb8ce6ef1f41e7c5f57a  gas/testsuite/gas/aarch64/neon-fp-cvt-int.s
@@ -5160,7 +5167,8 @@ a2712975af4c171bac28276a143097e3  gas/testsuite/gas/aarch64/ldst-reg-reg-offset.
 13e74643dea9ea5e5c76ecdeb7493898  gas/testsuite/gas/aarch64/b_1.s
 ec45e431c1732095d83822b779c5b5df  gas/testsuite/gas/aarch64/deprecated.l
 15c4b64084dc80f5277f05dbc6257354  gas/testsuite/gas/aarch64/illegal-2.s
-a45d143874a604e9b09e70f9dfb4554e  gas/testsuite/gas/aarch64/illegal.s
+6fcfbc8e04e5b17b596a740203175646  gas/testsuite/gas/aarch64/illegal.s
+15bf0e4cdfc601bbafee9de13626afc4  gas/testsuite/gas/aarch64/lse-atomic.d
 318ee30d9b9842c8e3f1fb6f6ea836e7  gas/testsuite/gas/aarch64/alias.s
 787476e766f223011c189df934608684  gas/testsuite/gas/aarch64/neon-frint.d
 d8b23671baa6a5ed6f6f4022888f7220  gas/testsuite/gas/aarch64/advsisd-misc.d
@@ -5209,16 +5217,18 @@ ff84ac43b48aa69fdb13e64608fee490  gas/testsuite/gas/aarch64/bitfield-alias.s
 efdf3105d16298fa03ebc2a7a0cedc2d  gas/testsuite/gas/aarch64/crypto.s
 978f6cf232d6b94c98ed03f289f35c0a  gas/testsuite/gas/aarch64/mapping2.d
 36c86be1babe604d1e18f4ea5f4f557e  gas/testsuite/gas/aarch64/legacy_reg_names.d
-51ea70cc147eebe96ef0ee3c2a0c59b0  gas/testsuite/gas/aarch64/illegal.l
+93293993ef333fc3c83cd498f4565554  gas/testsuite/gas/aarch64/illegal.l
 33544f4561fc0ad5df8f011ad7eeaf1c  gas/testsuite/gas/aarch64/bitfield-dump
 95aa0abdb221a50de3316a2f13f9b5c7  gas/testsuite/gas/aarch64/ilp32-basic.d
 1cedf5e7c2a7bb2d5cb3040d80131af2  gas/testsuite/gas/aarch64/diagnostic.d
+8dc6142149cad0678c6aef4896a38747  gas/testsuite/gas/aarch64/illegal-lse.d
 fcd03edaa919c324bf486cc60b658eec  gas/testsuite/gas/aarch64/int-insns.d
 77f6b07d720525532e3c0eff1a7e41d7  gas/testsuite/gas/aarch64/ldst-reg-imm-pre-ind.s
 22ee5d8b5cf98ef58e5e1e342746edfe  gas/testsuite/gas/aarch64/beq_1.s
 51fa1a115963d8e63f3b35c2a1670de4  gas/testsuite/gas/aarch64/msr.s
-d256875ae19cc98b34aad3697794ab60  gas/testsuite/gas/aarch64/sysreg-1.s
+7e54202258a3c676473205f8854f6da3  gas/testsuite/gas/aarch64/sysreg-1.s
 fb285992e9d641638dba8bd37f8b4cd3  gas/testsuite/gas/aarch64/fp-const0-parse.d
+6f836f532bd8eb5b657f3d3d7ff831dc  gas/testsuite/gas/aarch64/illegal-lse.s
 f56bafc0c06219faffed22ba07f76caf  gas/testsuite/gas/aarch64/legacy_reg_names.l
 c8bbaa93dca4681c3e089a9689a98ec5  gas/testsuite/gas/aarch64/ldr_1.d
 b8ec46d15160650865c021b0d1650def  gas/testsuite/gas/aarch64/shifted.s
@@ -5241,6 +5251,7 @@ d2687472c1f44457e59f85a853173355  gas/testsuite/gas/aarch64/tbz_1.d
 d2c4c33155d23c45a6a698d3833c951b  gas/testsuite/gas/aarch64/tlbi_op.d
 81b4d9cd14ce15ba05a8e00fb88683ef  gas/testsuite/gas/aarch64/sysreg.d
 d2894a166b5470a39b86fad416d74aec  gas/testsuite/gas/aarch64/tls.s
+b9d32d5cc55ba302a537e0b33169d420  gas/testsuite/gas/aarch64/illegal-lse.l
 8c4da6664b4ea6ddf1c8a0d09351caff  gas/testsuite/gas/aarch64/bitfield-bfm.d
 851a88ad5f535acc0bf62f52bdabfbe3  gas/testsuite/gas/aarch64/programmer-friendly.d
 9143f4e8bb70c861dcdb22bb9374e909  gas/testsuite/gas/aarch64/mapmisc.dat
@@ -8580,7 +8591,7 @@ a6429d3de563eb0422db7c58555a7b0b  gprof/i386.c
 d63d82e3702133d7eb21b03575723438  gprof/gprof.info
 bb4081da1d9c7c6f056ec52fe9bc2ac6  gprof/bbconv.pl
 c024ea0132b8e47beb396d3d701be4bb  gprof/ChangeLog-2012
-359a62b9b24344822dd8c838e09e66d7  gprof/gprof.1
+32feae96659aaa7791b47158f9a510ad  gprof/gprof.1
 45b40bf6f6d8e8ee594f0fbbacdb5626  gprof/search_list.h
 90584e94b238bb26c1dd5af55a09033c  gprof/gmon_out.h
 2e5ec26c1c13775b86c230d0f4619bba  gprof/ChangeLog-2007
@@ -8693,7 +8704,7 @@ b611a308a75056c2a8186199b92d8751  include/opcode/vax.h
 c2bdef81b55e5156557963f720519311  include/opcode/msp430.h
 3c8280486c71acf9bc25246d3404a2a6  include/opcode/sparc.h
 a24f387beb00a3e726a72f55ae361b12  include/opcode/nios2.h
-067e0e7b203ce6848e8146b49c5c1933  include/opcode/ChangeLog.linaro
+0f1697a9e1f289821d90eb3d6619b97e  include/opcode/ChangeLog.linaro
 2aab9f5c7ac5de630a5ab61dffee686b  include/opcode/d30v.h
 904930a6da216d930ed050e8fda269b4  include/opcode/pn.h
 f11bfc84e8a16b951ebe43a2abc02303  include/opcode/metag.h
@@ -8730,7 +8741,7 @@ d13912548d0ed599b86d03326e8bc298  include/opcode/rx.h
 8c4cb936177015c0dd4f4f31234b033a  include/opcode/tahoe.h
 7bfc43cfb0a7db8606357492e077735c  include/opcode/pyr.h
 420f975d9f61718b373e729f0828ead2  include/opcode/np1.h
-ab9cc06000c9c8fb3fc7da7f62e4ccfe  include/opcode/aarch64.h
+87d02b3c262f5130efe11507db6d3a63  include/opcode/aarch64.h
 a9e85bf8fa817a66a980cc1f77779241  include/opcode/avr.h
 48bf08b1c7e518e2051141f5e241c998  include/opcode/cris.h
 7a4987744ef7a7f4078c5a8c576336b7  include/opcode/d10v.h
@@ -8970,7 +8981,7 @@ c8501675ab40fcf8fe39364ab9de0e42  intl/dgettext.c
 42ed463176d7d9875fc5142d68531cff  ld/ldlex-wrapper.c
 1b7afbce3fb8e3b5cd9cb6266e112d07  ld/ldcref.c
 8380fe805fc59cb6fbe3073f98844ed1  ld/testplug.c
-c8cdc89c89d440130d561ca4e109165e  ld/configure.tgt
+63b402b3871d9e70140e270f2c0f5808  ld/configure.tgt
 8fd42a47e8c634402f9f563bf24480aa  ld/ldlang.c
 f3abd2c9a8e5b2fe2dce72ee127b69d9  ld/configure.in
 a55c516529e81362ed0350bc7a105175  ld/lexsup.c
@@ -8986,7 +8997,7 @@ cb83c58e2db10afdd1e6f57b2ab02d1a  ld/ChangeLog-0203
 bb75a430f73c1b93c1a9a6c0d8396838  ld/ldmisc.c
 351c85fba3e46d48e9752dc51e2a0cac  ld/genscrba.sh
 3673f67ae2e559fa9c580ed42564da70  ld/pe-dll.c
-f1766d5616447c9dbd997b748117079d  ld/ChangeLog.linaro
+823d99c9007b33a602185aae009946f3  ld/ChangeLog.linaro
 01627b664c7e61ab5dc202bb72913e0a  ld/TODO
 5e33868aa49cdc31363e63450fa7cbb8  ld/scripttempl/moxie.sc
 11e720b2d4fbd6b8ad9ce26f980acd6a  ld/scripttempl/aout.sc
@@ -9081,7 +9092,7 @@ b83d2090c526ea76244fb001060b87aa  ld/scripttempl/i386coff.sc
 d9e19023a20bcd8c506bff82f69dbba1  ld/ChangeLog-9197
 8b087227bfd826e425b9bc88f9a9c2e6  ld/pep-dll.c
 7972f97c40e79b0770fbf58333b59c7d  ld/ldgram.h
-25dace8b55a9e59786c2bfe8bcf5e8f2  ld/ld.info
+c974e122792090fe2b45fe076fc87dac  ld/ld.info
 de78f7ed7336058691debadabbf85b99  ld/sysdep.h
 bda3f0de40dfd38890eca9a0b95380a3  ld/plugin.c
 edbd3ce7f8ec12fac8c8f76869c472e6  ld/ChangeLog-2010
@@ -10151,7 +10162,7 @@ bfdf01cbcdcc47293ad59e8ead5fbb51  ld/testsuite/ld-pe/image_size.s
 892888288d9d6fd1250e24fab408ef0e  ld/testsuite/ld-linkonce/linkonce.exp
 0f2ec669dedf9925f6ae0db3b1a43506  ld/testsuite/ld-linkonce/y.s
 5193ef30618a2f1f3af9019b7f4f62de  ld/testsuite/ld-linkonce/x.s
-6a586942cd459c43f7583ccb7bbbbabb  ld/testsuite/ChangeLog.linaro
+c2c6dc65652836857bd4f1dfba39f69e  ld/testsuite/ChangeLog.linaro
 7aefa0a8f34a16164d08456ec76b6fc3  ld/testsuite/ld-xc16x/pcreloc.s
 3998ca79d045f299d12bbd0cf1e6205f  ld/testsuite/ld-xc16x/absrel.s
 c79d7034cdc00b1ef5f6063eb95f5c0c  ld/testsuite/ld-xc16x/pcreloc.d
@@ -10170,6 +10181,7 @@ ee05d23f722a952993a04bb0b5be2841  ld/testsuite/ld-aarch64/aarch64.ld
 2d1461bc6c910d1ec51f2fc4bc07466a  ld/testsuite/ld-aarch64/gc-relocs-311.s
 3f76996ae0a6a86ab3aa473eecaf498d  ld/testsuite/ld-aarch64/emit-relocs-287.s
 6893c72c487a30aad54a96af152e5c13  ld/testsuite/ld-aarch64/ifunc-17a.d
+fb1f3f50b5f365cd4d34a889ab9d4db8  ld/testsuite/ld-aarch64/emit-relocs-269-bad.d
 f3b9cbe2c5b17dda2420b3103acbd6e9  ld/testsuite/ld-aarch64/emit-relocs-272.s
 ea5e5340f2dad4956c90de22b89272b3  ld/testsuite/ld-aarch64/tlsle-symbol-offset.d
 2c3b2280783e2d581bbffb9b3cafa9ff  ld/testsuite/ld-aarch64/tls-desc-ie.d
@@ -10212,6 +10224,7 @@ e0b7029e7724d6ee52622a62e2a0a8ba  ld/testsuite/ld-aarch64/farcall-bl-none-functi
 b62b4aa8263dadfafe76c39d175dbd77  ld/testsuite/ld-aarch64/emit-relocs-270.s
 2828dbd3b9c9985329534149505ed979  ld/testsuite/ld-aarch64/ifunc-13a.s
 6f6d62f6c1858b69efb7d2fa70fe3aee  ld/testsuite/ld-aarch64/tls-relax-ie-le-3.d
+6e220b77ea1a7210374865f197cc0091  ld/testsuite/ld-aarch64/copy-reloc-exe.s
 35f97c85c4afbfd53e21558a3759f390  ld/testsuite/ld-aarch64/ifunc-5a-local.d
 b3cf485ec4f1288779a12e3132283cc8  ld/testsuite/ld-aarch64/ifunc-12.d
 1ef82d48f6f4b69da04397f1ace43c3c  ld/testsuite/ld-aarch64/emit-relocs-267.d
@@ -10241,8 +10254,10 @@ bf0d9e3bda65fa40deaaf963d892df5c  ld/testsuite/ld-aarch64/ifunc-9.d
 9dbd491f04d36547526e13cbcb5c7073  ld/testsuite/ld-aarch64/farcall-b-none-function.d
 c2e6e546fd214c9eea73f61e79f827be  ld/testsuite/ld-aarch64/ifunc-3a.d
 5222352f8c72da8ca776bd5195fffdaa  ld/testsuite/ld-aarch64/emit-relocs-283.d
+dd3897decb6f6964acd9eb1b7a8df33e  ld/testsuite/ld-aarch64/emit-relocs-268-bad.d
 0a79b2805f3828fe916320476053a2a0  ld/testsuite/ld-aarch64/ifunc-15.s
 c389e368955422a567bb6b689d790e83  ld/testsuite/ld-aarch64/ifunc-14a.d
+9b78835aa157bba4b09d741de16b4fa7  ld/testsuite/ld-aarch64/erratum835769.s
 ba5de9377970199a35c41f281287e079  ld/testsuite/ld-aarch64/gc-tls-relocs.d
 66d2b6101655cd3bc3a092017137ac80  ld/testsuite/ld-aarch64/emit-relocs-309-up.d
 cc97b1a4595914c00ca432e9d87860ab  ld/testsuite/ld-aarch64/emit-relocs-309.s
@@ -10263,7 +10278,8 @@ f38fd056e904df1ad907d6ce1f94b58f  ld/testsuite/ld-aarch64/ifunc-14e.d
 7289ba9415ccacded8796f766b2604eb  ld/testsuite/ld-aarch64/ifunc-20.s
 d354c6cec483ef9f5bcace927cd57c5b  ld/testsuite/ld-aarch64/tls-relax-gd-le.s
 1759e924e7a5c67fb0fa996066698678  ld/testsuite/ld-aarch64/gc-relocs-tlsle.s
-51ac1d8e67d335866e33f65fb7f15846  ld/testsuite/ld-aarch64/eh-frame-bar.s
+c1132d71e957b4a565cc4e05d23c233a  ld/testsuite/ld-aarch64/eh-frame-bar.s
+ba5ec3e4d883b0605c09e2fdb893381e  ld/testsuite/ld-aarch64/copy-reloc.d
 73b0cb0d55f1cda6f090efdde8583f16  ld/testsuite/ld-aarch64/emit-relocs-282.d
 a07966557c5d1afe8d065dba4cbd05e5  ld/testsuite/ld-aarch64/tls-relax-gdesc-le.d
 2363dd0db32ae86e5a22f1264cd0bb6f  ld/testsuite/ld-aarch64/tls-relax-gdesc-ie-2.d
@@ -10303,6 +10319,7 @@ d9ac8ec730e8a9eefaeeae904f91eb06  ld/testsuite/ld-aarch64/ifunc-19b.d
 5177c2461a57ac8edec567c52f3fca75  ld/testsuite/ld-aarch64/emit-relocs-263.d
 66d882d61a4022abd859f288963c169f  ld/testsuite/ld-aarch64/tls-relax-ie-le-3.s
 4b342a6f2f139f8ee1cdd8467c882b33  ld/testsuite/ld-aarch64/ifunc-8b.s
+3eedfd9a85f3aa9eab330d5dd4229e07  ld/testsuite/ld-aarch64/emit-relocs-266-bad.d
 e2d0ea5a3d83ffd5682567fffa07eea5  ld/testsuite/ld-aarch64/emit-relocs-260-be.d
 294bbde52f812cbb1ddd62a8661ae3a3  ld/testsuite/ld-aarch64/ifunc-14d.d
 5b4312165bd7cc68ec7489a1fb22f284  ld/testsuite/ld-aarch64/ifunc-3b.d
@@ -10314,11 +10331,13 @@ f4741b517806c2cfcaa3deb07025289e  ld/testsuite/ld-aarch64/emit-relocs-286-bad.d
 17a800915f5f048da54af4f5f5a57a76  ld/testsuite/ld-aarch64/emit-relocs-266.d
 872dd43e85d7fd1f14a9ffd491eade1f  ld/testsuite/ld-aarch64/ifunc-14c.d
 83dbb506da09401ddeba20f0d591a3f9  ld/testsuite/ld-aarch64/ifunc-5b-local.d
+e8a776fa1550901895a5eb3b53e59cda  ld/testsuite/ld-aarch64/emit-relocs-264-bad.d
 3bbc647ef7924d121665f8ea98f9c7f2  ld/testsuite/ld-aarch64/ifunc-7.s
 e93055df0283e3be6a89b34aed8b57df  ld/testsuite/ld-aarch64/emit-relocs-270.d
 e74f2480eb6a57d2ef95a73e07d4c5b5  ld/testsuite/ld-aarch64/ifunc-6a.d
 5eea30f874558c5486a231c0d3fc87ed  ld/testsuite/ld-aarch64/tls-relax-ie-le.d
 46235617945c84944e380a7586b0160d  ld/testsuite/ld-aarch64/limit-bl.s
+e9dd5b61e1de2f45d318bf17e690bcf4  ld/testsuite/ld-aarch64/erratum835769.d
 ecf162a0c4934468285802cf0fbf4722  ld/testsuite/ld-aarch64/ifunc-18b.s
 b0992366ce197c88c716b9e5a503d0f1  ld/testsuite/ld-aarch64/tls-relax-all.d
 f3a8a240cd05362209c86ef5bf7b9d04  ld/testsuite/ld-aarch64/tls-relax-ie-le.s
@@ -10339,12 +10358,12 @@ e8e9500d52dff29a56189695e4c42035  ld/testsuite/ld-aarch64/ifunc-9.s
 9ae0923f4c286b76c7e9c2cb489fd968  ld/testsuite/ld-aarch64/emit-relocs-267.s
 9d4e1cb1e8c9e8a9acb669974ad37093  ld/testsuite/ld-aarch64/emit-relocs-287.d
 40bedccc4a1f5d44fce79c780ec4b3a7  ld/testsuite/ld-aarch64/ifunc-2-local.s
-2ea0a78be34e20c280f355cfcca8b055  ld/testsuite/ld-aarch64/eh-frame-foo.s
+c0ee771714bb718a76f54d3829d4ec32  ld/testsuite/ld-aarch64/eh-frame-foo.s
 bf107a5fa5be037d13611048253886d3  ld/testsuite/ld-aarch64/emit-relocs-278.s
 e469ad8119588ee3b2a083debe4839e6  ld/testsuite/ld-aarch64/ifunc-7a.d
 27e1cbe92a63b8eae9b5a6ab8894081b  ld/testsuite/ld-aarch64/emit-relocs-311.d
 dabd7b5aa51861a9296ba4bd4df2256b  ld/testsuite/ld-aarch64/ifunc-5.s
-05e9c862cbb386a1f38b184cf67fe8eb  ld/testsuite/ld-aarch64/aarch64-elf.exp
+f2ce8325e06f3043487c665919300b70  ld/testsuite/ld-aarch64/aarch64-elf.exp
 cd894e083a658e4c5e8422712634e367  ld/testsuite/ld-aarch64/ifunc-18b.d
 6826a4365934545d618283ceafe4dc0c  ld/testsuite/ld-aarch64/emit-relocs-257-be.d
 c625ec2517dc1b6be2afd7ef7364f2d3  ld/testsuite/ld-aarch64/emit-relocs-283.s
@@ -10357,7 +10376,8 @@ c625ec2517dc1b6be2afd7ef7364f2d3  ld/testsuite/ld-aarch64/emit-relocs-283.s
 8e3aa7fa0bef5059a1fd5c19c7f0942f  ld/testsuite/ld-aarch64/ifunc-1-local.d
 04a53fd2efbc2361d150b46ddfb61126  ld/testsuite/ld-aarch64/tls-relax-ie-le-2.d
 3f5ab106493ae0bc3579d5331e1be0e9  ld/testsuite/ld-aarch64/ifunc-7c.d
-ba00be2838c9f7dfdb7588cd3e9c2d28  ld/testsuite/ld-aarch64/eh-frame.d
+f73506576e5c52666659f3ee78e967b3  ld/testsuite/ld-aarch64/eh-frame.d
+0bb06bd1458a67cf0614fa07108fa0f3  ld/testsuite/ld-aarch64/copy-reloc-so.s
 19d721115bcaf2de7d0063c859d8b3ca  ld/testsuite/ld-aarch64/ifunc-5b.d
 ac2e1b91795aef897b193969766d0054  ld/testsuite/ld-aarch64/ifunc-14c.s
 3b21793a43d28052dda92640b5156c88  ld/testsuite/ld-aarch64/emit-relocs-272.d
@@ -10730,6 +10750,7 @@ b5cf2a0d3f6dfc9c7abf18e554ee7f56  ld/testsuite/ld-arm/ifunc-8.rd
 b434422e46503615e91cf825c828c2f5  ld/testsuite/ld-arm/exec-got-1b.s
 aefaac7192d3e47c827da951f89d2bae  ld/testsuite/ld-arm/mixed-app.r
 1ba5e1d384cc9aff15613343d46585d4  ld/testsuite/ld-arm/attr-merge-3a.s
+feb5c1492da0b26d9ad6d8bebdaf25f1  ld/testsuite/ld-arm/jump-reloc-veneers-cond-short.d
 e451296a2ef78f15f6cf2fddb05237da  ld/testsuite/ld-arm/cortex-a8-fix-bcc-rel.s
 8d8c37619852fada3b1c587ce2548776  ld/testsuite/ld-arm/tls-mixed.s
 4a6620f5ffdf80120288d531181e52f9  ld/testsuite/ld-arm/exec-got-1a.s
@@ -10744,7 +10765,7 @@ af72dc49b413d92ed9667b4d63ed9ddf  ld/testsuite/ld-arm/cortex-a8-fix-blx-rel.s
 55af24eb165c542fdcb17f75e4c05af3  ld/testsuite/ld-arm/tls-descrelax-v7.s
 4e3e9b2de84e9e9e6e81f7a3b2343cf4  ld/testsuite/ld-arm/preempt-app.s
 73aaf1bc6445754cbb9abbf7f2f92e73  ld/testsuite/ld-arm/cortex-a8-fix-blx-rel-thumb.d
-c565869a5c6edf30bc35060b713de804  ld/testsuite/ld-arm/arm-elf.exp
+96eff6f83368e49297e1913dd6a06c7a  ld/testsuite/ld-arm/arm-elf.exp
 1e3d55793bb7fa21620cc91f65b71332  ld/testsuite/ld-arm/ifunc-gdesc.s
 1e2ce4555be8588f9ae73d3d59424e5c  ld/testsuite/ld-arm/arm-rel32.s
 2e3b64e093e12c6da2f693266d058577  ld/testsuite/ld-arm/callweak.s
@@ -10753,6 +10774,7 @@ c565869a5c6edf30bc35060b713de804  ld/testsuite/ld-arm/arm-elf.exp
 7895b15c6266c18505e625262eea54f0  ld/testsuite/ld-arm/arch-v6.s
 ab54c17ae17ff0a5d5e2a9665e45cb38  ld/testsuite/ld-arm/ifunc-4.rd
 367aad733880e6c27d540aa6a06c28fc  ld/testsuite/ld-arm/ifunc-2.rd
+40a2c3f2856766f79d80056c721a3b0c  ld/testsuite/ld-arm/pcrel-shared.s
 e2dadb7d750471c27af1efd41b48a882  ld/testsuite/ld-arm/armv4-bx.s
 1a44773a87c9dd55baf70236b7f36bbf  ld/testsuite/ld-arm/tls-descrelax.s
 c6939b523ea1dc8320aaeebb77bff0cf  ld/testsuite/ld-arm/attr-merge-vfp-6.d
@@ -10770,6 +10792,7 @@ ab992b7dc096cbff481684901098632d  ld/testsuite/ld-arm/cortex-a8-fix-bcc-plt.d
 3b533217d41c00ff6f1a9fd52268c7fe  ld/testsuite/ld-arm/thumb-b-lks-sym.d
 d597cf67123031a82eee9b1da9f869c1  ld/testsuite/ld-arm/ifunc-dynamic.ld
 0c32e8b3b51d8548cdf9c775ee4797ca  ld/testsuite/ld-arm/rodata-merge-map.ld
+9cf388e1df544d42c89a6f355c3b375f  ld/testsuite/ld-arm/farcall-cond-thumb-arm.d
 da263ec380f531417f9934070f7d83d5  ld/testsuite/ld-arm/farcall-arm-thumb-blx-pic-veneer.d
 baff38a8a30acb8c72fd4e7acafc2360  ld/testsuite/ld-arm/reloc-boundaries.s
 f733c441f07c3a381b1abe485d2ebf41  ld/testsuite/ld-arm/eabi-soft-float.d
@@ -10791,6 +10814,7 @@ bafd45e2fb70ed3e7636147857fb38a6  ld/testsuite/ld-arm/arm-target2-got-rel.d
 874a3e56ccc429ffcb496aff0ece4869  ld/testsuite/ld-arm/ifunc-13.gd
 994db600406de11068dbe19975be2a67  ld/testsuite/ld-arm/attr-merge-div-22.d
 2adbba2039a01ab3a6d57086fd991b78  ld/testsuite/ld-arm/cortex-a8-fix-bcc-plt.s
+0240d7e51e793e82f00d70b7b04b0ba7  ld/testsuite/ld-arm/farcall-cond-thumb-arm.s
 ab5acae9723a014850445a433539034e  ld/testsuite/ld-arm/armthumb-lib.sym
 5062f0e55656964b737967004417b7eb  ld/testsuite/ld-arm/gc-hidden-1.d
 661240281bcb6ec31f5eecb1d1f717d3  ld/testsuite/ld-arm/attr-merge-unknown-2r.d
@@ -10798,6 +10822,7 @@ ee62c06104579ebbc2a9e7a0623a9d50  ld/testsuite/ld-arm/farcall-arm-nacl-pic.d
 727e96cd4a23a2a3f70db64de7a68036  ld/testsuite/ld-arm/ifunc-14.dd
 a944a12e800e231aa6cd77fe3275c993  ld/testsuite/ld-arm/tls-lib-loc.r
 b8da88870cbdfaa6f830e79cbc04519e  ld/testsuite/ld-arm/ifunc-17.s
+75543c3a4a9663632cf5b616ebd7eb00  ld/testsuite/ld-arm/jump-reloc-veneers-cond-short-backward.d
 d428b81188e7ad0fefeacd7cd445f162  ld/testsuite/ld-arm/unwind-5.s
 59f81eab9394c3de487c1e5d04fa3630  ld/testsuite/ld-arm/attr-merge-arch-1.attr
 27210be16cc9d9bbd2833fbf7e8d46f8  ld/testsuite/ld-arm/vfp11-fix-vector.d
@@ -10827,6 +10852,7 @@ e7a45e746b52e017922d8165e5093419  ld/testsuite/ld-arm/ifunc-7.rd
 bb5e58349f11b25d307ad765a8a87a5b  ld/testsuite/ld-arm/jump-reloc-veneers-long.d
 3ca8b0e18dab00fb0b4e530cd8e69e40  ld/testsuite/ld-arm/cortex-a8-fix-bl-rel-plt.d
 ce7c7287491dece28e98da1c3efe773d  ld/testsuite/ld-arm/cortex-a8-fix-hdr.d
+7012d9c166a8b7893cfa6d9da9aa3db2  ld/testsuite/ld-arm/pcrel-shared.rd
 8769cbbf0c802d7f2c4b4364ba841b4b  ld/testsuite/ld-arm/attr-merge.s
 a90dede13396e671d72c9d9fa580deeb  ld/testsuite/ld-arm/farcall-mix2.s
 dba0735cbd99810f7d79073aacba81f3  ld/testsuite/ld-arm/attr-merge.attr
@@ -10912,11 +10938,13 @@ a670dc082f363aafcd582dc28f935052  ld/testsuite/ld-arm/group-relocs-alu-bad-2.d
 ff6cb82bd3dda9cb4328b50f2d88614e  ld/testsuite/ld-arm/vxworks1.ld
 8b0bd081030ed64dea9147f83177ab65  ld/testsuite/ld-arm/ifunc-2.dd
 d5ee2bc47fb355eb3486ce6afc450bca  ld/testsuite/ld-arm/tls-descseq.d
+eff4eeba93451a11e67df0c6820e2fbe  ld/testsuite/ld-arm/jump-reloc-veneers-cond-long.d
 7896f6dcbf537fd0bd67ab6f9fbe0b4c  ld/testsuite/ld-arm/preempt-app.sym
 a787400b6bcc43f49aa58957d81b56b9  ld/testsuite/ld-arm/arm-call1.s
 509a265d4fe0d75472a1cdf9d96b69e1  ld/testsuite/ld-arm/ifunc-7.gd
 e6d53a8df83263f9ddb77d774170ab4d  ld/testsuite/ld-arm/attr-merge-unknown-2.s
 03eb0ba2c48ae2667d7a6ca898ea3beb  ld/testsuite/ld-arm/thumb1-bl.s
+7f227b09979d49de67309758ad3bbf87  ld/testsuite/ld-arm/jump-reloc-veneers-cond-long-backward.d
 dc103f34e4dd020596269e3fcbd16751  ld/testsuite/ld-arm/ifunc-5.rd
 b459c568af8f35839ef4077ae253512a  ld/testsuite/ld-arm/farcall-mixed-lib1.s
 1f2a12faccac07fa4906d13ef08aa104  ld/testsuite/ld-arm/ifunc-13.rd
@@ -10930,6 +10958,7 @@ e09e2081dad65507e45d9528b05d6954  ld/testsuite/ld-arm/farcall-thumb-arm-blx.d
 d3e16de902b7a18de2d6a590a5ee1a37  ld/testsuite/ld-arm/ifunc-11.dd
 d4dd7676d18d8440e8dc78137276c2ba  ld/testsuite/ld-arm/thumb-entry.s
 200eae4c0be923c69e3840550fbc6c13  ld/testsuite/ld-arm/ifunc-7.s
+9c2e711f55a6b310e740223dd5862fdc  ld/testsuite/ld-arm/jump-reloc-veneers-cond.s
 62f80cb0667f1f4f15b674a8af29dab4  ld/testsuite/ld-arm/attr-merge-5.s
 48784d08956228e0d16b89ac340ea6ab  ld/testsuite/ld-arm/cortex-a8-fix-hdr.s
 5240c9e8d92aab0f960a67e693ef800a  ld/testsuite/ld-arm/tls-descrelax-be8.d
@@ -10939,12 +10968,14 @@ dd0cb4adc8cf08f7ddae79d216d4adc8  ld/testsuite/ld-arm/tls-lib.r
 4c48ddba2fcd22187f0226a2012d5595  ld/testsuite/ld-arm/attr-merge-vfp-3.s
 106e6c743b39fd0d42538e28ecd04678  ld/testsuite/ld-arm/data-only-map.d
 2c5d3d9cfe517b28252071905c6089ee  ld/testsuite/ld-arm/ifunc-14.gd
+62e08c5b9ba1fc9e2e6c9c9b7425518e  ld/testsuite/ld-arm/attr-merge-arch-2b.s
 ebf2ca41724304a82d24761f1fc5fbf0  ld/testsuite/ld-arm/tls-mixed.r
 98e83a8185dff6838a4fd59d8adcb579  ld/testsuite/ld-arm/export-class.exp
 80854a8a9c4500cc20738d200a77b006  ld/testsuite/ld-arm/cortex-a8-fix-plt.ld
 ddfacb39f8a0959e97c0d694a9f8c315  ld/testsuite/ld-arm/thumb2-bl-bad.s
 83d80a7ef45408d267162af94a007143  ld/testsuite/ld-arm/farcall-arm-arm.s
 1eca6e65087d2a7e3e775194ab8d150e  ld/testsuite/ld-arm/group-relocs-ldr-bad.s
+64e6ef223a2c0fa29b0547add0ee6e7e  ld/testsuite/ld-arm/attr-merge-arch-2a.s
 aed25e01070077e10df302eb4d39259a  ld/testsuite/ld-arm/farcall-data.d
 46ab8658883f82a56f4d80b28e0fc1d6  ld/testsuite/ld-arm/attr-merge-div-01.d
 e3c1745e31476344dce8f55c0c7eec58  ld/testsuite/ld-arm/group-relocs-ldrs-bad-2.s
@@ -11034,6 +11065,7 @@ f8ed0f76ec28526cbc42d3022defa692  ld/testsuite/ld-arm/attr-merge-wchar-44-nowarn
 9474176eafaec09ab607732f1c56b004  ld/testsuite/ld-arm/hidfn.s
 98075e266e56c001a5e76a193b4a5241  ld/testsuite/ld-arm/movw-shared-3.d
 30eb42b09208249590397a29ede51b06  ld/testsuite/ld-arm/ifunc-16.rd
+904b84111a823ff0ab538d13e0b98868  ld/testsuite/ld-arm/attr-merge-arch-2.d
 8df0f6d6af5f8ad2dd377e406417421c  ld/testsuite/ld-arm/ifunc-1.gd
 716ded4118071b5eb4a9530d3842a0bb  ld/testsuite/ld-arm/arm-no-rel-plt.ld
 dba0735cbd99810f7d79073aacba81f3  ld/testsuite/ld-arm/attr-merge-2.attr
@@ -11572,7 +11604,7 @@ d541c1b0473dadc5fe3632cae0051b7a  ld/testsuite/ld-elf/hash.d
 fe5bf27901db70ca55ed14c19833aa69  ld/testsuite/ld-elf/linkoncerdiff1.s
 9eaa52574b09fc06a3a9133e8ab494af  ld/testsuite/ld-elf/pr349-1.s
 32c0be4fb7f3030bf9c74c0a836d4f2e  ld/testsuite/ld-elf/dl5.out
-8b90f4bde81952ea78c721a8160b52db  ld/testsuite/ld-elf/eh5.d
+cc88ab78ce8843bee6ae34bdcdab9c1b  ld/testsuite/ld-elf/eh5.d
 6d45d323532038bb5b9244dfe9c99c60  ld/testsuite/ld-elf/pr14862-2.c
 e23b8d902b46d50011563346bcdef9cd  ld/testsuite/ld-elf/foo.c
 5a0d4da7c2361cadb1522da97e4fe05c  ld/testsuite/ld-elf/provide-hidden-s.nd
@@ -12178,7 +12210,7 @@ f7f5702fdd2a60cb63ef7f5ad9f41fa7  ld/testsuite/ld-gc/pr14265.d
 4fd4394e0fffbea332fd110afa670884  ld/testsuite/ld-elfcomm/common1a.c
 8eb6a8cf48d79df5287e9493d40cf94d  ld/testsuite/ld-elfcomm/sort-common.s
 1ded50eb4cc3807ba226bca7ed76082c  ld/testsuite/ld-elfcomm/common1b.c
-49e9f749eb4dfe81bb72cb334b948eb2  ld/testsuite/ChangeLog
+b8af819d4db92ff35f3085b75d257bdf  ld/testsuite/ChangeLog
 a8dbf5f9838a94e3e1d6bb3ac1ffb031  ld/testsuite/ld-xstormy16/pcrel.s
 c672c9391c0476202146864913baf1cf  ld/testsuite/ld-xstormy16/external.s
 3105964d5d4b7fb1c6827105fc30d4f6  ld/testsuite/ld-xstormy16/pcrel.d
@@ -14162,7 +14194,7 @@ dc2d5ed03d6fffab2a51a0a756205881  ld/ChangeLog-2011
 33a7188fb9d73c111f91e789558156ea  ld/ldlang.h
 73feb06b0b17d058db587d5d6a5b3104  ld/ldemul.h
 b116956a62582d5a8ef1e1737d173eda  ld/deffile.h
-c85a27729c739508f253377ecef1e66f  ld/ChangeLog
+17760434d9a1440874bf720ffdea2546  ld/ChangeLog
 a9d1ff6c62567cfe7f30bf671cd68a6b  ld/emultempl/alphaelf.em
 f1284c8e8c8575df89792873f564a486  ld/emultempl/ppc64elf.em
 a1e44428a80727b027cf3e187d094e33  ld/emultempl/ticoff.em
@@ -14202,7 +14234,7 @@ c739dc384974726a68de258bc7a8df40  ld/emultempl/xtensaelf.em
 81a484399720a30475fc2ce562b65eb7  ld/emultempl/scoreelf.em
 d881f2596284cd76aa6940fc1a5bc1ab  ld/emultempl/vms.em
 3dbb2c5364aa8c73c2ebee5691b7bbd8  ld/emultempl/metagelf.em
-d2bdadb64dd026b6c7d5c42a20f79f45  ld/emultempl/aarch64elf.em
+951fee75ccbf7d564821092f4857c58c  ld/emultempl/aarch64elf.em
 9d42213fa87772b57a43834b5b780cf4  ld/emultempl/lnk960.em
 2045c7b840cfbc7bef8f846a350bd25d  ld/emultempl/aix.em
 7271e7c20830d9396414665416ff40d5  ld/emultempl/hppaelf.em
@@ -14225,7 +14257,7 @@ fe0d8adff94f4784d4142fc9e1f7535b  ld/config.in
 b490be1471d89fc85886d814c400538e  ld/Makefile.am
 a2bbb9a3e5ce870051999d5cbd4ffc22  ld/ldmisc.h
 b209e19960c51467d8d0426974f2f736  ld/configdoc.texi
-0729c1d3a7463497dcc236ddd123c8a2  ld/ld.texinfo
+b3d253836419f6a9b4832ff6babf17a5  ld/ld.texinfo
 1ded054093de910d9786c62bc4fe8cc6  ld/stamp-h.in
 f1d1d110b9e89a17eca7116545d66e79  ld/ldver.h
 26956e7c69bbd71949bb1963bc9bf9fb  ld/deffilep.y
@@ -14576,7 +14608,7 @@ bbe34906cff4913d48f7f03ab5a9deac  ld/ChangeLog-2012
 a20633ccd0fb2f2cb8a7742351825c42  ld/plugin.h
 e6f4c4a667967b79b544c2dbc4bf8335  ld/ldlex.c
 2dcdec47a460e0200552a6bf23015dd7  ld/ChangeLog-2007
-b5a9da26eab7b7bd0199a920b8d2c3b8  ld/ld.1
+48d94d2e14b102e95a97a24864b5b42a  ld/ld.1
 eb9757c389f2d66a1e8f80a8633f28cd  ld/ldlex.l
 5d11d29b69836beeefcd1c6d6a24e809  ld/ldfile.c
 b4ea35b18cd631b1a84c4d66b5fbf17f  ld/ChangeLog-0001
@@ -14784,7 +14816,7 @@ a13fe9b39f5f481ea3fb8662cbc16ee4  opcodes/m10300-dis.c
 cfabe82140ce4eb2addfcb21b986c86a  opcodes/frv-ibld.c
 b5c8dbba6bec73cc7bc357e6397ff00f  opcodes/tic4x-dis.c
 006ba74072ac247a26a5dca66fa99eb7  opcodes/fr30-opc.h
-41367dcba82f171b8f683c269f23de15  opcodes/aarch64-opc.c
+4016ddfe86bd18736a245d99390b58dd  opcodes/aarch64-opc.c
 008fe25af51f207c571015e436a2be45  opcodes/z8kgen.c
 c16e1131cccd650b8d653acfff29cf86  opcodes/mep-dis.c
 796bf959dd98214bb8a3b1110e3c2670  opcodes/lm32-dis.c
@@ -14798,7 +14830,7 @@ cf75c26734d23b64b24c1f601bec1aa1  opcodes/mep-desc.c
 d55b3860c4b6a94ffe2df13dc6565adb  opcodes/nios2-opc.c
 2537fd35553e9abc7f73b09a9dcc8448  opcodes/m10200-opc.c
 615bf8dc1c70b14d80be2ae6f31feccf  opcodes/ChangeLog-2005
-8442fd2281c6cf9a29ca477906b96cb9  opcodes/aarch64-opc-2.c
+40626e30fca963ab65dd96b86fb5073a  opcodes/aarch64-opc-2.c
 31995accf3e7ef8e0eedd6392afeb4d8  opcodes/vax-dis.c
 f1f09223557d8405ccd6038f82064488  opcodes/ip2k-dis.c
 3bd3592ada34ee1b8c9c1fc1b9a3d8bc  opcodes/openrisc-dis.c
@@ -14829,7 +14861,7 @@ e20717c760dc0ea91cbe83004b5f696c  opcodes/i386-opc.tbl
 08c9ea34083f6d02efbd3dd805c8082f  opcodes/avr-dis.c
 8d6fe830106fcbda822c06a6763b1f28  opcodes/frv-opc.c
 1f54245db6d74faffc5f8e956644e894  opcodes/d30v-dis.c
-457ac9611ae16fc387316b916dc6d8d4  opcodes/ChangeLog.linaro
+cd3421b558ae3cf7ad3aab7c02f8a482  opcodes/ChangeLog.linaro
 54b00173b67ef85d0a34554dcb9ca96d  opcodes/tic80-dis.c
 5601b608a19d4e7c19b134a458df22d7  opcodes/lm32-opc.c
 2e26c2d5bcab8c834c3f8748325f7367  opcodes/cgen-bitset.c
@@ -14852,7 +14884,7 @@ ee3831872d0eb5a46d9bb8649e5e464a  opcodes/sysdep.h
 97755bf5b81b7e389e43c7a4fe3f4431  opcodes/s390-opc.c
 cb47a206279475ce8c1c2c04b6323556  opcodes/mep-desc.h
 4040795b40e856e403a736b7203f8c00  opcodes/lm32-opc.h
-908b4982e68150a8fd33f1851707c747  opcodes/aarch64-dis.c
+f1def81e6748ae180742b9d8081f7ea6  opcodes/aarch64-dis.c
 3f344b4342a0f690134a85b456e303e0  opcodes/cgen-dis.in
 ad5a699a3b347fec27a4dbcb0cc132d7  opcodes/i386-tbl.h
 8eb6f747d8f986697f4f3a9dc0732fee  opcodes/epiphany-desc.c
@@ -14973,7 +15005,7 @@ b3d7452b4310332b7974b34b09f65a6d  opcodes/ia64-war.tbl
 5339efb6ca9f1055b0e07064fa64db35  opcodes/frv-desc.h
 576661d51ba9fff895ef4ce98a168f00  opcodes/ppc-opc.c
 d2cd7ae58ae776e075b0d64bb18a5f76  opcodes/spu-opc.c
-df95a40026ea2c2d7c9c9ea4ce343a2f  opcodes/aarch64-dis.h
+e77d58129f82b315e64b88294ffe5e95  opcodes/aarch64-dis.h
 8c1ab5ad3ef70c64fa8970c1c055fc8d  opcodes/ia64-dis.c
 6311a9f7c625e9f417286a3490f39d4d  opcodes/openrisc-asm.c
 2f35ebaa942b414631c2b55aedc1531c  opcodes/m32r-ibld.c
@@ -14988,7 +15020,7 @@ b388f0f0d5edee4f7241749a3b6e0d90  opcodes/config.in
 6309786445610f67c9c886a6d8c27e57  opcodes/Makefile.am
 e36a0a280023e9bd1165aa43dedf8eb9  opcodes/msp430-dis.c
 8321e848de7b3c800d5c611874615427  opcodes/tilepro-dis.c
-a42bba29de97d2a59747ae301825cf7a  opcodes/aarch64-opc.h
+df5b4a45408c5735a75243a783429e15  opcodes/aarch64-opc.h
 42258eebd4fac7287e41091b968fda0f  opcodes/msp430-decode.opc
 d92cf67612895b65ff62ddb82f9b5543  opcodes/cgen-asm.in
 948f39ae51c9ddcc8f4e328cc4425106  opcodes/ip2k-opc.c
@@ -15007,7 +15039,7 @@ d71afbae75149ff82d893ba2db5bd296  opcodes/i386-init.h
 2156873e893b64e765646887bb056324  opcodes/xstormy16-dis.c
 c696c23f8ed84f0efb05844e219382fb  opcodes/epiphany-opc.c
 8cfffb9578c648f09f6b4ba5c0779be7  opcodes/hppa-dis.c
-a1dac4aae467eff27645c97fdcebc379  opcodes/aarch64-tbl.h
+0243b202196de1a1c12d738097ef842e  opcodes/aarch64-tbl.h
 96bd1295b51a1c0664c31a32db849fdf  opcodes/aarch64-gen.c
 f172ffa9789365f41acd6af7334e98d4  opcodes/xtensa-dis.c
 e713f5ec619f0268014ef01feab86c0b  opcodes/m68hc11-opc.c
@@ -15029,7 +15061,7 @@ a270403bead8816e5e9a909aa991e2b1  opcodes/cgen-ibld.in
 8d02c591f7889e4a0d6be47c55d4168a  opcodes/ChangeLog-2012
 7e0e61944d83ac71db0fd3c3278bbea1  opcodes/alpha-opc.c
 24a976b6e3d0dedc20abd0ff680ae63a  opcodes/cris-opc.c
-c5c7c45cf52cdf916de3cec469e54b69  opcodes/aarch64-dis-2.c
+40dbdbb9ae722ac03e4f613b1867531c  opcodes/aarch64-dis-2.c
 3e7e949d979ea280c1c6ba53550fafbe  opcodes/lm32-ibld.c
 5257094fc1a386e4c2c3f00156ae323a  opcodes/moxie-opc.c
 a6a85e9dae8ed6727c8421092faea180  opcodes/epiphany-asm.c
@@ -15061,7 +15093,7 @@ fa21aa9c6fa0ee3c65707a2107f4a8d7  opcodes/m32c-desc.c
 71b3368e10ef92e6bbc551b0d20db82e  opcodes/iq2000-opc.c
 0fb3ac51dae47688313a569d8de4f428  opcodes/m32c-desc.h
 18d5a80d2b4910d879a88197eb1627ad  opcodes/xstormy16-ibld.c
-3bd82201e2f4cb741542cf61b1d3c327  opcodes/aarch64-asm.c
+281fd019e3c4e984ef14a43c5751830a  opcodes/aarch64-asm.c
 9de0721c55346a2137a1c4743a346125  opcodes/alpha-dis.c
 a1bd87f32dea84b9bc5605f092d91688  opcodes/s390-dis.c
 dce3dc85831bd7368b85f6fb4c5ca93d  opcodes/fr30-opc.c
@@ -15069,7 +15101,7 @@ a91452ca1d7ab6a941a364d974149852  opcodes/score7-dis.c
 38172591fbd1642f2d172945b7098376  opcodes/epiphany-opc.h
 2825c9b5fe984f05bebbb3666a7403b1  opcodes/or32-opc.c
 ed406e7ae99699b9d4dd8e53aad11c4a  opcodes/fr30-dis.c
-1a471fe621bd1efcb39dcc09db04714b  opcodes/aarch64-asm-2.c
+5bdaf72f56588c9f94e6927a9829af06  opcodes/aarch64-asm-2.c
 018c5daa636e0f4d8314c9b28d8a53ba  opcodes/m32c-ibld.c
 b3d65ebfe89e547896663c61def89981  opcodes/arc-ext.h
 53b4624eb33bd3035ff7845c82612fdf  opcodes/pdp11-dis.c
@@ -15082,7 +15114,6 @@ b703a698570619af12334f30eeffd41c  opcodes/openrisc-opc.c
 07c33a285703b40cd6f93a478e97e03b  README
 72b7803505f14cf31e291a59f538c6c8  README-maintainer-mode
 9ded84c8fb1840e68c467da08880fe07  setup.com
-fdf8bcfe81f7499e673985b604ff4a34  src-release
 cf2baa0854f564a7785307e79f155efc  symlink-tree
 6ffd0f415aea2960cac41434e6d904bb  texinfo/texinfo.tex
 69678e72941d681665c3731bfb3044ab  ylwrap

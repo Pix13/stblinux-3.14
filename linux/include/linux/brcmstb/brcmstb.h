@@ -601,21 +601,6 @@
 
 #endif
 
-/* Kernel will program WKTMR to expire in 1 second */
-#define BRCM_STANDBY_TEST		0x01
-/* Wait 120s before entering standby, to allow registers to be read */
-#define BRCM_STANDBY_DELAY		0x02
-/* Show UART output at each step */
-#define BRCM_STANDBY_VERBOSE		0x04
-/* Don't enter standby - just delay for 5s then return */
-#define BRCM_STANDBY_NO_SLEEP		0x08
-/* Don't shut down MIPS PLL */
-#define BRCM_STANDBY_MIPS_PLL_ON	0x10
-/* Don't shut down DDR PLL */
-#define BRCM_STANDBY_DDR_PLL_ON		0x20
-
-#define UPGTMR_FREQ		27000000
-
 /***********************************************************************
  * Register access macros - sample usage:
  *
@@ -664,36 +649,6 @@
 	 BCHP_##reg##_##field##_MASK)); \
 	BDEV_RD(BCHP_##reg); \
 	} while (0)
-
-/***********************************************************************
- * Platform features (based on bond options or bootloader settings)
- ***********************************************************************/
-
-extern int brcm_sata_enabled;
-extern int brcm_pcie_enabled;
-extern int brcm_docsis_platform;
-extern int brcm_moca_enabled;
-extern int brcm_usb_enabled;
-
-#ifdef CONFIG_BRCM_SLOW_TVM_CLOCK
-#define BRCM_BASE_BAUD_TVM	(54000000 / 16)
-#else
-#define BRCM_BASE_BAUD_TVM	(216000000 / 16)
-#endif
-
-#define BRCM_BASE_BAUD_STB	(81000000 / 16)
-#define BRCM_BASE_BAUD_PCU	(192000000 / 16)
-extern unsigned long brcm_base_baud0;
-extern unsigned long brcm_base_baud;
-
-#define CFE_STRING_SIZE		64
-
-extern char brcm_cfe_boardname[CFE_STRING_SIZE];
-
-extern unsigned long brcm_moca_i2c_base;
-extern unsigned long brcm_moca_rf_band;
-
-#define BRCM_PCI_SLOTS		16
 
 /***********************************************************************
  * HIF L2 IRQ controller - shared by EDU, SDIO
@@ -757,116 +712,18 @@ extern unsigned long brcm_moca_rf_band;
 
 #endif
 
-#define __BMIPS_GET_CBR()              ((unsigned long)BMIPS_GET_CBR())
-
-asmlinkage void brcm_upper_tlb_setup(void);
-void board_pinmux_setup(void);
-void board_get_ram_size(unsigned long *dram0_mb, unsigned long *dram1_mb);
-void brcm_wraparound_check(void);
-
-void ebi_restore_settings(void);
-
-void brcmstb_cpu_setup(void);
-void bchip_sata3_init(void);
-void bchip_usb_init(void);
-void bchip_moca_init(void);
-void bchip_check_compat(void);
-void bchip_set_features(void);
-void bchip_early_setup(void);
-void brcm_machine_restart(const char *command);
-void brcm_machine_halt(void);
-char *brcmstb_pcibios_setup(char *str);
-
-void __cpuinit bmips_start_cpu_cores(void);
-
-void cfe_die(char *fmt, ...);
-
-ssize_t brcm_pm_show_cpu_div(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_cpu_div(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_cpu_pll(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_cpu_pll(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-
-ssize_t brcm_pm_show_usb_power(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_usb_power(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_sata_power(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_sata_power(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_ddr_timeout(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_ddr_timeout(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_standby_flags(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_standby_flags(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_standby_timeout(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_standby_timeout(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_memc1_power(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_memc1_power(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_halt_mode(struct device *dev,
-	struct device_attribute *attr, char *buf);
-ssize_t brcm_pm_store_halt_mode(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count);
-ssize_t brcm_pm_show_time_at_wakeup(struct device *dev,
-	struct device_attribute *attr, char *buf);
-
-#ifdef BCHP_PM_L2_CPU_STATUS
-#define TIMER_INTR_MASK		BCHP_PM_L2_CPU_STATUS_TIMER_INTR_MASK
-#ifdef BCHP_PM_L2_CPU_STATUS_WOL_ENET_MASK
-#define WOL_ENET_MASK		BCHP_PM_L2_CPU_STATUS_WOL_ENET_MASK
-#elif defined(BCHP_PM_L2_CPU_STATUS_WOL_MPD_MASK)
-#define WOL_ENET_MASK		(BCHP_PM_L2_CPU_STATUS_WOL_MPD_MASK | \
-				 BCHP_PM_L2_CPU_STATUS_WOL_HFB_MASK)
-#else
-#define WOL_ENET_MASK		(0)
-#endif
-#ifdef BCHP_PM_L2_CPU_STATUS_WOL_MOCA_MASK
-#define WOL_MOCA_MASK		BCHP_PM_L2_CPU_STATUS_WOL_MOCA_MASK
-#else
-#define WOL_MOCA_MASK		(0)
-#endif
-#else
-#define TIMER_INTR_MASK		BCHP_AON_PM_L2_CPU_STATUS_TIMER_INTR_MASK
-#define WOL_ENET_MASK		BCHP_AON_PM_L2_CPU_STATUS_WOL_ENET_MASK
-#ifdef BCHP_AON_PM_L2_CPU_STATUS_WOL_MOCA_MASK
-#define WOL_MOCA_MASK		BCHP_AON_PM_L2_CPU_STATUS_WOL_MOCA_MASK
-#else
-#ifdef CONFIG_BCM7231B0
-#define WOL_MOCA_MASK		BCHP_AON_PM_L2_CPU_STATUS_WOL_ENET1_MASK
-#else
-#define WOL_MOCA_MASK		(0)
-#endif
-#endif
-#endif
-
-/* NMI / TP1 reset vector */
-extern char brcm_reset_nmi_vec[];
-extern char brcm_reset_nmi_vec_end[];
-
-/* TP1 warm restart interrupt vector */
-extern char brcm_tp1_int_vec[];
-extern char brcm_tp1_int_vec_end[];
-
-extern atomic_t brcm_unaligned_fp_count;
-extern atomic_t brcm_rdhwr_count;		/* excludes rdhwr fastpath */
-
-extern unsigned long brcm_cpu_khz;
-extern unsigned long brcm_adj_cpu_khz;
-
 #if defined(CONFIG_BRCMSTB_USE_MEGA_BARRIER)
 extern void brcmstb_mega_barrier(void);
 #endif
+
+/*
+ * Exclude a given memory range from the MAC authentication process during S3
+ * suspend/resume. Ranges are reset after each MAC (i.e., after each S3
+ * suspend/resume cycle). Returns non-zero on error.
+ */
+int brcmstb_pm_mem_exclude(phys_addr_t addr, size_t len);
+/* So users can determine whether the kernel provides this API */
+#define BRCMSTB_HAS_PM_MEM_EXCLUDE
 
 /* BCMGENET device tree properties */
 #define BRCM_PHY_ID_AUTO	0x100

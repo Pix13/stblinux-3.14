@@ -208,6 +208,9 @@ config DMA_CMA
 	  to allocate big physically-contiguous blocks of memory for use with
 	  hardware components that do not support I/O map nor scatter-gather.
 
+	  You can disable CMA by specifying "cma=0" on the kernel's command
+	  line.
+
 	  For more information see <include/linux/dma-contiguous.h>.
 	  If unsure, say "n".
 
@@ -265,16 +268,6 @@ config CMA_ALIGNMENT
 	  of 8 means that the buffers will be aligned up to 1MiB only.
 
 	  If unsure, leave the default value "8".
-
-config CMA_AREAS
-	int "Maximum count of the CMA device-private areas"
-	default 7
-	help
-	  CMA allows to create CMA areas for particular devices. This parameter
-	  sets the maximum number of such device private CMA areas in the
-	  system.
-
-	  If unsure, leave the default value "7".
 
 endif
 

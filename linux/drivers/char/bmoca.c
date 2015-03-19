@@ -142,6 +142,7 @@
 #define FLUSH_IRQ		1
 #define FLUSH_DMA_ONLY		2
 #define FLUSH_REQRESP_ONLY	3
+#define FLUSH_WOL_ONLY		4
 
 #define DEFAULT_PHY_CLOCK	(300 * 1000000)
 #define MOCA_SUSPEND_TIMEOUT_MS 300
@@ -184,6 +185,7 @@ struct moca_regs {
 	unsigned int		moca2host_mmp_inbox_0_offset;
 	unsigned int		moca2host_mmp_inbox_1_offset;
 	unsigned int		moca2host_mmp_inbox_2_offset;
+	unsigned int		extras_mmp_outbox_3_offset;
 	unsigned int		h2m_resp_bit[2]; /* indexed by cpu */
 	unsigned int		h2m_req_bit[2]; /* indexed by cpu */
 	unsigned int		sideband_gmii_fc_offset;
@@ -232,7 +234,6 @@ struct moca_priv_data {
 
 	int			enabled;
 	int			running;
-	int			wol_enabled;
 	struct clk		*clk;
 	struct clk		*phy_clk;
 	struct clk		*cpu_clk;
@@ -364,6 +365,7 @@ static const struct moca_regs regs_20 = {
 	.moca2host_mmp_inbox_0_offset	= 0x001ffd58,
 	.moca2host_mmp_inbox_1_offset	= 0x001ffd5c,
 	.moca2host_mmp_inbox_2_offset	= 0x001ffd60,
+	.extras_mmp_outbox_3_offset	= 0x001fec3c,
 	.h2m_resp_bit[1]		= 0x10,
 	.h2m_req_bit[1]			= 0x20,
 	.h2m_resp_bit[0]		= 0x1,
@@ -401,6 +403,8 @@ static const char * const __maybe_unused moca_state_string[] = {
 	[MOCA_SUSPENDING_GOT_ACK] = "suspending got ACK",
 	[MOCA_SUSPENDED] = "suspended",
 	[MOCA_RESUMING] = "resuming",
+	[MOCA_RESUMING_ASSERT] = "resuming ASSERT",
+	[MOCA_RESUMING_WDOG] = "resuming WDOG"
 };
 
 /* support for multiple MoCA devices */
@@ -418,12 +422,16 @@ static struct class *moca_class;
 #define M2H_NEXTCHUNK		BIT(3)
 #define M2H_NEXTCHUNK_CPU0	BIT(4)
 #define M2H_WDT_CPU0		BIT(6)
+#define M2H_WOL			BIT(7)
 #define M2H_WDT_CPU1		BIT(10)
 #define M2H_DMA			BIT(11)
 
 #define M2H_RESP_CPU0		BIT(13)
 #define M2H_REQ_CPU0		BIT(14)
 #define M2H_ASSERT_CPU0		BIT(15)
+
+#define ASSERT_PENDING_CPU0	BIT(0)
+#define ASSERT_PENDING_CPU1	BIT(1)
 
 /* does this word contain a NIL byte (i.e. end of string)? */
 #define HAS0(x)			((((x) & 0xff) == 0) || \
@@ -663,6 +671,11 @@ static u32 moca_irq_status(struct moca_priv_data *priv, int flush)
 		MOCA_WR(priv->base + r->l2_clear_offset,
 			stat & (M2H_RESP | M2H_REQ |
 			M2H_RESP_CPU0 | M2H_REQ_CPU0));
+		MOCA_RD(priv->base + r->l2_clear_offset);
+	}
+	if (flush == FLUSH_WOL_ONLY) {
+		MOCA_WR(priv->base + r->l2_clear_offset,
+			stat & M2H_WOL);
 		MOCA_RD(priv->base + r->l2_clear_offset);
 	}
 
@@ -1390,8 +1403,10 @@ static void moca_work_handler(struct work_struct *work)
 
 	mutex_lock(&priv->dev_mutex);
 
+
 	if (priv->enabled) {
 		mask = moca_irq_status(priv, FLUSH_IRQ);
+
 		if (mask & M2H_DMA) {
 			mask &= ~M2H_DMA;
 			complete(&priv->copy_complete);
@@ -1432,13 +1447,13 @@ static void moca_work_handler(struct work_struct *work)
 			ret = moca_recvmsg(priv, priv->core_req_offset,
 				priv->core_req_size, 0, 1);
 			if (ret == -ENOMEM)
-				priv->assert_pending = 2;
+				priv->assert_pending = ASSERT_PENDING_CPU1;
 		}
 		if (mask & M2H_ASSERT_CPU0) {
 			ret = moca_recvmsg(priv, priv->core_req_offset,
 				priv->core_req_size, 0, 0);
 			if (ret == -ENOMEM)
-				priv->assert_pending = 1;
+				priv->assert_pending = ASSERT_PENDING_CPU0;
 		}
 		/* M2H_WDT_CPU1 is mapped to the only CPU for MoCA11 HW */
 		if (mask & M2H_WDT_CPU1) {
@@ -1955,20 +1970,6 @@ static long moca_file_ioctl(struct file *file, unsigned int cmd,
 			ret = -EIO;
 		break;
 	case MOCA_IOCTL_WOL:
-		if (arg) {
-			device_set_wakeup_enable(&priv->pdev->dev, 1);
-			if (!priv->wol_enabled)
-				enable_irq_wake(priv->wol_irq);
-			priv->wol_enabled = 1;
-		} else {
-			device_set_wakeup_enable(&priv->pdev->dev, 0);
-			/* Avoid unbalanced disable_irq_wake calls */
-			if (priv->wol_enabled)
-				disable_irq_wake(priv->wol_irq);
-			priv->wol_enabled = 0;
-		}
-		dev_info(priv->dev, "WOL is %s\n",
-			priv->wol_enabled ? "enabled" : "disabled");
 		ret = 0;
 		break;
 	case MOCA_IOCTL_SET_CPU_RATE:
@@ -2053,10 +2054,10 @@ static ssize_t moca_file_read(struct file *file, char __user *buf,
 			return -EIO;
 		}
 
-		if (priv->assert_pending & 2) {
+		if (priv->assert_pending & ASSERT_PENDING_CPU1) {
 			if (moca_recvmsg(priv, priv->core_req_offset,
 				priv->core_req_size, 0, 1) != -ENOMEM)
-				priv->assert_pending &= ~2;
+				priv->assert_pending &= ~ASSERT_PENDING_CPU1;
 			else
 				dev_warn(priv->dev,
 					 "moca_recvmsg assert failed\n");
@@ -2064,7 +2065,7 @@ static ssize_t moca_file_read(struct file *file, char __user *buf,
 		if (priv->assert_pending & 1) {
 			if (moca_recvmsg(priv, priv->core_req_offset,
 				priv->core_req_size, 0, 0) != -ENOMEM)
-				priv->assert_pending &= ~1;
+				priv->assert_pending &= ~ASSERT_PENDING_CPU0;
 			else
 				dev_warn(priv->dev,
 					 "moca_recvmsg assert failed\n");
@@ -2449,7 +2450,6 @@ static void moca_prepare_suspend(struct moca_priv_data *priv)
 	long timeout = msecs_to_jiffies(MOCA_SUSPEND_TIMEOUT_MS);
 
 	mutex_lock(&priv->dev_mutex);
-
 	if (moca_in_reset(priv)) {
 		dev_warn(priv->dev, "MoCA core powered off\n");
 		goto out;
@@ -2490,9 +2490,25 @@ static void moca_complete_resume(struct moca_priv_data *priv)
 	int rc;
 
 	mutex_lock(&priv->dev_mutex);
+
 	if (moca_in_reset(priv)) {
 		dev_warn(priv->dev, "MoCA core in reset\n");
 		goto out;
+	}
+
+	if (priv->state == MOCA_RESUMING_ASSERT) {
+		/*
+		 * There should be an assert message queued.
+		 * It doesn't matter what CPU, mocad will figure it out.
+		 */
+		int ret = moca_recvmsg(priv, priv->core_req_offset,
+				       priv->core_req_size, 0, 1);
+		if (ret == -ENOMEM)
+			priv->assert_pending = ASSERT_PENDING_CPU1;
+		ret = moca_recvmsg(priv, priv->core_req_offset,
+				   priv->core_req_size, 0, 0);
+		if (ret == -ENOMEM)
+			priv->assert_pending |= ASSERT_PENDING_CPU0;
 	}
 
 	if (priv->state != MOCA_RESUMING) {
@@ -2558,6 +2574,27 @@ static int moca_unregister_pm_notifier(struct moca_priv_data *priv)
 static irqreturn_t moca_wol_isr(int irq, void *dev_id)
 {
 	struct moca_priv_data *priv = dev_id;
+
+	/* get status reg and log */
+	u32 stat = moca_irq_status(priv, FLUSH_WOL_ONLY);
+	u32 assert_code_in = 0;
+	if (moca_is_20(priv))
+		assert_code_in = MOCA_RD(priv->base +
+				    priv->regs->extras_mmp_outbox_3_offset);
+
+	/* Assert takes precedence over Watchdog, takes precedence over WoL */
+	if (((stat & M2H_WOL) && assert_code_in != 0)
+	    || (stat & (M2H_ASSERT | M2H_ASSERT_CPU0))) {
+		dev_dbg(priv->dev, "ASSERT %x!\n", assert_code_in);
+		moca_set_pm_state(priv, MOCA_RESUMING_ASSERT);
+	} else if (stat & M2H_WOL) {
+		dev_dbg(priv->dev, "WOL!\n");
+	}
+
+	if (stat & (M2H_WDT_CPU1 | M2H_WDT_CPU0)) {
+		dev_dbg(priv->dev, "WATCHDOG!\n");
+		moca_set_pm_state(priv, MOCA_RESUMING_WDOG);
+	}
 
 	pm_wakeup_event(&priv->pdev->dev, 0);
 
@@ -2667,11 +2704,13 @@ static int moca_probe(struct platform_device *pdev)
 	}
 
 	/* Request the WOL interrupt line and advertise suspend if available */
-	priv->wol_enabled = 0;
 	err = devm_request_irq(&pdev->dev, priv->wol_irq, moca_wol_isr, 0,
 			       "mocawol", priv);
-	if (!err && !(priv->wol_irq < 0))
+	if (!err && !(priv->wol_irq < 0)) {
 		device_set_wakeup_capable(&pdev->dev, 1);
+		device_set_wakeup_enable(&priv->pdev->dev, 1);
+		enable_irq_wake(priv->wol_irq);
+	}
 
 	moca_hw_init(priv, MOCA_ENABLE);
 	moca_disable_irq(priv);
@@ -2793,8 +2832,10 @@ static int moca_resume(struct device *dev)
 
 	for (minor = 0; minor < NUM_MINORS; minor++) {
 		struct moca_priv_data *priv = minor_tbl[minor];
+
 		if (priv && priv->enabled) {
-			if (moca_in_reset(priv)) {
+			if (priv->state != MOCA_RESUMING_WDOG
+			    && moca_in_reset(priv)) {
 				/*
 				 * If we lost power to the block
 				 * (e.g. unclean S3 transition), but
@@ -2812,12 +2853,14 @@ static int moca_resume(struct device *dev)
 			}
 
 			mutex_lock(&priv->dev_mutex);
-			if (priv->enabled && priv->state != MOCA_SUSPENDED)
+			if (priv->state != MOCA_SUSPENDED)
 				dev_warn(priv->dev, "state %s should be %s\n",
 					 moca_state_string[priv->state],
 					 moca_state_string[MOCA_SUSPENDED]);
 
-			moca_set_pm_state(priv, MOCA_RESUMING);
+			if (priv->state != MOCA_RESUMING_ASSERT
+			    && priv->state != MOCA_RESUMING_WDOG)
+				moca_set_pm_state(priv, MOCA_RESUMING);
 			mutex_unlock(&priv->dev_mutex);
 		}
 	}
