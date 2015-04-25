@@ -6,9 +6,6 @@
  */
 #include <asm/asm-offsets.h>
 #include <asm/thread_info.h>
-#ifdef CONFIG_BRCMSTB
-#include <linux/brcmstb/brcmstb.h>
-#endif
 
 /*
  * vma_vm_mm - get mm pointer from vma pointer (vma->vm_mm)
@@ -333,12 +330,4 @@ ENTRY(\name\()_tlb_fns)
 .macro globl_equ x, y
 	.globl	\x
 	.equ	\x, \y
-.endm
-
-.macro	issue_brcmstb_mega_barrier
-#ifdef CONFIG_BRCMSTB_USE_MEGA_BARRIER
-	stmdb	sp!, {r0, lr}
-	blx	brcmstb_mega_barrier
-	ldmia	sp!, {r0, lr}
-#endif
 .endm

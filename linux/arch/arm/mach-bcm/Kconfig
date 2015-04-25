@@ -47,6 +47,8 @@ config ARCH_BRCMSTB
 	select ARM_ERRATA_798181 if SMP
 	select ARCH_DMA_ADDR_T_64BIT if ARM_LPAE
 	select GENERIC_IRQ_CHIP
+	select BRCMSTB_GISB_ARB
+	select SOC_BRCMSTB
 	help
 	  Say Y if you intend to run the kernel on a Broadcom ARM-based STB
 	  chipset.
@@ -72,16 +74,6 @@ config BCM3390A0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
-
-config BCM7145A0
-	bool "7145 Ax"
-	select BCM7145
-	select BRCM_HAS_NAND_MAJOR_7
-	select BRCM_HAS_NAND_MINOR_0
-	select BRCM_HAS_BSPI_V4
-	select BRCM_HAS_MOCA_20_GEN23
-	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_USE_MEGA_BARRIER
 
 config BCM7145B0
 	bool "7145 Bx"
@@ -143,17 +135,6 @@ config BCM74371A0
 	select BRCM_HAS_BSPI_V4
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
-
-config BCM7439A0
-	bool "7439 Ax"
-	select BCM7439
-	select BRCM_GENET_V4
-	select BRCM_HAS_NAND_MAJOR_7
-	select BRCM_HAS_NAND_MINOR_0
-	select BRCM_HAS_BSPI_V4
-	select BRCM_HAS_MOCA_20_GEN23
-	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_USE_MEGA_BARRIER
 
 config BCM7439B0
 	bool "7439 Bx"
@@ -403,16 +384,6 @@ config BRCM_MSPI_LEGACY
 
 # MSPI can transfer either 64b or 8b per slot
 config BRCM_MSPI_64B_WORDS
-	bool
-
-# Apply the mega-barrier prior to DMA operations to workaround
-# issue noted in HW7445-1301 and derivatives.
-config BRCMSTB_USE_MEGA_BARRIER
-	bool
-	select CMA
-
-# Perform memory hashing before entering S3, using XPT DMA
-config BRCMSTB_XPT_HASH
 	bool
 
 config BRCM_USB_OHCI

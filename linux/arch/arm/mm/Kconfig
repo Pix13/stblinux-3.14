@@ -856,6 +856,7 @@ config OUTER_CACHE_SYNC
 config CACHE_B15_RAC
 	bool "Enable the Broadcom Brahma-B15 read-ahead cache controller"
 	depends on ARCH_BRCMSTB
+	default y
 	help
 	  This option enables the Broadcom Brahma-B15 read-ahead cache
 	  controller. If disabled, the read-ahead cache remains off.

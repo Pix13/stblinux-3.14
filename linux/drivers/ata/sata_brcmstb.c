@@ -163,25 +163,6 @@ static int brcm_sata3_init_config(void __iomem *ahci_regs,
 	writel((DATA_ENDIAN << 4) | (DATA_ENDIAN << 2) | (MMIO_ENDIAN << 0),
 		top_regs + SATA_TOP_CTRL_BUS_CTRL);
 
-	if (brcm_pdata->quirks & SATA_BRCM_QK_NONCQ) {
-		/* Temporarily allow writing to AHCI RO registers */
-		u32 reg = readl(top_regs + SATA_TOP_CTRL_BUS_CTRL);
-		reg |= SATA_TOP_CTRL_BUS_CTRL_OVERRIDE_HWINIT;
-		writel(reg, top_regs + SATA_TOP_CTRL_BUS_CTRL);
-
-		/* Clear out the NCQ bit so the AHCI driver will not issue
-		 * FPDMA/NCQ commands.
-		 */
-		reg = readl(ahci_regs + HOST_CAP);
-		reg &= ~HOST_CAP_NCQ;
-		writel(reg, ahci_regs + HOST_CAP);
-
-		/* Re-enable AHCI RO property */
-		reg = readl(top_regs + SATA_TOP_CTRL_BUS_CTRL);
-		reg &= ~SATA_TOP_CTRL_BUS_CTRL_OVERRIDE_HWINIT;
-		writel(reg, top_regs + SATA_TOP_CTRL_BUS_CTRL);
-	}
-
 done:
 	if (top_regs)
 		iounmap(top_regs);
@@ -349,20 +330,6 @@ err:
 	return status;
 }
 
-static void brcm_ahci_setup_quirks(struct platform_device *pdev)
-{
-	struct sata_brcm_pdata *brcm_pdata = pdev->dev.platform_data;
-
-	brcm_pdata->quirks = 0;
-
-	if (of_machine_is_compatible("brcm,bcm7145a0")) {
-		brcm_pdata->quirks |= SATA_BRCM_QK_ALT_RST;
-		brcm_pdata->quirks |= SATA_BRCM_QK_NONCQ;
-	} else if (of_machine_is_compatible("brcm,bcm7439a0")) {
-		brcm_pdata->quirks |= SATA_BRCM_QK_ALT_RST;
-	}
-}
-
 static int setup_ahci_pdata(struct platform_device *pdev,
 	struct ahci_platform_data *ahci_pd)
 {
@@ -410,9 +377,6 @@ static int brcm_ahci_probe(struct platform_device *pdev)
 	status = brcm_ahci_parse_dt_node(pdev);
 	if (status)
 		goto err_cleanup;
-
-	brcm_ahci_setup_quirks(pdev);
-
 	/*
 	 * Configure the platform AHCI device
 	 */

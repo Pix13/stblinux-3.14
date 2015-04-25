@@ -31,7 +31,7 @@
 #define SDIO_CFG_REG(x, y)	(x + BCHP_SDIO_0_CFG_##y -	\
 				BCHP_SDIO_0_CFG_REG_START)
 
-#if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM74371A0)
+#if defined(CONFIG_BCM74371A0)
 /*
  * HW7445-1183
  * Setting the RESET_ALL or RESET_DATA bits will hang the SDIO
@@ -155,7 +155,7 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 		goto undo_clk_get;
 
 /* Only enable reset workaround for 7439a0 and 74371a0 senior */
-#if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM74371A0)
+#if defined(CONFIG_BCM74371A0)
 	if (BRCM_CHIP_ID() == 0x7439)
 		sdhci_brcmstb_pdata.ops = &sdhci_brcmstb_ops;
 #endif

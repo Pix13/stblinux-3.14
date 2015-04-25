@@ -22,6 +22,8 @@
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 
+#include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/thermal.h>
 
 #include "thermal_core.h"
@@ -34,10 +36,25 @@
  */
 static int notify_user_space(struct thermal_zone_device *tz, int trip)
 {
+	char *envp[] = { NULL, NULL, NULL };
+	int ret = 0;
+
+	envp[0] = kasprintf(GFP_KERNEL, "TRIPNUM=%u", trip);
+	envp[1] = kasprintf(GFP_KERNEL, "TEMPERATURE=%d", tz->temperature);
+	if (!envp[0] || !envp[1]) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
 	mutex_lock(&tz->lock);
-	kobject_uevent(&tz->device.kobj, KOBJ_CHANGE);
+	kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, envp);
 	mutex_unlock(&tz->lock);
-	return 0;
+
+out:
+	kfree(envp[0]);
+	kfree(envp[1]);
+
+	return ret;
 }
 
 static struct thermal_governor thermal_gov_user_space = {

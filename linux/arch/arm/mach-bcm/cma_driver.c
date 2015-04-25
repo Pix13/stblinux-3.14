@@ -67,7 +67,6 @@ struct cma_pdev_data {
 struct cma_region_rsv_data {
 	int nr_regions_valid;
 	struct cma_pdev_data regions[NR_BANKS];
-	long long unsigned prm_kern_rsv_mb;
 	long long unsigned prm_low_lim_mb;
 	int prm_low_kern_rsv_pct;
 };
@@ -75,7 +74,6 @@ struct cma_region_rsv_data {
 /* CMA region reservation */
 
 static struct cma_region_rsv_data cma_data __initdata = {
-	.prm_kern_rsv_mb = 256 << 20,
 	.prm_low_lim_mb = 32 << 20,
 	.prm_low_kern_rsv_pct = 20,
 };
@@ -84,17 +82,6 @@ enum scan_bitmap_op {
 	GET_NUM_REGIONS = 0,
 	GET_REGION_INFO,
 };
-
-/*
- * The default kernel reservation on systems with low and high-memory. The
- * size of the memblock minus this variable will be given to CMA
- */
-static int __init cma_kern_rsv_set(char *p)
-{
-	cma_data.prm_kern_rsv_mb = memparse(p, NULL);
-	return !cma_data.prm_kern_rsv_mb ? -EINVAL : 0;
-}
-early_param("brcm_cma_kern_rsv", cma_kern_rsv_set);
 
 /*
  * The lowest low-memory memblock size needed in order to reserve a cma region
@@ -220,15 +207,8 @@ static int __init cma_calc_rsv_range(int bank_nr, phys_addr_t *size)
 			rem = do_div(tmp, 100);
 			total = tmp + rem;
 		} else {
-			if (bank->size >= cma_data.prm_kern_rsv_mb) {
-				total = bank->size - cma_data.prm_kern_rsv_mb;
-			} else {
-				pr_debug("bank start=0x%pa size=0x%pa is smaller than cma_data.prm_kern_rsv_mb=0x%llx - skipping\n",
-					&bank->start,
-					&bank->size,
-					cma_data.prm_kern_rsv_mb);
-				return -EINVAL;
-			}
+			/* If we have more than one bank, do not use the first bank. */
+			return -EINVAL;
 		}
 	} else if (bank->start >= VME_A32_MAX && bank->size > SZ_64M) {
 		/*
@@ -248,6 +228,11 @@ static int __init cma_calc_rsv_range(int bank_nr, phys_addr_t *size)
 		total -= bytes_reserved;
 
 	*size = round_down(total, alignment);
+
+	if (*size == 0) {
+		pr_debug("size available in bank was 0 - skipping\n");
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -1123,13 +1108,6 @@ static int __init cma_drvr_do_prealloc(struct device *dev,
 	u32 size;
 
 	size = cma_dev->range.size;
-#ifdef CONFIG_BRCMSTB_USE_MEGA_BARRIER
-	/* Every CMA device needs to accomodate the mega-barrier page if a
-	 * pre-allocation is needed.
-	 */
-	if (size > PAGE_SIZE)
-		size -= PAGE_SIZE;
-#endif
 
 	ret = cma_dev_get_mem(cma_dev, &addr, size, 0);
 	if (ret)

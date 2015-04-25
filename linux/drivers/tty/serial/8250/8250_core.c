@@ -65,8 +65,6 @@ static int serial_index(struct uart_port *port)
 
 static unsigned int skip_txen_test; /* force skip of txen test at init time */
 
-static void wait_for_xmitr(struct uart_8250_port *up, int bits);
-
 /*
  * Debugging.
  */
@@ -301,13 +299,6 @@ static const struct serial8250_config uart_config[] = {
 		.tx_loadsz	= 1024,
 		.flags		= UART_CAP_HFIFO,
 	},
-	[PORT_BRCM_BUGGY_DW] = {
-		.name		= "BuggyDW",
-		.fifo_size	= 32,
-		.tx_loadsz	= 32,
-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
-		.flags		= UART_CAP_FIFO | UART_NATSEMI,
-	},
 	[PORT_8250_CIR] = {
 		.name		= "CIR port"
 	},
@@ -431,26 +422,6 @@ static unsigned int mem32_serial_in(struct uart_port *p, int offset)
 	return readl(p->membase + offset);
 }
 
-/*
- * SWLINUX-2948: Chips with UARTs marked BuggyDW have an unresettable "busy
- * detect" interrupt that can be triggered by writing LCR when UART is busy
- * (one case is when receive data is present in RBR).  Work around this by:
- * 1. clearing and initializing FIFOs
- * 2. writing LCR (racing against external input)
- */
-static void safer_mem32_serial_out(struct uart_port *p, int offset, int value)
-{
-	struct uart_8250_port *up =
-		container_of(p, struct uart_8250_port, port);
-	if (offset == UART_LCR) {
-		wait_for_xmitr(up, BOTH_EMPTY);
-		serial8250_clear_and_reinit_fifos(up);
-		mem32_serial_out(p, offset, value);
-	} else {
-		mem32_serial_out(p, offset, value);
-	}
-}
-
 static unsigned int io_serial_in(struct uart_port *p, int offset)
 {
 	offset = offset << p->regshift;
@@ -488,8 +459,6 @@ static void set_io_from_upio(struct uart_port *p)
 	case UPIO_MEM32:
 		p->serial_in = mem32_serial_in;
 		p->serial_out = mem32_serial_out;
-		if (p->flags & UPF_SAFER_LCR_WRITES)
-			p->serial_out = safer_mem32_serial_out;
 		break;
 
 #if defined(CONFIG_MIPS_ALCHEMY) || defined(CONFIG_SERIAL_8250_RT288X)

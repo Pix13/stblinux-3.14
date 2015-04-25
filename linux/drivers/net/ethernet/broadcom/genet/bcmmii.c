@@ -182,9 +182,6 @@ void bcmgenet_mii_reset(struct net_device *dev)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
 
-	bcmgenet_mii_write(priv->mii_bus, priv->phy_addr, MII_BMCR, BMCR_RESET);
-	udelay(1);
-
 	/* call the PHY driver specific init routine */
 	phy_init_hw(priv->phydev);
 	phy_start_aneg(priv->phydev);
@@ -196,7 +193,7 @@ void bcmgenet_mii_reset(struct net_device *dev)
  * micro seconds always works. The post-reset delay of 20 micro seconds could
  * be eliminated but better be safe than sorry.
  */
-static void bcmgenet_ephy_power_up(struct net_device *dev)
+void bcmgenet_phy_power_set(struct net_device *dev, bool enable)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
 	u32 reg = 0;
@@ -206,14 +203,25 @@ static void bcmgenet_ephy_power_up(struct net_device *dev)
 		return;
 
 	reg = bcmgenet_ext_readl(priv, EXT_GPHY_CTRL);
-	reg &= ~(EXT_CFG_IDDQ_BIAS | EXT_CFG_PWR_DOWN);
-	reg |= EXT_GPHY_RESET;
-	bcmgenet_ext_writel(priv, reg, EXT_GPHY_CTRL);
-	mdelay(2);
+	if (enable) {
+		reg &= ~EXT_CK25_DIS;
+		bcmgenet_ext_writel(priv, reg, EXT_GPHY_CTRL);
+		mdelay(1);
 
-	reg &= ~EXT_GPHY_RESET;
+		reg &= ~(EXT_CFG_IDDQ_BIAS | EXT_CFG_PWR_DOWN);
+		reg |= EXT_GPHY_RESET;
+		bcmgenet_ext_writel(priv, reg, EXT_GPHY_CTRL);
+		mdelay(1);
+
+		reg &= ~EXT_GPHY_RESET;
+	} else {
+		reg |= EXT_CFG_IDDQ_BIAS | EXT_CFG_PWR_DOWN | EXT_GPHY_RESET;
+		bcmgenet_ext_writel(priv, reg, EXT_GPHY_CTRL);
+		mdelay(1);
+		reg |= EXT_CK25_DIS;
+	}
 	bcmgenet_ext_writel(priv, reg, EXT_GPHY_CTRL);
-	udelay(20);
+	udelay(60);
 }
 
 static int bcmgenet_mii_probe(struct net_device *dev)
@@ -349,8 +357,8 @@ static void bcmgenet_internal_phy_setup(struct net_device *dev)
 	struct bcmgenet_priv *priv = netdev_priv(dev);
 	u32 reg;
 
-	/* Power up EPHY */
-	bcmgenet_ephy_power_up(dev);
+	/* Power up PHY */
+	bcmgenet_phy_power_set(dev, true);
 	/* enable APD */
 	reg = bcmgenet_ext_readl(priv, EXT_EXT_PWR_MGMT);
 	reg |= EXT_PWR_DN_EN_LD;

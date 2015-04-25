@@ -712,10 +712,6 @@
 
 #endif
 
-#if defined(CONFIG_BRCMSTB_USE_MEGA_BARRIER)
-extern void brcmstb_mega_barrier(void);
-#endif
-
 /*
  * Exclude a given memory range from the MAC authentication process during S3
  * suspend/resume. Ranges are reset after each MAC (i.e., after each S3

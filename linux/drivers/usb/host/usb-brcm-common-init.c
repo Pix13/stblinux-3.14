@@ -219,26 +219,7 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 {
 	uint32_t reg;
 
-#if defined(CONFIG_BCM7145A0)
-	if (xhci) {
-		/* Updating USB 3.0 PHY registers */
-		/* fix PLL lock */
-		usb_mdio_write(ctrl, 0x1f, 0x8000, MDIO_USB3);
-		usb_mdio_write(ctrl, 0x0d, 0x0020, MDIO_USB3);
-		usb_mdio_write(ctrl, 0x0e, 0x000e, MDIO_USB3);
-		usb_mdio_write(ctrl, 0x12, 0x19f8, MDIO_USB3);
-		usb_mdio_write(ctrl, 0x01, 0x0000, MDIO_USB3);
-		usb_mdio_write(ctrl, 0x01, 0x9000, MDIO_USB3);
-		usb_mdio_write(ctrl, 0x1f, 0x8060, MDIO_USB3);
-		/* Tx demphasis override */
-		usb_mdio_write(ctrl, 0x0c, 0x8840, MDIO_USB3);
-		 /* max margin error count */
-		usb_mdio_write(ctrl, 0x05, 0xff08, MDIO_USB3);
-		/* deglitch params 6,3 */
-		usb_mdio_write(ctrl, 0x03, 0x6302, MDIO_USB3);
-	}
-#endif
-#if defined(CONFIG_BCM7439A0) || defined(CONFIG_BCM7366)
+#if defined(CONFIG_BCM7366)
 	/*
 	 * The PHY3_SOFT_RESETB bits default to the wrong state.
 	 */
@@ -276,7 +257,7 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 		USB_CTRL_MASK(USB30_CTL1, usb3_ioc));
 #endif
 
-#if !defined(CONFIG_BCM7439A0) && !defined(CONFIG_BCM74371A0) && \
+#if !defined(CONFIG_BCM74371A0) && \
 	!defined(CONFIG_BCM7364A0)
 	/*
 	 * HW7439-637: 7439a0 and its derivatives do not have large enough

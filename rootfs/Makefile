@@ -122,7 +122,7 @@ rootfs: .target chkpath
 initrd_kernel: .target chkpath rootfs
 	mkdir -p images
 	# configure kernel for initramfs, then build it
-	$(CFG) initramfs
+	+$(CFG) initramfs
 	if [ "$(ARCH)" = "mips" ]; then \
 		$(MAKE) -C $(LINUXDIR) SUBDIRS= ARCH=mips vmlinux || exit 1; \
 		gzip -9 < $(LINUXDIR)/vmlinux > \
@@ -136,7 +136,7 @@ initrd_kernel: .target chkpath rootfs
 .PHONY: kernel
 kernel: .target chkpath
 	mkdir -p images
-	$(CFG) noinitramfs
+	+$(CFG) noinitramfs
 	if [ "$(ARCH)" = "mips" ]; then \
 		$(MAKE) -C $(LINUXDIR) ARCH=mips vmlinux || exit 1; \
 		gzip -9 < $(LINUXDIR)/vmlinux > \
@@ -162,7 +162,7 @@ kernel_sign: .target chkpath
 	$(MAKE) -j1 -C user romfs \
 		BUILD_ROOT_SIGN=y SIGLIST=$(SIGLIST) ROOTFSDIR=$(ROOTFSDIR)
 	#build kernel.
-	$(CFG) initramfs-sign 
+	+$(CFG) initramfs-sign
 	if [ "$(ARCH)" = "mips" ]; then \
 		$(MAKE) -C $(LINUXDIR) vmlinux SUBDIRS= ARCH=mips || exit 1; \
 		gzip -9 < $(LINUXDIR)/vmlinux > images/vmlinuz-sign-$(PLAT); \
@@ -234,7 +234,7 @@ release:
 
 .PHONY: chkpath
 chkpath:
-	@$(CHKPATH)
+	+@$(CHKPATH)
 
 #############################################################################
 # BUILD CONFIGURATION
@@ -260,7 +260,7 @@ oldconfig: .target chkpath
 defaults-%: chkpath
 	@touch .dirty
 	@chmod -R 0755 config/scripts/{Configure,Menuconfig} bin
-	$(CFG) defaults $*
+	+$(CFG) defaults $*
 	$(MAKE) -j1 silentoldconfig
 	@echo "***************************************************************"
 	@echo "* Build configuration"
@@ -275,7 +275,7 @@ defaults-%: chkpath
 
 .PHONY: save_defaults
 save_defaults: .target
-	$(CFG) save_defaults $(PLAT)
+	+$(CFG) save_defaults $(PLAT)
 
 .PHONY: menuconfig-linux menuconfig-vendor menuconfig-uclibc \
 	menuconfig-busybox xconfig-linux

@@ -168,19 +168,6 @@ static void _brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 	};
 	void __iomem *top_ctrl;
 
-	if (pdata->quirks & SATA_BRCM_QK_ALT_RST) {
-#if (defined(CONFIG_BRCMSTB) && \
-defined(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_sata_phy_disable_MASK))
-		/*
-		 * This version of the chip placed the reset bit in a non-SATA
-		 * IP register.
-		 */
-		BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_0, sata_phy_disable, 0);
-#else
-		pr_err("Unable to handle quirk SATA_BRCM_QK_ALT_RST\n");
-#endif
-	}
-
 	top_ctrl = ioremap(pdata->top_ctrl_base_addr, SATA_TOP_CTRL_REG_LENGTH);
 	if (!top_ctrl) {
 		pr_err("failed to ioremap SATA top ctrl regs\n");
@@ -252,28 +239,9 @@ void brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 		goto err;
 	}
 
-	if (pdata->phy_generation == 0x2800) {
+	if (pdata->phy_generation == 0x2800)
 		cfg_op = &cfg_op_tbl[SATA_PHY_MDIO_28NM];
-
-		if (pdata->quirks & SATA_BRCM_QK_INIT_PHY) {
-			/* The 28nm SATA PHY has incorrect PLL settings upon
-			 * chip reset.
-			 * The workaround suggested by the H/W team requires
-			 * initialization of the PLL registers in order to force
-			 * calibration.
-			 *
-			 * For more information, refer to: HWxxxx
-			 */
-			const u32 PLL_SM_CTRL_0_DFLT = 0x3089;
-
-			sata_mdio_wr_28nm(base, port, PLL_REG_BANK_0,
-				PLL_REG_BANK_0_PLLCONTROL_0,
-				0x00000000, PLL_SM_CTRL_0_DFLT);
-			sata_mdio_wr_28nm(base, port, PLL_REG_BANK_0,
-				PLL_REG_BANK_0_PLLCONTROL_0,
-				0xfffffffe, 0x0);
-		}
-	} else
+	else
 		cfg_op = &cfg_op_tbl[SATA_PHY_MDIO_LEGACY];
 
 	if (enable) {

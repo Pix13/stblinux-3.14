@@ -27,7 +27,6 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/printk.h>
-#include <linux/smp.h>
 #if defined(CONFIG_BRCMSTB)
 #include <linux/brcmstb/brcmstb.h>
 #include <linux/brcmstb/cma_driver.h>
@@ -61,6 +60,10 @@ static const char *brcmstb_match[] __initconst = {
 /*
  * HACK: The following drivers are still using BDEV macros:
  * - XPT DMA
+ * - SPI
+ * - NAND
+ * - SDHCI
+ * - MoCA
  *
  * Once these drivers have migrated over to using 'of_iomap()' and standard
  * register accessors, we can eliminate this static mapping.
@@ -149,12 +152,13 @@ static inline void of_add_fixed_phys(void)
 #define  CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK 0x70000000
 
 static void __iomem *cpubiuctrl_base;
+static unsigned int mcp_wr_pairing_en;
 
 /*
- * HW7445-1920: Disable MCP write pairing to improve stability on long term
- * stress test.
+ * HW7445-1920: On affected chips, disable MCP write pairing to improve
+ * stability on long term stress test.
  */
-static int __init disable_mcp_write_pairing(void)
+static int __init mcp_write_pairing_set(void)
 {
 	u32 creds = 0;
 
@@ -162,7 +166,11 @@ static int __init disable_mcp_write_pairing(void)
 		return -1;
 
 	creds = __raw_readl(cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
-	if (creds & CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK) {
+	if (mcp_wr_pairing_en) {
+		pr_info("MCP: Enabling write pairing\n");
+		__raw_writel(creds | CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK,
+			     cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
+	} else if (creds & CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK) {
 		pr_info("MCP: Disabling write pairing\n");
 		__raw_writel(creds & ~CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK,
 				cpubiuctrl_base + CPU_CREDIT_REG_OFFSET);
@@ -184,6 +192,8 @@ static void __init setup_hifcpubiuctrl_regs(void)
 	cpubiuctrl_base = of_iomap(np, 0);
 	if (!cpubiuctrl_base)
 		pr_err("failed to remap BIU control base\n");
+
+	mcp_wr_pairing_en = of_property_read_bool(np, "brcm,write-pairing");
 
 	of_node_put(np);
 }
@@ -212,35 +222,21 @@ static struct syscore_ops brcmstb_cpu_credit_syscore_ops = {
 };
 #endif
 
-void brcmstb_irq0_init(void)
-{
-	BDEV_WR(BCHP_IRQ0_IRQEN, BCHP_IRQ0_IRQEN_uarta_irqen_MASK
-		| BCHP_IRQ0_IRQEN_uartb_irqen_MASK
-		| BCHP_IRQ0_IRQEN_uartc_irqen_MASK
-	);
-}
-
 static void __init brcmstb_init_irq(void)
 {
 	/* Force lazily-disabled IRQs to be masked before suspend */
 	gic_arch_extn.flags |= IRQCHIP_MASK_ON_SUSPEND;
 
-	brcmstb_irq0_init();
 	irqchip_init();
 }
 
 static void __init brcmstb_init_machine(void)
 {
 	struct platform_device_info devinfo = { .name = "cpufreq-cpu0", };
-	int ret;
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 	cma_register();
 	of_add_fixed_phys();
-	brcmstb_hook_fault_code();
-	ret = brcmstb_pm_init();
-	if (ret)
-		pr_warn("PM: initialization failed with code %d\n", ret);
 	platform_device_register_full(&devinfo);
 #ifdef CONFIG_PM_SLEEP
 	register_syscore_ops(&brcmstb_cpu_credit_syscore_ops);
@@ -250,92 +246,10 @@ static void __init brcmstb_init_machine(void)
 static void __init brcmstb_init_early(void)
 {
 	setup_hifcpubiuctrl_regs();
-	if (disable_mcp_write_pairing())
+	if (mcp_write_pairing_set())
 		pr_err("MCP: Unable to disable write pairing!\n");
 	add_preferred_console("ttyS", 0, "115200");
 }
-
-#ifdef CONFIG_BRCMSTB_USE_MEGA_BARRIER
-static phys_addr_t so_mem_paddr[NR_BANKS];
-static void __iomem *so_mem_vaddr[NR_BANKS];
-
-static struct cma_dev *cma_dev_get_by_addr(phys_addr_t start, phys_addr_t end)
-{
-	int i = 0;
-	for (i = 0; i < CMA_DEV_MAX; i++) {
-		struct cma_dev *cma_dev = cma_dev_get_cma_dev(i);
-		if (!cma_dev)
-			continue;
-
-		if (cma_dev->range.base >= start &&
-		    (cma_dev->range.base + cma_dev->range.size) <= end)
-			return cma_dev;
-	}
-
-	return NULL;
-}
-
-static int brcmstb_mega_barrier_init(void)
-{
-	int bank_nr;
-
-	pr_info("brcmstb: setting up mega-barrier workaround\n");
-
-	for_each_bank(bank_nr, &meminfo) {
-		struct page *page;
-		struct cma_dev *cma_dev;
-		const struct membank *bank = &meminfo.bank[bank_nr];
-		const int len = PAGE_SIZE;
-
-		cma_dev = cma_dev_get_by_addr(bank_phys_start(bank),
-						bank_phys_end(bank));
-		if (!cma_dev) {
-			phys_addr_t start = bank_phys_start(bank);
-			phys_addr_t end = bank_phys_end(bank);
-			pr_warn("no cma dev for addr range (%pa,%pa) exists\n",
-					&start,
-					&end);
-			continue;
-		}
-
-		page = dma_alloc_from_contiguous(cma_dev->dev,
-							len >> PAGE_SHIFT, 0);
-		if (!page) {
-			pr_err("failed to alloc page for dummy store on bank %d\n",
-				bank_nr);
-			continue;
-		}
-
-		so_mem_paddr[bank_nr] = page_to_phys(page);
-		so_mem_vaddr[bank_nr] = cma_dev_kva_map(page, len >> PAGE_SHIFT,
-					pgprot_noncached(pgprot_kernel));
-	}
-
-	return 0;
-}
-late_initcall(brcmstb_mega_barrier_init);
-
-/*
- * The suggested workaround requires a dummy store to memory mapped as
- * STRONGLY ORDERED on each MEMC, followed by a data sync barrier.
- *
- * This function should be called following all cache flush operations.
- */
-void brcmstb_mega_barrier(void)
-{
-	int bank_nr;
-
-	__asm__("dsb");
-
-	for (bank_nr = 0; bank_nr < NR_BANKS; bank_nr++) {
-		if (so_mem_vaddr[bank_nr])
-			writel_relaxed(0, so_mem_vaddr[bank_nr]);
-	}
-
-	__asm__("dsb");
-}
-EXPORT_SYMBOL(brcmstb_mega_barrier);
-#endif /* CONFIG_BRCMSTB_USE_MEGA_BARRIER */
 
 static void __init brcmstb_init_time(void)
 {
@@ -343,57 +257,6 @@ static void __init brcmstb_init_time(void)
 	clocksource_of_init();
 }
 #endif /* CONFIG_BRCMSTB */
-
-/***********************************************************************
- * SMP boot
- ***********************************************************************/
-
-#ifdef CONFIG_SMP
-static DEFINE_SPINLOCK(boot_lock);
-
-static void brcmstb_secondary_init(unsigned int cpu)
-{
-	/*
-	 * Synchronise with the boot thread.
-	 */
-	spin_lock(&boot_lock);
-	spin_unlock(&boot_lock);
-}
-
-static int brcmstb_boot_secondary(unsigned int cpu,
-				  struct task_struct *idle)
-{
-	/*
-	 * set synchronisation state between this boot processor
-	 * and the secondary one
-	 */
-	spin_lock(&boot_lock);
-
-	/* Bring up power to the core if necessary */
-	if (brcmstb_cpu_get_power_state(cpu) == 0)
-		brcmstb_cpu_power_on(cpu);
-
-	brcmstb_cpu_boot(cpu);
-
-	/*
-	 * now the secondary core is starting up let it run its
-	 * calibrations, then wait for it to finish
-	 */
-	spin_unlock(&boot_lock);
-
-	return 0;
-}
-
-struct smp_operations brcmstb_smp_ops __initdata = {
-	.smp_prepare_cpus	= brcmstb_cpu_ctrl_setup,
-	.smp_secondary_init	= brcmstb_secondary_init,
-	.smp_boot_secondary	= brcmstb_boot_secondary,
-#ifdef CONFIG_HOTPLUG_CPU
-	.cpu_kill		= brcmstb_cpu_kill,
-	.cpu_die		= brcmstb_cpu_die,
-#endif
-};
-#endif  /* CONFIG_SMP */
 
 DT_MACHINE_START(BRCMSTB, "Broadcom STB (Flattened Device Tree)")
 	.dt_compat	= brcmstb_match,
@@ -404,8 +267,5 @@ DT_MACHINE_START(BRCMSTB, "Broadcom STB (Flattened Device Tree)")
 	.init_early	= brcmstb_init_early,
 	.init_irq	= brcmstb_init_irq,
 	.init_time	= brcmstb_init_time,
-#endif
-#ifdef CONFIG_SMP
-	.smp		= smp_ops(brcmstb_smp_ops),
 #endif
 MACHINE_END

@@ -187,6 +187,11 @@ if [ ! -f /sys/power/pm_test ] ; then
 	fi
 else
 	echo $mode > /sys/power/pm_test
+	if [ -f /sys/module/suspend/parameters/pm_test_delay ]; then
+		echo $wakeup_time > /sys/module/suspend/parameters/pm_test_delay
+	else
+		echo "configurable PM test delay is not supported in your kernel"
+	fi
 fi
 
 [ "$tp_all" -eq 0 ] && set_cpus_power $tp_all

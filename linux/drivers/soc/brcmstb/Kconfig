@@ -1,0 +1,39 @@
+config SOC_BRCMSTB
+	bool
+
+menu "Broadcom STB SoC drivers"
+	depends on SOC_BRCMSTB
+
+config BRCMSTB_IRQ0_STUB
+	bool "Enable stub IRQ0 driver"
+	default y
+	depends on !BCM7120_L2_IRQ
+	help
+	  This enables the stub IRQ0 driver, for configuring the IRQ0
+	  forwarding mask to enable the UARTs, but not do anything else with
+	  the IRQ0 block. This driver is really a hack, and it exists solely
+	  because Nexus wants to share the IRQ0 registers without telling
+	  Linux.
+
+	  It is highly recommended to either enable this or BCM7120_L2_IRQ.
+
+config BRCMSTB_PM
+	bool "Support suspend/resume for STB platforms"
+	default y
+	depends on PM
+	depends on ARM && ARCH_BRCMSTB
+
+config BRCMSTB_SRPD
+	tristate "Support enabling DDR self-refresh modes"
+	help
+	  Provides a sysfs interface for setting the self-refresh timeout
+	  value on Broadcom STB memory controllers.
+
+config BRCMSTB_WKTMR
+	tristate "Support wake-up timer"
+
+# Perform memory hashing before entering S3, using XPT DMA
+config BRCMSTB_XPT_HASH
+	bool
+
+endmenu

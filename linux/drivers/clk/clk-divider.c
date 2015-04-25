@@ -161,7 +161,7 @@ static int clk_divider_bestdiv(struct clk_hw *hw, unsigned long rate,
 
 	if (!(__clk_get_flags(hw->clk) & CLK_SET_RATE_PARENT)) {
 		parent_rate = *best_parent_rate;
-		bestdiv = DIV_ROUND_UP(parent_rate, rate);
+		bestdiv = DIV_ROUND_UP_ULL((u64)parent_rate, rate);
 		bestdiv = bestdiv == 0 ? 1 : bestdiv;
 		bestdiv = bestdiv > maxdiv ? maxdiv : bestdiv;
 		return bestdiv;
@@ -391,6 +391,7 @@ void of_divider_clk_setup(struct device_node *node)
 	u8 clk_divider_flags = 0;
 	u32 mask = 0;
 	u32 shift = 0;
+	u32 width;
 	struct clk_div_table *table;
 
 	of_property_read_string(node, "clock-output-names", &clk_name);
@@ -406,6 +407,11 @@ void of_divider_clk_setup(struct device_node *node)
 	if (of_property_read_u32(node, "bit-mask", &mask)) {
 		pr_err("%s: missing bit-mask property for %s\n", __func__,
 		       node->name);
+		return;
+	}
+	width = fls(mask);
+	if ((1 << width) - 1 != mask) {
+		pr_err("%s: bad bit-mask for %s\n", __func__, node->name);
 		return;
 	}
 
@@ -432,7 +438,7 @@ void of_divider_clk_setup(struct device_node *node)
 		return;
 
 	clk = _register_divider(NULL, clk_name, parent_name, 0, reg, shift,
-			mask, clk_divider_flags, table, NULL);
+			width, clk_divider_flags, table, NULL);
 
 	if (!IS_ERR(clk))
 		of_clk_add_provider(node, of_clk_src_simple_get, clk);

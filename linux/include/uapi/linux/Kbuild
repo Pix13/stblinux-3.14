@@ -1,5 +1,6 @@
 # UAPI Header export list
 header-y += byteorder/
+header-y += brcmstb/
 header-y += can/
 header-y += caif/
 header-y += dvb/

@@ -144,7 +144,7 @@ cp $LINUXDIR/vmlinux tmp/romfs/boot/
 
 cp misc/devconsole.tar tmp/nfsroot.tar
 chmod u+w tmp/nfsroot.tar
-tar --owner 0 --group 0 -rf tmp/nfsroot.tar romfs/
+tar --exclude=".git*" --owner 0 --group 0 -rf tmp/nfsroot.tar romfs/
 tar --owner 0 --group 0 -rf tmp/nfsroot.tar -C tmp romfs/boot/
 bzip2 < tmp/nfsroot.tar > images/nfsroot-${TARGET}.tar.bz2
 echo "  -> images/nfsroot-${TARGET}.tar.bz2"

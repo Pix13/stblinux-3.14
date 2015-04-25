@@ -80,12 +80,6 @@ enum sata_mdio_phy_regs_legacy {
 	TXPMD_REG_BANK_LEGACY = 0x1a0,
 };
 
-enum sata_brcm_quirks {
-	SATA_BRCM_QK_INIT_PHY = BIT(0),
-	SATA_BRCM_QK_ALT_RST  = BIT(1),
-	SATA_BRCM_QK_NONCQ    = BIT(2),
-};
-
 /**
  * struct pdev_map - Doubly-linked list used to associate a struct device
  *                     its associated platform devices.

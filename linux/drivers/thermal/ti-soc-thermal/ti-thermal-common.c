@@ -239,7 +239,7 @@ static int ti_thermal_get_trip_temp(struct thermal_zone_device *thermal,
 	return 0;
 }
 
-static int __ti_thermal_get_trend(void *p, long *trend)
+static int __ti_thermal_get_trend(void *p, int trip, enum thermal_trend *trend)
 {
 	struct ti_thermal_data *data = p;
 	struct ti_bandgap *bgp;
@@ -249,22 +249,6 @@ static int __ti_thermal_get_trend(void *p, long *trend)
 	id = data->sensor_id;
 
 	ret = ti_bandgap_get_trend(bgp, id, &tr);
-	if (ret)
-		return ret;
-
-	*trend = tr;
-
-	return 0;
-}
-
-/* Get the temperature trend callback functions for thermal zone */
-static int ti_thermal_get_trend(struct thermal_zone_device *thermal,
-				int trip, enum thermal_trend *trend)
-{
-	int ret;
-	long tr;
-
-	ret = __ti_thermal_get_trend(thermal->devdata, &tr);
 	if (ret)
 		return ret;
 
@@ -278,6 +262,13 @@ static int ti_thermal_get_trend(struct thermal_zone_device *thermal,
 	return 0;
 }
 
+/* Get the temperature trend callback functions for thermal zone */
+static int ti_thermal_get_trend(struct thermal_zone_device *thermal,
+				int trip, enum thermal_trend *trend)
+{
+	return __ti_thermal_get_trend(thermal->devdata, trip, trend);
+}
+
 /* Get critical temperature callback functions for thermal zone */
 static int ti_thermal_get_crit_temp(struct thermal_zone_device *thermal,
 				    unsigned long *temp)
@@ -285,6 +276,11 @@ static int ti_thermal_get_crit_temp(struct thermal_zone_device *thermal,
 	/* shutdown zone */
 	return ti_thermal_get_trip_temp(thermal, OMAP_TRIP_NUMBER - 1, temp);
 }
+
+static const struct thermal_zone_of_device_ops ti_of_thermal_ops = {
+	.get_temp = __ti_thermal_get_temp,
+	.get_trend = __ti_thermal_get_trend,
+};
 
 static struct thermal_zone_device_ops ti_thermal_ops = {
 	.get_temp = ti_thermal_get_temp,
@@ -333,8 +329,7 @@ int ti_thermal_expose_sensor(struct ti_bandgap *bgp, int id,
 
 	/* in case this is specified by DT */
 	data->ti_thermal = thermal_zone_of_sensor_register(bgp->dev, id,
-					data, __ti_thermal_get_temp,
-					__ti_thermal_get_trend);
+					data, &ti_of_thermal_ops);
 	if (IS_ERR(data->ti_thermal)) {
 		/* Create thermal zone */
 		data->ti_thermal = thermal_zone_device_register(domain,

@@ -171,7 +171,8 @@ static int brcm_usb_instance_probe(struct platform_device *pdev)
 	err = clk_prepare_enable(priv->usb_clk);
 	if (err)
 		return err;
-	brcm_usb_common_ctrl_xhci_soft_reset((uintptr_t)priv->ctrl_regs, false);
+	brcm_usb_common_ctrl_xhci_soft_reset((uintptr_t)priv->ctrl_regs,
+					!priv->has_xhci);
 	brcm_usb_common_ctrl_init((uintptr_t)priv->ctrl_regs, priv->ioc,
 				priv->ipp, priv->has_xhci);
 	return of_platform_populate(dn, NULL, NULL, NULL);

@@ -54,7 +54,6 @@ ifdef UCLINUX_BUILD_LIB
 	CFLAGS  :=  -O2 -g
   endif
 	CFLAGS  += $(VENDOR_CFLAGS)
-	CFLAGS  += -fno-builtin
 
 	# don't want all the CFLAGS for uClibc/Config
 	ARCH_CFLAGS = $(CFLAGS)
@@ -119,7 +118,6 @@ ifdef UCLINUX_BUILD_USER
   endif
 	CFLAGS  += $(VENDOR_CFLAGS)
 	CFLAGS  += -Dlinux -D__linux__ -Dunix -DEMBED
-	CFLAGS  += -fno-builtin
 
 	CXXFLAGS = $(CFLAGS) $(INCCXX) -fname-mangling-version-0
 

@@ -53,16 +53,6 @@
 static int wp_on = 1;
 module_param(wp_on, int, 0444);
 
-/* SWLINUX-2527: support a workaround for bugs filed in, e.g., HW7445-988 */
-#if defined(CONFIG_BCM7145A0)
-#define HW7445_988_WORKAROUND
-#endif
-
-/* CRNAND-34: FLASH DMA must use 512B transfer sizes */
-#define CRNAND_34_WORKAROUND() IS_ENABLED(CONFIG_BCM7439A0)
-
-#define CRNAND_34_STEPSIZE	512
-
 /***********************************************************************
  * Definitions
  ***********************************************************************/
@@ -240,8 +230,7 @@ struct brcmstb_nand_controller {
 	/* List of NAND hosts (one for each chip-select) */
 	struct list_head host_list;
 
-	struct brcm_nand_dma_desc *dma_descs;
-	unsigned int		num_dma_descs;
+	struct brcm_nand_dma_desc *dma_desc;
 	dma_addr_t		dma_pa;
 
 	/* in-memory cache of the FLASH_CACHE, used only for some commands */
@@ -251,11 +240,6 @@ struct brcmstb_nand_controller {
 	u32			nand_cs_nand_xor;
 	u32			corr_stat_threshold;
 	u32			flash_dma_mode;
-
-#ifdef HW7445_988_WORKAROUND
-	/* HW7445-988: need to skip some interrupts for PROGRAM_PAGE */
-	int			skip_irq;
-#endif
 };
 
 struct brcmstb_nand_cfg {
@@ -631,13 +615,6 @@ static irqreturn_t brcmstb_nand_ctlrdy_irq(int irq, void *data)
 	if (ctrl->dma_pending)
 		return IRQ_HANDLED;
 
-#ifdef HW7445_988_WORKAROUND
-	/* HW7445-988: ignore certain interrupts */
-	if (ctrl->skip_irq > 0) {
-		ctrl->skip_irq--;
-		return IRQ_HANDLED;
-	}
-#endif
 	complete(&ctrl->done);
 	return IRQ_HANDLED;
 }
@@ -710,10 +687,6 @@ static int brcmstb_nand_waitfunc(struct mtd_info *mtd, struct nand_chip *this)
 			BDEV_RD(BCHP_HIF_INTR2_CPU_STATUS),
 			BDEV_RD(BCHP_NAND_INTFC_STATUS));
 	}
-#ifdef HW7445_988_WORKAROUND
-	/* HW7445-988: if we timed out, stop skipping interrupts */
-	ctrl->skip_irq = 0;
-#endif
 	ctrl->cmd_pending = 0;
 	return BDEV_RD_F(NAND_INTFC_STATUS, FLASH_STATUS);
 }
@@ -998,33 +971,20 @@ static int brcmstb_nand_dma_trans(struct brcmstb_nand_host *host, u64 addr,
 	struct brcmstb_nand_controller *ctrl = host->ctrl;
 	dma_addr_t buf_pa;
 	int dir = dma_cmd == CMD_PAGE_READ ? DMA_FROM_DEVICE : DMA_TO_DEVICE;
-	int step = len, offs, i;
 
 	buf_pa = dma_map_single(&host->pdev->dev, buf, len, dir);
 
-	/* CRNAND-34: DMA reads must be split into fine-grained linked-lists */
-	if (CRNAND_34_WORKAROUND())
-		step = CRNAND_34_STEPSIZE;
+	brcmstb_nand_fill_dma_desc(host, ctrl->dma_desc, addr, buf_pa, len,
+				   dma_cmd, true, true, 0);
 
-	for (offs = 0, i = 0; offs < len; offs += step, i++) {
-		bool begin = offs == 0;
-		bool end = (offs + step) >= len;
-		brcmstb_nand_fill_dma_desc(host, &ctrl->dma_descs[i],
-				addr + offs, buf_pa + offs, step, dma_cmd,
-				begin, end, end ? 0 : flash_dma_get_desc_pa(ctrl, i + 1));
-	}
-
-	BUG_ON(i > (int)ctrl->num_dma_descs);
-
-	brcmstb_nand_dma_run(host, flash_dma_get_desc_pa(ctrl, 0));
+	brcmstb_nand_dma_run(host, ctrl->dma_pa);
 
 	dma_unmap_single(&host->pdev->dev, buf_pa, len, dir);
 
-	for (offs = 0, i = 0; offs < len; offs += step, i++)
-		if (ctrl->dma_descs[i].status_valid & FLASH_DMA_ECC_ERROR)
-			return -EBADMSG;
-		else if (ctrl->dma_descs[i].status_valid & FLASH_DMA_CORR_ERROR)
-			return -EUCLEAN;
+	if (ctrl->dma_desc->status_valid & FLASH_DMA_ECC_ERROR)
+		return -EBADMSG;
+	else if (ctrl->dma_desc->status_valid & FLASH_DMA_CORR_ERROR)
+		return -EUCLEAN;
 
 	return 0;
 }
@@ -1293,8 +1253,6 @@ static int brcmstb_nand_write(struct mtd_info *mtd,
 		(host->cs << 16) | ((addr >> 32) & 0xffff));
 
 	for (i = 0; i < trans; i++, addr += FC_BYTES) {
-		int cmd = CMD_PROGRAM_PAGE;
-
 		/* full address MUST be set before populating FC */
 		BDEV_WR_RB(BCHP_NAND_CMD_ADDRESS, addr & 0xffffffff);
 
@@ -1310,29 +1268,8 @@ static int brcmstb_nand_write(struct mtd_info *mtd,
 					host->hwcfg.sector_size_1k);
 		}
 
-#ifdef HW7445_988_WORKAROUND
-		/*
-		 * HW7445-988: when programming with SECTOR_SIZE_1K=1, just use
-		 * PROGRAM_SPARE_AREA for every other 512B -- to fill
-		 * the spare area without triggering the ping-pong IRQ bug
-		 */
-		if (host->hwcfg.sector_size_1k && !(i & 0x01)) {
-			cmd = CMD_PROGRAM_SPARE_AREA;
-		} else {
-			cmd = CMD_PROGRAM_PAGE;
-
-			/*
-			 * HW7445-988: for PROGRAM_PAGE (all sector sizes)
-			 * ignore the first interrupt except for the last
-			 * sector
-			 */
-			if ((i + 1) != trans)
-				ctrl->skip_irq = 1;
-		}
-#endif
-
 		/* we cannot use SPARE_AREA_PROGRAM when PARTIAL_PAGE_EN=0 */
-		brcmstb_nand_send_cmd(host, cmd);
+		brcmstb_nand_send_cmd(host, CMD_PROGRAM_PAGE);
 		status = brcmstb_nand_waitfunc(mtd, chip);
 
 		if (status & NAND_STATUS_FAIL) {
@@ -1833,30 +1770,6 @@ static const struct dev_pm_ops brcmstb_nand_pm_ops = {
  * Platform driver setup (per controller)
  ***********************************************************************/
 
-/**
- * Allocate one or more FLASH_DMA descriptors
- */
-static int brcmstb_nand_alloc_dma_descrs(struct device *dev,
-		struct brcmstb_nand_controller *ctrl, unsigned int num_descs)
-{
-	struct brcm_nand_dma_desc *descs;
-	dma_addr_t pa;
-
-	if (num_descs == 0)
-		return -EINVAL;
-
-	descs = dmam_alloc_coherent(dev, num_descs * sizeof(*descs), &pa,
-			GFP_KERNEL);
-	if (!descs)
-		return -ENOMEM;
-
-	ctrl->dma_descs = descs;
-	ctrl->num_dma_descs = num_descs;
-	ctrl->dma_pa = pa;
-
-	return 0;
-}
-
 static int brcmstb_nand_check_irq_cascade(struct device *dev,
 		struct brcmstb_nand_controller *ctrl)
 {
@@ -1928,8 +1841,6 @@ static int brcmstb_nand_probe(struct platform_device *pdev)
 	/* FLASH_DMA */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "flash-dma");
 	if (res) {
-		int count;
-
 		ctrl->flash_dma_base = devm_request_and_ioremap(dev, res);
 		if (!ctrl->flash_dma_base)
 			return -ENODEV;
@@ -1937,15 +1848,12 @@ static int brcmstb_nand_probe(struct platform_device *pdev)
 		flash_dma_writel(ctrl, FLASH_DMA_MODE, 1); /* linked-list */
 		flash_dma_writel(ctrl, FLASH_DMA_ERROR_STATUS, 0);
 
-		if (CRNAND_34_WORKAROUND())
-			count = NAND_MAX_PAGESIZE / CRNAND_34_STEPSIZE;
-		else
-			count = 1;
-
 		/* Allocate descriptor(s) */
-		ret = brcmstb_nand_alloc_dma_descrs(dev, ctrl, count);
-		if (ret)
-			return ret;
+		ctrl->dma_desc = dmam_alloc_coherent(dev,
+						     sizeof(*ctrl->dma_desc),
+						     &ctrl->dma_pa, GFP_KERNEL);
+		if (!ctrl->dma_desc)
+			return -ENOMEM;
 
 		if (ctrl->irq_cascaded) {
 			ctrl->dma_irq = platform_get_irq(pdev, 1);

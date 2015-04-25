@@ -59,6 +59,33 @@ function find_mtd_partition()
 	return 1
 }
 
+# Sets mmcblk_dev if one is available.  Assumes that the first writable eMMC
+# device we find is the one we want.
+function find_mmcblk_dev()
+{
+	local block_dir dev_type ro old_sysfs
+
+	if [ -d /sys/class/block ]; then
+		unset old_sysfs
+		block_dir="/sys/class/block"
+	else
+		old_sysfs=1
+		block_dir="/sys/block"
+	fi
+	for x in $block_dir/mmcblk[0-9]; do
+		if [ ! -d $x ]; then
+			continue
+		fi
+		ro=$(cat "$x/ro")
+		dev_type=$(cat "$x/device/type")
+		if [ "$ro" = 0 -a "$dev_type" = "MMC" ]; then
+			mmcblk_dev=$(basename $x)
+			return 0
+		fi
+	done
+	return 1
+}
+
 function find_thumbdrive()
 {
 	thumbdrive=""
@@ -233,9 +260,11 @@ function handle_opt_2()
 		ubiformat $mtd --yes
 		ubiattach -m $rootfs_part -d 0
 		# NOTE: ubiattach/mdev may run asynchronously
-		while [ ! -e /dev/ubi0 ]; do
-			sleep 1
-		done
+		wait_for_nodes /dev/ubi0
+		if [ $? -ne 0 ]; then
+			ubidetach -d 0
+			exit 1
+		fi
 		ubimkvol /dev/ubi0 -N rootfs -m
 		mount -t ubifs ubi0:rootfs /mnt/flash
 
@@ -302,9 +331,11 @@ function handle_opt_4()
 		ubiformat $mtd --yes
 		ubiattach -m $rootfs_part -d 0
 		# NOTE: ubiattach/mdev may run asynchronously
-		while [ ! -e /dev/ubi0 ]; do
-			sleep 1
-		done
+		wait_for_nodes /dev/ubi0
+		if [ $? -ne 0 ]; then
+			ubidetach -d 0
+			exit 1
+		fi
 		ubimkvol /dev/ubi0 -N squashfs -s ${imgsize}KiB
 		if ! find_mtd_partition squashfs newpart; then
 			echo "ERROR: can't find new squashfs partition"
@@ -347,6 +378,25 @@ function handle_opt_4()
 	exit 0
 }
 
+# Waits for nodes to appear with a timeout per node.
+function wait_for_nodes()
+{
+	local retry=10
+	local part
+	for part in $@; do
+		while ! [ -b $part -o -c $part ]; do
+			if [ $retry -le 0 ]; then
+				echo "timed out waiting for $part" 1>&2
+				return 1
+			else
+				: $(( retry -= 1))
+				sleep 1
+			fi
+		done
+	done
+	return 0
+}
+
 # Install rootfs to hard drive
 function handle_opt_5()
 {
@@ -360,8 +410,8 @@ function handle_opt_5()
 		-n 3:16779264:33556479 -t 3:0700 -c 3:"application" \
 		-N 4 -t 4:0700 -c 4:"video"
 
-	# Give mdev time to create the device nodes
-	sleep 2
+	wait_for_nodes ${hdd_dev}1 ${hdd_dev}2 ${hdd_dev}3 ${hdd_dev}4
+	[ $? -ne 0 ] && exit 1
 
 	# Enable swap; mke2fs on multi-terabyte drives can malloc
 	# upwards of 80MB
@@ -439,6 +489,62 @@ function handle_opt_7()
 	echo "To mount the filesystem now:"
 	echo ""
 	echo "  mount ${dev} /mnt/flash"
+	echo ""
+	exit 0
+}
+
+function maybe_prepare_mmcblk_dev()
+{
+	local dev=$1
+	local summary=`sgdisk -p $dev`
+	local needs_prepare=$(echo $summary | grep -q "kernel" &&
+		echo $summary | grep -q "rootfs")
+
+	if [ $needs_prepare ]; then
+		sgdisk -o $dev
+		sgdisk -a 1 -n 1:34:35 -c 1:"macadr" $dev
+		sgdisk -a 1 -n 2:36:163 -c 2:"nvram" $dev
+		sgdisk -a 1 -n 3:164:16547 -c 3:"kernel" $dev
+		sgdisk -a 1 -n 4:16548:17571 -c 4:"splash" $dev
+		sgdisk -a 1 -n 5:17572:17699 -c 5:"devtree" $dev
+		sgdisk -N 6 -c 6:"rootfs" $dev
+
+		wait_for_nodes ${dev}p1 ${dev}p2 ${dev}p3 ${dev}p4 ${dev}p5 ${dev}p6
+		[ $? -ne 0 ] && exit 1
+	fi
+}
+
+function handle_opt_8()
+{
+	check_root $mmcblk_dev
+
+	local dev=/dev/$mmcblk_dev
+
+	maybe_prepare_mmcblk_dev $dev
+	local kernel_part=${dev}p3
+	local rootfs_part=${dev}p6
+
+	# install kernel
+	tftp_fetch $tftphost $tftppath/vmlinuz-$plat /tmp/vmlinuz
+	dd if=/tmp/vmlinuz of=$kernel_part
+	rm /tmp/vmlinuz
+
+	# install rootfs
+	mkfs.ext4 $rootfs_part
+	mount $rootfs_part /mnt/hd
+	write_rootfs -linux
+	umount /mnt/hd
+
+	echo ""
+	echo "Finished writing kernel and rootfs to eMMC."
+	echo ""
+	echo "Sample boot command line:"
+	echo ""
+	echo "  boot flash0.kernel: 'root=$rootfs_part rootwait rw'"
+	echo ""
+	echo "To mount the filesystem now:"
+	echo ""
+	echo "  mount $rootfs_part /mnt/hd"
 	echo ""
 	exit 0
 }
@@ -578,15 +684,17 @@ if [ -z $rootfs_part ]; then
 	suf2="(not available)"
 	suf3="$suf2"
 	suf4="$suf2"
-fi
-
-if flash_is_nand $rootfs_part; then
+elif flash_is_nand $rootfs_part; then
 	suf3="(not available)"
 	suf4="(uses UBI)"
 fi
 
 if ! find_thumbdrive; then
 	suf7="(not available)"
+fi
+
+if ! find_mmcblk_dev; then
+	suf8="(not available)"
 fi
 
 while :; do
@@ -613,7 +721,8 @@ while :; do
 	echo "4) Install SQUASHFS rootfs to flash (RO) $suf4"
 	echo "5) Format/partition entire HDD, then install rootfs $suf5"
 	echo "6) Update rootfs on first HDD partition $suf6"
-	echo "7) Install kernel/rootfs to USB thumbdrive $suf7"
+	echo "7) Install kernel+rootfs to USB thumbdrive $suf7"
+	echo "8) Install kernel+rootfs to eMMC $suf8"
 	echo "q) Exit"
 	echo ""
 	echo -n "Selection: "
@@ -626,7 +735,7 @@ while :; do
 	echo ""
 
 	case $resp in
-		[1-7])
+		[1-8])
 			sufname='$'suf${resp}
 			eval suf=$sufname
 			if [[ "$suf" = *"not available"* ]]; then
