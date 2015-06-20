@@ -54,6 +54,7 @@
 #define PCIE_MISC_RC_BAR3_CONFIG_HI			0x4040
 #define PCIE_MISC_MSI_BAR_CONFIG_LO			0x4044
 #define PCIE_MISC_MSI_BAR_CONFIG_HI			0x4048
+#define PCIE_MISC_PCIE_CTRL				0x4064
 #define PCIE_MISC_PCIE_STATUS				0x4068
 #define PCIE_MISC_CPU_2_PCIE_MEM_WIN0_BASE_LIMIT	0x4070
 #define PCIE_MISC_HARD_PCIE_HARD_DEBUG			0x4204
@@ -65,6 +66,7 @@
 #define PCIE_RGR1_SW_INIT_1				0x9210
 
 #define BRCM_NUM_PCI_OUT_WINS		0x4
+#define BRCM_MAX_SCB			0x4
 
 #define PCI_BUSNUM_SHIFT		20
 #define PCI_SLOT_SHIFT			15
@@ -114,6 +116,7 @@ struct brcm_pcie {
 	int			num_out_wins;
 	bool			ssc;
 	int			gen;
+	int			scb_size_vals[BRCM_MAX_SCB];
 	struct brcm_window	out_wins[BRCM_NUM_PCI_OUT_WINS];
 	struct pci_sys_data	*sys;
 	struct device		*dev;
@@ -123,6 +126,7 @@ static struct list_head brcm_pcie;
 static int brcm_num_pci_controllers;
 static int num_memc;
 static void turn_off(void __iomem *base);
+static void enter_l23(struct brcm_pcie *pcie);
 
 
 /***********************************************************************
@@ -280,6 +284,7 @@ static int is_pcie_link_up(struct brcm_pcie *pcie)
 static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 {
 	void __iomem *base = pcie->base;
+	unsigned int scb_size_val;
 	int i;
 
 	/* reset the bridge and the endpoint device */
@@ -307,14 +312,25 @@ static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 	__raw_writel(0x00000011, base + PCIE_MISC_RC_BAR2_CONFIG_LO);
 	__raw_writel(0x00000000, base + PCIE_MISC_RC_BAR2_CONFIG_HI);
 
-	/* field: SCB0_SIZE = 1 Gb */
-	wr_fld(base + PCIE_MISC_MISC_CTRL, 0xf8000000, 27, 0x0f);
-	/* field: SCB1_SIZE = 1 Gb */
-	if (num_memc > 1)
-		wr_fld(base + PCIE_MISC_MISC_CTRL, 0x07c00000, 22, 0x0f);
-	/* field: SCB2_SIZE = 1 Gb */
-	if (num_memc > 2)
-		wr_fld(base + PCIE_MISC_MISC_CTRL, 0x0000001f, 0, 0x0f);
+	/* field: SCB0_SIZE, default = 0xf (1 GB) */
+	scb_size_val = pcie->scb_size_vals[0] ? pcie->scb_size_vals[0] : 0xf;
+	wr_fld(base + PCIE_MISC_MISC_CTRL, 0xf8000000, 27, scb_size_val);
+
+	/* field: SCB1_SIZE, default = 0xf (1 GB) */
+	if (num_memc > 1) {
+		scb_size_val = pcie->scb_size_vals[1]
+			? pcie->scb_size_vals[1] : 0xf;
+		wr_fld(base + PCIE_MISC_MISC_CTRL, 0x07c00000,
+		       22, scb_size_val);
+	}
+
+	/* field: SCB2_SIZE, default = 0xf (1 GB) */
+	if (num_memc > 2) {
+		scb_size_val = pcie->scb_size_vals[2]
+			? pcie->scb_size_vals[2] : 0xf;
+		wr_fld(base + PCIE_MISC_MISC_CTRL, 0x0000001f,
+		       0, scb_size_val);
+	}
 
 	/* disable the PCIE->GISB memory window */
 	__raw_writel(0x00000000, base + PCIE_MISC_RC_BAR1_CONFIG_LO);
@@ -418,7 +434,6 @@ FAIL:
 }
 
 
-#if defined(CONFIG_PM)
 /*
  * syscore device to handle PCIe bus suspend and resume
  */
@@ -427,6 +442,8 @@ static void turn_off(void __iomem *base)
 {
 	/* Reset endpoint device */
 	wr_fld_rb(base + PCIE_RGR1_SW_INIT_1, 0x00000001, 0, 1);
+	/* deassert request for L23 in case it was asserted */
+	wr_fld_rb(base + PCIE_MISC_PCIE_CTRL, 0x1, 0, 0);
 	/* SERDES_IDDQ = 1 */
 	wr_fld_rb(base + PCIE_MISC_HARD_PCIE_HARD_DEBUG, 0x08000000,
 		  27, 1);
@@ -435,11 +452,30 @@ static void turn_off(void __iomem *base)
 }
 
 
+static void enter_l23(struct brcm_pcie *pcie)
+{
+	void __iomem *base = pcie->base;
+	int timeout = 1000;
+	int l23;
+
+	/* assert request for L23 */
+	wr_fld_rb(base + PCIE_MISC_PCIE_CTRL, 0x1, 0, 1);
+	do {
+		/* poll L23 status */
+		l23 = __raw_readl(base + PCIE_MISC_PCIE_STATUS) & (1 << 6);
+	} while (--timeout && !l23);
+
+	if (!timeout)
+		dev_err(pcie->dev, "failed to enter L23\n");
+}
+
+
 static int pcie_suspend(void)
 {
 	struct brcm_pcie *pcie;
 
 	list_for_each_entry(pcie, &brcm_pcie, list) {
+		enter_l23(pcie);
 		turn_off(pcie->base);
 		clk_disable(pcie->clk);
 		pcie->suspended = true;
@@ -481,7 +517,6 @@ static struct syscore_ops pcie_pm_ops = {
 	.suspend        = pcie_suspend,
 	.resume         = pcie_resume,
 };
-#endif
 
 
 /***********************************************************************
@@ -637,7 +672,7 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 	int len, i, irq_offset, rlen, pna, np, ret;
 	struct brcm_pcie *pcie;
 	struct resource *r;
-	const u32 *ranges;
+	const u32 *ranges, *log2_scb_sizes, *dma_ranges;
 	void __iomem *base;
 	u32 tmp;
 
@@ -700,6 +735,27 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 	}
 
 	pcie->ssc = of_property_read_bool(dn, "brcm,ssc");
+
+	/* Get the value for the log2 of the scb sizes.  Subtract 15 from
+	 * each because the target register field has 0==disabled and 1==64KB.
+	 */
+	log2_scb_sizes = of_get_property(dn, "brcm,log2-scb-sizes", &rlen);
+	if (log2_scb_sizes != NULL)
+		for (i = 0; i < rlen/4; i++)
+			pcie->scb_size_vals[i]
+				= (int) of_read_number(log2_scb_sizes + i, 1)
+					- 15;
+
+	/* Look for the dma-ranges property.  If it exists, issue a warning
+	 * as PCIe drivers may not work.  This is because the identity
+	 * mapping between system memory and PCIe space is not preserved,
+	 * and we need Linux to massage the dma_addr_t values it gets
+	 * from dma memory allocation.  This functionality will be added
+	 * in the near future.
+	 */
+	dma_ranges = of_get_property(dn, "dma-ranges", &rlen);
+	if (dma_ranges != NULL)
+		dev_warn(pcie->dev, "no identity map; PCI drivers may fail");
 
 	ranges = of_get_property(dn, "ranges", &rlen);
 	if (ranges == NULL) {

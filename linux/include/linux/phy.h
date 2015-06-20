@@ -74,6 +74,7 @@ typedef enum {
 	PHY_INTERFACE_MODE_RTBI,
 	PHY_INTERFACE_MODE_SMII,
 	PHY_INTERFACE_MODE_XGMII,
+	PHY_INTERFACE_MODE_MOCA,
 } phy_interface_t;
 
 
@@ -132,6 +133,9 @@ struct mii_bus {
 
 	/* PHY addresses to be ignored when probing */
 	u32 phy_mask;
+
+	/* PHY addresses to ignore the TA/read failure */
+	u32 phy_ignore_ta_mask;
 
 	/*
 	 * Pointer to an array of interrupts, each PHY's

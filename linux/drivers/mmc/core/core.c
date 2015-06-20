@@ -2582,11 +2582,7 @@ EXPORT_SYMBOL(mmc_power_restore_host);
  */
 int mmc_flush_cache(struct mmc_card *card)
 {
-	struct mmc_host *host = card->host;
 	int err = 0;
-
-	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL))
-		return err;
 
 	if (mmc_card_mmc(card) &&
 			(card->ext_csd.cache_size > 0) &&
@@ -2614,8 +2610,7 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 	unsigned int timeout;
 	int err = 0;
 
-	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL) ||
-			mmc_card_is_removable(host))
+	if (mmc_card_is_removable(host))
 		return err;
 
 	if (card && mmc_card_mmc(card) &&

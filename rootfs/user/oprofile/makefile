@@ -37,7 +37,6 @@ clean distclean::
 romfs::
 	$(STRIP) pp/opannotate pp/oparchive pp/opgprof pp/opreport \
 		utils/ophelp daemon/oprofiled
-	chmod 0755 utils/opcontrol
 	$(ROMFSINST) -e CONFIG_USER_PROFILE_OPROFILE pp/opannotate \
 		/bin/opannotate
 	$(ROMFSINST) -e CONFIG_USER_PROFILE_OPROFILE pp/opgprof \

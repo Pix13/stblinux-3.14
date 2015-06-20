@@ -160,9 +160,7 @@ static int brcmstb_waketmr_probe(struct platform_device *pdev)
 	 * process boot-time "wakeups" (e.g., from S5 soft-off)
 	 */
 	device_set_wakeup_capable(dev, true);
-	ret = device_wakeup_enable(dev);
-	if (ret)
-		return ret;
+	device_wakeup_enable(dev);
 
 	timer->irq = platform_get_irq(pdev, 0);
 	if ((int)timer->irq < 0)

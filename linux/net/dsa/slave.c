@@ -583,16 +583,32 @@ static void dsa_slave_phy_setup(struct dsa_slave_priv *p,
 {
 	struct dsa_switch *ds = p->parent;
 	struct dsa_chip_data *cd = ds->pd;
-	struct device_node *phy_dn;
+	struct device_node *phy_dn, *port_dn;
+	bool phy_is_fixed = false;
 	u32 phy_flags = 0;
 	u32 phy_addr;
+	int ret;
 
-	p->phy_interface = of_get_phy_mode(cd->port_dn[p->port]);
+	port_dn = cd->port_dn[p->port];
+	p->phy_interface = of_get_phy_mode(port_dn);
+
+	phy_dn = of_parse_phandle(port_dn, "phy-handle", 0);
+	if (of_phy_is_fixed_link(port_dn)) {
+		/* In the case of a fixed PHY, the DT node associated
+		 * to the fixed PHY is the Port DT node
+		 */
+		ret = of_phy_register_fixed_link(port_dn);
+		if (ret) {
+			pr_err("failed to register fixed PHY\n");
+			return;
+		}
+		phy_dn = port_dn;
+		phy_is_fixed = true;
+	}
 
 	if (ds->drv->get_phy_flags)
 		phy_flags = ds->drv->get_phy_flags(ds, p->port);
 
-	phy_dn = of_parse_phandle(cd->port_dn[p->port], "phy-handle", 0);
 	if (phy_dn) {
 		/* Allow the switch driver to intercept PHY registers accesses
 		 * to address 0 and 0x1e to workaround the lack of MDIO bus
@@ -600,8 +616,9 @@ static void dsa_slave_phy_setup(struct dsa_slave_priv *p,
 		 * a problem with Broadcom switches that have a hard-coded
 		 * pseudo-PHY address 30d.
 		 */
-		if (of_device_is_compatible(phy_dn, "brcm,bcm53101") ||
-			of_device_is_compatible(phy_dn, "brcm,bcm53125")) {
+		if ((of_device_is_compatible(phy_dn, "brcm,bcm53101") ||
+			of_device_is_compatible(phy_dn, "brcm,bcm53125")) &&
+			of_machine_is_compatible("brcm,bcm7445d0")) {
 
 			if (of_property_read_u32(phy_dn, "reg", &phy_addr))
 				phy_addr = 0;
@@ -619,14 +636,10 @@ static void dsa_slave_phy_setup(struct dsa_slave_priv *p,
 			p->phy = of_phy_connect(slave_dev, phy_dn,
 					dsa_slave_adjust_link, phy_flags,
 					p->phy_interface);
-	} else {
-		p->phy = of_phy_connect_fixed_link(slave_dev,
-				dsa_slave_adjust_link,
-				p->phy_interface);
-		if (p->phy)
-			fixed_phy_set_link_update(p->phy,
-					dsa_slave_fixed_link_update);
 	}
+
+	if (p->phy && phy_is_fixed)
+		fixed_phy_set_link_update(p->phy, dsa_slave_fixed_link_update);
 
 	/* We could not connect to a designated PHY, so use the switch internal
 	 * MDIO bus instead

@@ -57,8 +57,7 @@ static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
 
 #if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7145B0) ||		\
 	defined(CONFIG_BCM7250B0) || defined(CONFIG_BCM7364A0) ||	\
-	defined(CONFIG_BCM7366B0) || defined(CONFIG_BCM7439B0) ||	\
-	defined(CONFIG_BCM7445D0)
+	defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7445D0)
 static int sdhci_override_caps(struct platform_device *pdev,
 			uint32_t cap0_setbits,
 			uint32_t cap0_clearbits,

@@ -483,6 +483,8 @@ static const struct of_device_id brcmstb_clk_match_full[] __initconst = {
 	  .data = of_fixed_factor_clk_setup, },
 	{ .compatible = "divider-clock",
 	  .data = of_divider_clk_setup, },
+	{ .compatible = "multiplier-clock",
+	  .data = of_multiplier_clk_setup, },
 	{}
 };
 

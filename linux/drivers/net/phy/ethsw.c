@@ -26,6 +26,7 @@
 #include <linux/ctype.h>
 #include <linux/stddef.h>
 #include <linux/phy.h>
+#include <linux/brcmphy.h>
 #include <linux/module.h>
 
 #define BCM53125_PHY_ID		0x03625f20
@@ -33,8 +34,6 @@
 
 static unsigned char swdata[16];
 static struct proc_dir_entry *p;
-
-#define PSEUDO_PHY_ADDR	0x1e
 
 #define REG_PSEUDO_PHY_MII_REG16                          0x10
     #define REG_PPM_REG16_SWITCH_PAGE_NUMBER_SHIFT        8
@@ -146,7 +145,7 @@ static void ethsw_mdio_rreg(struct phy_device *phydev, int page, int reg,
 	int v, vm[4];
 	int i;
 
-	phy_id = PSEUDO_PHY_ADDR;
+	phy_id = BRCM_PSEUDO_PHY_ADDR;
 	v = (page << REG_PPM_REG16_SWITCH_PAGE_NUMBER_SHIFT) | REG_PPM_REG16_MDIO_ENABLE;
 	mdiobus_write(phydev->bus, phy_id, REG_PSEUDO_PHY_MII_REG16, v);
 
@@ -215,7 +214,7 @@ static void ethsw_mdio_wreg(struct phy_device *phydev, int page, int reg,
 	int v;
 	int i;
 
-	phy_id = PSEUDO_PHY_ADDR;
+	phy_id = BRCM_PSEUDO_PHY_ADDR;
 	v = (page << REG_PPM_REG16_SWITCH_PAGE_NUMBER_SHIFT) | REG_PPM_REG16_MDIO_ENABLE;
 	mdiobus_write(phydev->bus, phy_id, REG_PSEUDO_PHY_MII_REG16, v);
 
@@ -730,7 +729,7 @@ static int bcm53x25_probe(struct phy_device *phydev)
 	 * address 0 as this is the default PHY addressing supported
 	 * for BCM53xxx switches
 	 */
-	if (phydev->addr != PSEUDO_PHY_ADDR && phydev->addr != 0) {
+	if (phydev->addr != BRCM_PSEUDO_PHY_ADDR && phydev->addr != 0) {
 		dev_err(&phydev->dev, "invalid PHY address %d\n",
 			phydev->addr);
 		return -ENODEV;
@@ -741,6 +740,12 @@ static int bcm53x25_probe(struct phy_device *phydev)
 		p = NULL;
 	}
 	ethsw_add_proc_files(phydev);
+
+	/* Tell the MDIO bus controller that this switch's pseudo-PHY has a
+	 * broken turn-around and it should ignore read failures. See ING JIRA
+	 * SF-357.
+	 */
+	phydev->bus->phy_ignore_ta_mask |= 1 << BRCM_PSEUDO_PHY_ADDR;
 
 	return 0;
 }

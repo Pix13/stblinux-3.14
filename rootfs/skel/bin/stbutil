@@ -497,10 +497,20 @@ function maybe_prepare_mmcblk_dev()
 {
 	local dev=$1
 	local summary=`sgdisk -p $dev`
-	local needs_prepare=$(echo $summary | grep -q "kernel" &&
-		echo $summary | grep -q "rootfs")
 
-	if [ $needs_prepare ]; then
+	# Check that we have the right number of partitions and that
+	# the expected names are present
+	if [ $(echo "$summary" | awk 'END {print $1}') == '6' ] &&
+	     echo "$summary" | grep -q "kernel" &&
+	     echo "$summary" | grep -q "rootfs"; then
+		return 0
+	elif [ $(echo "$summary" | awk 'END {print $1}') != 'Number' ]; then
+		echo "Error: refusing to destroy custom partition setup on ${dev}." 1>&2
+		echo "Please check contents and manually clear out partition data" 1>&2
+		echo "when ready with 'sgdisk -o ${dev}', then try again." 1>&2
+		exit 1
+	else
+		# Starting from clean partition table
 		sgdisk -o $dev
 		sgdisk -a 1 -n 1:34:35 -c 1:"macadr" $dev
 		sgdisk -a 1 -n 2:36:163 -c 2:"nvram" $dev
@@ -512,6 +522,7 @@ function maybe_prepare_mmcblk_dev()
 		wait_for_nodes ${dev}p1 ${dev}p2 ${dev}p3 ${dev}p4 ${dev}p5 ${dev}p6
 		[ $? -ne 0 ] && exit 1
 	fi
+	return 0
 }
 
 function handle_opt_8()
@@ -535,12 +546,17 @@ function handle_opt_8()
 	write_rootfs -linux
 	umount /mnt/hd
 
+	local bolt_flashpart="flash0.kernel"
+	if [ "$flash_type" != "eMMC" ]; then
+		bolt_flashpart="emmcflash0.kernel"
+	fi
+
 	echo ""
 	echo "Finished writing kernel and rootfs to eMMC."
 	echo ""
 	echo "Sample boot command line:"
 	echo ""
-	echo "  boot flash0.kernel: 'root=$rootfs_part rootwait rw'"
+	echo "  boot $bolt_flashpart: 'root=$rootfs_part rootwait rw'"
 	echo ""
 	echo "To mount the filesystem now:"
 	echo ""
@@ -693,7 +709,10 @@ if ! find_thumbdrive; then
 	suf7="(not available)"
 fi
 
-if ! find_mmcblk_dev; then
+if find_mmcblk_dev; then
+	# only set flash_type to eMMC if nothing else is already set
+	flash_type=${flash_type:-eMMC}
+else
 	suf8="(not available)"
 fi
 

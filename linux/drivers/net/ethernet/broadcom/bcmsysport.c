@@ -285,9 +285,9 @@ static const struct bcm_sysport_stats bcm_sysport_gstrings_stats[] = {
 	/* RBUF misc statistics */
 	STAT_RBUF("rbuf_ovflow_cnt", mib.rbuf_ovflow_cnt, RBUF_OVFL_DISC_CNTR),
 	STAT_RBUF("rbuf_err_cnt", mib.rbuf_err_cnt, RBUF_ERR_PKT_CNTR),
-	STAT_MIB_RX("alloc_rx_buff_failed", mib.alloc_rx_buff_failed),
-	STAT_MIB_RX("rx_dma_failed", mib.rx_dma_failed),
-	STAT_MIB_TX("tx_dma_failed", mib.tx_dma_failed),
+	STAT_MIB_SOFT("alloc_rx_buff_failed", mib.alloc_rx_buff_failed),
+	STAT_MIB_SOFT("rx_dma_failed", mib.rx_dma_failed),
+	STAT_MIB_SOFT("tx_dma_failed", mib.tx_dma_failed),
 };
 
 #define BCM_SYSPORT_STATS_LEN	ARRAY_SIZE(bcm_sysport_gstrings_stats)
@@ -356,6 +356,7 @@ static void bcm_sysport_update_mib_counters(struct bcm_sysport_priv *priv)
 		s = &bcm_sysport_gstrings_stats[i];
 		switch (s->type) {
 		case BCM_SYSPORT_STAT_NETDEV:
+		case BCM_SYSPORT_STAT_SOFT:
 			continue;
 		case BCM_SYSPORT_STAT_MIB_RX:
 		case BCM_SYSPORT_STAT_MIB_TX:
@@ -467,6 +468,67 @@ static int bcm_sysport_set_wol(struct net_device *dev,
 	return 0;
 }
 
+static int bcm_sysport_get_coalesce(struct net_device *dev,
+				    struct ethtool_coalesce *ec)
+{
+	struct bcm_sysport_priv *priv = netdev_priv(dev);
+	u32 reg;
+
+	reg = tdma_readl(priv, TDMA_DESC_RING_INTR_CONTROL(0));
+
+	ec->tx_coalesce_usecs = (reg >> RING_TIMEOUT_SHIFT) * 8192 / 1000;
+	ec->tx_max_coalesced_frames = reg & RING_INTR_THRESH_MASK;
+
+	reg = rdma_readl(priv, RDMA_MBDONE_INTR);
+
+	ec->rx_coalesce_usecs = (reg >> RDMA_TIMEOUT_SHIFT) * 8192 / 1000;
+	ec->rx_max_coalesced_frames = reg & RDMA_INTR_THRESH_MASK;
+
+	return 0;
+}
+
+static int bcm_sysport_set_coalesce(struct net_device *dev,
+				    struct ethtool_coalesce *ec)
+{
+	struct bcm_sysport_priv *priv = netdev_priv(dev);
+	unsigned int i;
+	u32 reg;
+
+	/* Base system clock is 125Mhz, DMA timeout is this reference clock
+	 * divided by 1024, which yield roughly 8.192 us, our maximum value has
+	 * to fit in the RING_TIMEOUT_MASK (16 bits).
+	 */
+	if (ec->tx_max_coalesced_frames > RING_INTR_THRESH_MASK ||
+	    ec->tx_coalesce_usecs > (RING_TIMEOUT_MASK * 8) + 1 ||
+	    ec->rx_max_coalesced_frames > RDMA_INTR_THRESH_MASK ||
+	    ec->rx_coalesce_usecs > (RDMA_TIMEOUT_MASK * 8) + 1)
+		return -EINVAL;
+
+	if ((ec->tx_coalesce_usecs == 0 && ec->tx_max_coalesced_frames == 0) ||
+	    (ec->rx_coalesce_usecs == 0 && ec->rx_max_coalesced_frames == 0))
+		return -EINVAL;
+
+	for (i = 0; i < dev->num_tx_queues; i++) {
+		reg = tdma_readl(priv, TDMA_DESC_RING_INTR_CONTROL(i));
+		reg &= ~(RING_INTR_THRESH_MASK |
+			 RING_TIMEOUT_MASK << RING_TIMEOUT_SHIFT);
+		reg |= ec->tx_max_coalesced_frames;
+		reg |= DIV_ROUND_UP(ec->tx_coalesce_usecs * 1000, 8192) <<
+			 RING_TIMEOUT_SHIFT;
+		tdma_writel(priv, reg, TDMA_DESC_RING_INTR_CONTROL(i));
+	}
+
+	reg = rdma_readl(priv, RDMA_MBDONE_INTR);
+	reg &= ~(RDMA_INTR_THRESH_MASK |
+		 RDMA_TIMEOUT_MASK << RDMA_TIMEOUT_SHIFT);
+	reg |= ec->rx_max_coalesced_frames;
+	reg |= DIV_ROUND_UP(ec->rx_coalesce_usecs * 1000, 8192) <<
+			    RDMA_TIMEOUT_SHIFT;
+	rdma_writel(priv, reg, RDMA_MBDONE_INTR);
+
+	return 0;
+}
+
 static void bcm_sysport_free_cb(struct bcm_sysport_cb *cb)
 {
 	dev_kfree_skb_any(cb->skb);
@@ -499,12 +561,7 @@ static int bcm_sysport_rx_refill(struct bcm_sysport_priv *priv,
 	}
 
 	dma_unmap_addr_set(cb, dma_addr, mapping);
-	dma_desc_set_addr(priv, priv->rx_bd_assign_ptr, mapping);
-
-	priv->rx_bd_assign_index++;
-	priv->rx_bd_assign_index &= (priv->num_rx_bds - 1);
-	priv->rx_bd_assign_ptr = priv->rx_bds +
-		(priv->rx_bd_assign_index * DESC_SIZE);
+	dma_desc_set_addr(priv, cb->bd_addr, mapping);
 
 	netif_dbg(priv, rx_status, ndev, "RX refill\n");
 
@@ -518,7 +575,7 @@ static int bcm_sysport_alloc_rx_bufs(struct bcm_sysport_priv *priv)
 	unsigned int i;
 
 	for (i = 0; i < priv->num_rx_bds; i++) {
-		cb = &priv->rx_cbs[priv->rx_bd_assign_index];
+		cb = &priv->rx_cbs[i];
 		if (cb->skb)
 			continue;
 
@@ -594,6 +651,14 @@ static unsigned int bcm_sysport_desc_rx(struct bcm_sysport_priv *priv,
 			"p_ind=%d, c_ind=%d, rd_ptr=%d, len=%d, flag=0x%04x\n",
 			p_index, priv->rx_c_index, priv->rx_read_ptr,
 			len, status);
+
+		if (unlikely(len > RX_BUF_LENGTH)) {
+			netif_err(priv, rx_status, ndev, "oversized packet\n");
+			ndev->stats.rx_over_errors++;
+			ndev->stats.rx_errors++;
+			dev_kfree_skb_any(skb);
+			goto refill;
+		}
 
 		if (unlikely(!(status & DESC_EOP) || !(status & DESC_SOP))) {
 			netif_err(priv, rx_status, ndev, "fragmented packet!\n");
@@ -1249,14 +1314,14 @@ static inline int tdma_enable_set(struct bcm_sysport_priv *priv,
 
 static int bcm_sysport_init_rx_ring(struct bcm_sysport_priv *priv)
 {
+	struct bcm_sysport_cb *cb;
 	u32 reg;
 	int ret;
+	int i;
 
 	/* Initialize SW view of the RX ring */
 	priv->num_rx_bds = NUM_RX_DESC;
 	priv->rx_bds = priv->base + SYS_PORT_RDMA_OFFSET;
-	priv->rx_bd_assign_ptr = priv->rx_bds;
-	priv->rx_bd_assign_index = 0;
 	priv->rx_c_index = 0;
 	priv->rx_read_ptr = 0;
 	priv->rx_cbs = kzalloc(priv->num_rx_bds *
@@ -1264,6 +1329,11 @@ static int bcm_sysport_init_rx_ring(struct bcm_sysport_priv *priv)
 	if (!priv->rx_cbs) {
 		netif_err(priv, hw, priv->netdev, "CB allocation failed\n");
 		return -ENOMEM;
+	}
+
+	for (i = 0; i < priv->num_rx_bds; i++) {
+		cb = priv->rx_cbs + i;
+		cb->bd_addr = priv->rx_bds + i * DESC_SIZE;
 	}
 
 	ret = bcm_sysport_alloc_rx_bufs(priv);
@@ -1468,8 +1538,8 @@ static int bcm_sysport_open(struct net_device *dev)
 	/* Read CRC forward */
 	priv->crc_fwd = !!(umac_readl(priv, UMAC_CMD) & CMD_CRC_FWD);
 
-	priv->phydev = of_phy_connect_fixed_link(dev, bcm_sysport_adj_link,
-						priv->phy_interface);
+	priv->phydev = of_phy_connect(dev, priv->phy_dn, bcm_sysport_adj_link,
+					0, priv->phy_interface);
 	if (!priv->phydev) {
 		netdev_err(dev, "could not attach to PHY\n");
 		ret = -ENODEV;
@@ -1628,6 +1698,8 @@ static struct ethtool_ops bcm_sysport_ethtool_ops = {
 	.get_sset_count		= bcm_sysport_get_sset_count,
 	.get_wol		= bcm_sysport_get_wol,
 	.set_wol		= bcm_sysport_set_wol,
+	.get_coalesce		= bcm_sysport_get_coalesce,
+	.set_coalesce		= bcm_sysport_set_coalesce,
 };
 
 static const struct net_device_ops bcm_sysport_netdev_ops = {
@@ -1691,6 +1763,19 @@ static int bcm_sysport_probe(struct platform_device *pdev)
 	/* Default to GMII interface mode */
 	if (priv->phy_interface < 0)
 		priv->phy_interface = PHY_INTERFACE_MODE_GMII;
+
+	/* In the case of a fixed PHY, the DT node associated
+	 * to the PHY is the Ethernet MAC DT node.
+	 */
+	if (of_phy_is_fixed_link(dn)) {
+		ret = of_phy_register_fixed_link(dn);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to register fixed PHY\n");
+			goto err;
+		}
+
+		priv->phy_dn = dn;
+	}
 
 	/* Initialize netdevice members */
 	macaddr = of_get_mac_address(dn);

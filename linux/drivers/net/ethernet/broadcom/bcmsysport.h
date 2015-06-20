@@ -302,7 +302,7 @@ struct rsb {
 #define RDMA_END_ADDR_LO		0x102c
 
 #define RDMA_MBDONE_INTR		0x1030
-#define  RDMA_INTR_THRESH_MASK		0xff
+#define  RDMA_INTR_THRESH_MASK		0x1ff
 #define  RDMA_TIMEOUT_SHIFT		16
 #define  RDMA_TIMEOUT_MASK		0xffff
 
@@ -580,6 +580,7 @@ enum bcm_sysport_stat_type {
 	BCM_SYSPORT_STAT_RUNT,
 	BCM_SYSPORT_STAT_RXCHK,
 	BCM_SYSPORT_STAT_RBUF,
+	BCM_SYSPORT_STAT_SOFT,
 };
 
 /* Macros to help define ethtool statistics */
@@ -600,6 +601,7 @@ enum bcm_sysport_stat_type {
 #define STAT_MIB_RX(str, m) STAT_MIB(str, m, BCM_SYSPORT_STAT_MIB_RX)
 #define STAT_MIB_TX(str, m) STAT_MIB(str, m, BCM_SYSPORT_STAT_MIB_TX)
 #define STAT_RUNT(str, m) STAT_MIB(str, m, BCM_SYSPORT_STAT_RUNT)
+#define STAT_MIB_SOFT(str, m) STAT_MIB(str, m, BCM_SYSPORT_STAT_SOFT)
 
 #define STAT_RXCHK(str, m, ofs) { \
 	.stat_string = str, \
@@ -668,14 +670,13 @@ struct bcm_sysport_priv {
 
 	/* Receive queue */
 	void __iomem		*rx_bds;
-	void __iomem		*rx_bd_assign_ptr;
-	unsigned int		rx_bd_assign_index;
 	struct bcm_sysport_cb	*rx_cbs;
 	unsigned int		num_rx_bds;
 	unsigned int		rx_read_ptr;
 	unsigned int		rx_c_index;
 
 	/* PHY device */
+	struct device_node	*phy_dn;
 	struct phy_device	*phydev;
 	phy_interface_t		phy_interface;
 	int			old_pause;

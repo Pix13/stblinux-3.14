@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/printk.h>
 #if defined(CONFIG_BRCMSTB)
+#include <linux/brcmstb/bmem.h>
 #include <linux/brcmstb/brcmstb.h>
 #include <linux/brcmstb/cma_driver.h>
 #endif
@@ -43,8 +44,6 @@
 #include <asm/mach/map.h>
 #include <asm/mach/time.h>
 #include <asm/setup.h>
-
-#include "brcmstb.h"
 
 /***********************************************************************
  * STB CPU (main application processor)
@@ -84,69 +83,10 @@ static void __init brcmstb_map_io(void)
 
 static void __init brcmstb_reserve(void)
 {
+	brcmstb_memory_reserve();
 	cma_reserve();
+	bmem_reserve();
 }
-
-#ifdef CONFIG_FIXED_PHY
-static int of_add_one_fixed_phy(struct device_node *np)
-{
-	struct fixed_phy_status status = {};
- 	u32 *fixed_link;
-	int ret;
-
-	fixed_link  = (u32 *)of_get_property(np, "fixed-link", NULL);
-	if (!fixed_link)
-		return 1;
-
-	status.link = 1;
-	status.duplex = be32_to_cpu(fixed_link[1]);
-	/* Force full-duplex settings here, since BOLT v0.86 would set MoCA
-	 * links to half-duplex, and that might cause packet losses since the
-	 * link between GENET or SWITCH and MoCA's ECL is full-duplex.
-	 *
-	 * BOLT does not support configuring the duplex type, so we can safely
-	 * override this to DUPLEX_FULL.
-	 */
-	status.duplex = DUPLEX_FULL;
-	status.speed = be32_to_cpu(fixed_link[2]);
-	status.pause = be32_to_cpu(fixed_link[3]);
-	status.asym_pause = be32_to_cpu(fixed_link[4]);
-
-	ret = fixed_phy_add(PHY_POLL, be32_to_cpu(fixed_link[0]), &status);
-	if (ret)
-		of_node_put(np);
-
-	return ret;
-}
-
-static int __init of_add_fixed_phys(void)
-{
-	struct device_node *np, *child, *port;
-
-	for_each_compatible_node(np, NULL, "brcm,bcm7445-switch-v4.0") {
-		for_each_child_of_node(np, child) {
-			for_each_child_of_node(child, port) {
-				if (of_add_one_fixed_phy(port))
-					continue;
-			}
-		}
-	}
-
-	/* SYSTEMPORT Ethernet MAC also uses the 'fixed-link' property */
-	for_each_compatible_node(np, NULL, "brcm,systemport-v1.00")
-		of_add_one_fixed_phy(np);
-
-	/* GENET uses the 'fixed-link' property */
-	for_each_compatible_node(np, NULL, "brcm,genet-v4")
-		of_add_one_fixed_phy(np);
-
-	return 0;
-}
-#else
-static inline void of_add_fixed_phys(void)
-{
-}
-#endif /* CONFIG_FIXED_PHY */
 
 #define CPU_CREDIT_REG_OFFSET 0x184
 #define  CPU_CREDIT_REG_MCPx_WR_PAIRING_EN_MASK 0x70000000
@@ -236,7 +176,6 @@ static void __init brcmstb_init_machine(void)
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 	cma_register();
-	of_add_fixed_phys();
 	platform_device_register_full(&devinfo);
 #ifdef CONFIG_PM_SLEEP
 	register_syscore_ops(&brcmstb_cpu_credit_syscore_ops);

@@ -82,7 +82,7 @@ static int unimac_mdio_read(struct mii_bus *bus, int phy_id, int reg)
 		return -ETIMEDOUT;
 
 	cmd = __raw_readl(priv->base + MDIO_CMD);
-	if (cmd & MDIO_READ_FAIL)
+	if (!(bus->phy_ignore_ta_mask & 1 << phy_id) && (cmd & MDIO_READ_FAIL))
 		return -EIO;
 
 	return cmd & 0xffff;

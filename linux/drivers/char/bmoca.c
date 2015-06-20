@@ -2243,21 +2243,21 @@ static int moca_parse_dt_node(struct moca_priv_data *priv)
 	/* mandatory entries */
 
 	/* get the common clocks from bmoca node */
-	priv->clk = of_clk_get_by_name(of_node, "sw_moca");
+	priv->clk = devm_clk_get(&pdev->dev, "sw_moca");
 	if (IS_ERR(priv->clk)) {
 		dev_err(&pdev->dev,
 			"can't find sw_moca clk\n");
 		priv->clk = NULL;
 	}
 
-	priv->cpu_clk = of_clk_get_by_name(of_node, "sw_moca_cpu");
+	priv->cpu_clk = devm_clk_get(&pdev->dev, "sw_moca_cpu");
 	if (IS_ERR(priv->cpu_clk)) {
 		dev_err(&pdev->dev,
 			"can't find moca_cpu clk\n");
 		priv->cpu_clk = NULL;
 	}
 
-	priv->phy_clk = of_clk_get_by_name(of_node, "sw_moca_phy");
+	priv->phy_clk = devm_clk_get(&pdev->dev, "sw_moca_phy");
 	if (IS_ERR(priv->phy_clk)) {
 		dev_err(&pdev->dev,
 			"can't find moca_phy clk\n");
@@ -2569,7 +2569,14 @@ static int moca_unregister_pm_notifier(struct moca_priv_data *priv)
 {
 	return unregister_pm_notifier(&priv->pm_notifier);
 }
-#endif
+#else
+
+static inline void moca_set_pm_state(struct moca_priv_data *priv,
+				     enum moca_pm_states state)
+{
+}
+
+#endif /* CONFIG_PM */
 
 static irqreturn_t moca_wol_isr(int irq, void *dev_id)
 {
@@ -2604,11 +2611,11 @@ static irqreturn_t moca_wol_isr(int irq, void *dev_id)
 static int moca_probe(struct platform_device *pdev)
 {
 	struct moca_priv_data *priv;
-	struct resource *mres, *ires;
+	struct resource *mres;
 	int minor, err;
 	struct moca_platform_data *pd;
 
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		dev_err(&pdev->dev, "out of memory\n");
 		return -ENOMEM;
@@ -2620,7 +2627,7 @@ static int moca_probe(struct platform_device *pdev)
 #if defined(CONFIG_OF)
 	err = moca_parse_dt_node(priv);
 	if (err)
-		goto bad;
+		return err;
 #endif
 	pd = pdev->dev.platform_data;
 	priv->hw_rev = pd->hw_rev;
@@ -2639,8 +2646,7 @@ static int moca_probe(struct platform_device *pdev)
 	else {
 		dev_err(&pdev->dev, "unsupported MoCA HWREV: %x\n",
 			pd->hw_rev);
-		err = -EINVAL;
-		goto bad;
+		return -EINVAL;
 	}
 
 	init_waitqueue_head(&priv->host_msg_wq);
@@ -2671,27 +2677,27 @@ static int moca_probe(struct platform_device *pdev)
 
 	if (priv->minor == -1) {
 		dev_err(&pdev->dev, "can't allocate minor device\n");
-		err = -EIO;
-		goto bad;
+		return -EIO;
 	}
 
 	mres = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	ires = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!mres || !ires) {
-		dev_err(&pdev->dev, "can't get resources\n");
-		err = -EIO;
-		goto bad;
+	priv->base = devm_ioremap_resource(&pdev->dev, mres);
+	if (IS_ERR(priv->base))
+		return PTR_ERR(priv->base);
+
+	priv->irq = platform_get_irq(pdev, 0);
+	if (priv->irq < 0) {
+		dev_err(&pdev->dev, "can't get IRQ\n");
+		return -EIO;
 	}
-	priv->base = ioremap(mres->start, mres->end - mres->start + 1);
-	priv->irq = ires->start;
 
 	priv->wol_irq = platform_get_irq(pdev, 1);
 	if (priv->wol_irq < 0)
 		dev_err(&pdev->dev, "can't find IRQs\n");
 
 	if (pd->bcm3450_i2c_base)
-		priv->i2c_base = ioremap(pd->bcm3450_i2c_base,
-			sizeof(struct bsc_regs));
+		priv->i2c_base = devm_ioremap(&pdev->dev, pd->bcm3450_i2c_base,
+					      sizeof(struct bsc_regs));
 
 	/* leave core in reset until we get an ioctl */
 	moca_hw_reset(priv);
@@ -2699,8 +2705,7 @@ static int moca_probe(struct platform_device *pdev)
 	if (request_irq(priv->irq, moca_interrupt, 0, "moca",
 			priv) < 0) {
 		dev_err(&pdev->dev, "can't request interrupt\n");
-		err = -EIO;
-		goto bad2;
+		return -EIO;
 	}
 
 	/* Request the WOL interrupt line and advertise suspend if available */
@@ -2737,45 +2742,21 @@ static int moca_probe(struct platform_device *pdev)
 	if (err) {
 		dev_err(&pdev->dev, "register_pm_notifier failed err %d\n",
 			err);
-		goto bad2;
+		return err;
 	}
 #endif
 
 	return 0;
-
-bad2:
-	if (priv->base)
-		iounmap(priv->base);
-	if (priv->i2c_base)
-		iounmap(priv->i2c_base);
-bad:
-	kfree(priv);
-	return err;
 }
 
 static int moca_remove(struct platform_device *pdev)
 {
 	struct moca_priv_data *priv = dev_get_drvdata(&pdev->dev);
-	struct clk *clk = priv->clk;
-	struct clk *phy_clk = priv->phy_clk;
-	struct clk *cpu_clk = priv->cpu_clk;
-	struct clk *wol_clk = priv->wol_clk;
 	int err = 0;
 
 	if (priv->dev)
 		device_destroy(moca_class, MKDEV(MOCA_MAJOR, priv->minor));
 	minor_tbl[priv->minor] = NULL;
-
-	free_irq(priv->irq, priv);
-	if (priv->i2c_base)
-		iounmap(priv->i2c_base);
-	if (priv->base)
-		iounmap(priv->base);
-
-	clk_put(cpu_clk);
-	clk_put(phy_clk);
-	clk_put(clk);
-	clk_put(wol_clk);
 
 #ifdef CONFIG_PM
 	err = moca_unregister_pm_notifier(priv);
@@ -2784,12 +2765,11 @@ static int moca_remove(struct platform_device *pdev)
 			err);
 	}
 #endif
-	kfree(priv);
 
 	return err;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 static int moca_suspend(struct device *dev)
 {
 	int minor;
@@ -2866,13 +2846,9 @@ static int moca_resume(struct device *dev)
 	}
 	return 0;
 }
-
-static const struct dev_pm_ops moca_pm_ops = {
-	.suspend		= moca_suspend,
-	.resume			= moca_resume,
-};
-
 #endif
+
+static SIMPLE_DEV_PM_OPS(moca_pm_ops, moca_suspend, moca_resume);
 
 static struct platform_driver moca_plat_drv = {
 	.probe =		moca_probe,
@@ -2880,12 +2856,8 @@ static struct platform_driver moca_plat_drv = {
 	.driver = {
 		.name =		"bmoca",
 		.owner =	THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm =		&moca_pm_ops,
-#endif
-#ifdef CONFIG_OF
 		.of_match_table = of_match_ptr(bmoca_instance_match),
-#endif
 	},
 };
 

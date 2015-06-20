@@ -155,8 +155,8 @@ static int bcm7xxx_28nm_d0_afe_config_init(struct phy_device *phydev)
 	/* AFE_RX_LP_COUNTER, set RX bandwidth to maximum */
 	phy_write_misc(phydev, 0x0038, 0x0003, 0x7fc0);
 
-	/* AFE_TX_CONFIG, set 1000BT Cfeed=110 for all ports */
-	phy_write_misc(phydev, 0x0039, 0x0000, 0x0061);
+	/* AFE_TX_CONFIG, set 100BT Cfeed=011 to improve rise/fall time */
+	phy_write_misc(phydev, 0x0039, 0x0000, 0x0431);
 
 	/* AFE_VDCA_ICTRL_0, set Iq=1101 instead of 0111 for AB symmetry */
 	phy_write_misc(phydev, 0x0039, 0x0001, 0xa7da);
@@ -185,6 +185,9 @@ static int bcm7xxx_28nm_e0_plus_afe_config_init(struct phy_device *phydev)
 {
 	/* AFE_RXCONFIG_1, provide more margin for INL/DNL measurement on ATE */
 	phy_write_misc(phydev, 0x0038, 0x0001, 0x9b2f);
+
+	/* AFE_TX_CONFIG, set 100BT Cfeed=011 to improve rise/fall time */
+	phy_write_misc(phydev, 0x0039, 0x0000, 0x0431);
 
 	/* AFE_VDCA_ICTRL_0, set Iq=1101 instead of 0111 for AB symmetry */
 	phy_write_misc(phydev, 0x0039, 0x0001, 0xa7da);

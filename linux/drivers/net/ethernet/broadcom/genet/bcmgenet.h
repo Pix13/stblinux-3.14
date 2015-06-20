@@ -30,7 +30,19 @@
 #include <linux/mii.h>
 #include <linux/if_vlan.h>
 #include <linux/phy.h>
-#include <linux/brcmstb/brcmstb.h>
+
+/* BCMGENET device tree properties */
+#define BRCM_PHY_ID_AUTO	0x100
+#define BRCM_PHY_ID_NONE	0x101
+
+#define BRCM_PHY_TYPE_INT	1
+#define BRCM_PHY_TYPE_EXT_MII	2
+#define BRCM_PHY_TYPE_EXT_RVMII	3
+#define BRCM_PHY_TYPE_EXT_RGMII	4
+#define BRCM_PHY_TYPE_EXT_RGMII_IBS	5
+#define BRCM_PHY_TYPE_EXT_RGMII_NO_ID	6
+#define BRCM_PHY_TYPE_MOCA	7
+
 
 /* total number of Buffer Descriptors, same for Rx/Tx */
 #define TOTAL_DESC				256

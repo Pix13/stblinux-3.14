@@ -49,6 +49,7 @@ config ARCH_BRCMSTB
 	select GENERIC_IRQ_CHIP
 	select BRCMSTB_GISB_ARB
 	select SOC_BRCMSTB
+	select ARCH_WANT_OPTIONAL_GPIOLIB
 	help
 	  Say Y if you intend to run the kernel on a Broadcom ARM-based STB
 	  chipset.
@@ -96,17 +97,6 @@ config BCM7250B0
 config BCM7364A0
 	bool "7364 Ax"
 	select BCM7364
-	select BRCM_GENET_V4
-	select BRCM_HAS_NAND_MAJOR_7
-	select BRCM_HAS_NAND_MINOR_1
-	select BRCM_HAS_BSPI_V4
-	select BRCM_HAS_MOCA_20_GEN23
-	select BRCM_MSPI_64B_WORDS
-	select BRCMSTB_XPT_HASH if PM
-
-config BCM7366B0
-	bool "7366 Bx"
-	select BCM7366
 	select BRCM_GENET_V4
 	select BRCM_HAS_NAND_MAJOR_7
 	select BRCM_HAS_NAND_MINOR_1

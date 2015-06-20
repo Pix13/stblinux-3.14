@@ -18,4 +18,3 @@ distclean: clean
 
 romfs:
 	$(ROMFSINST) -e CONFIG_USER_CMATOOL cmatool /bin/cmatool
-	$(ROMFSINST) -e CONFIG_USER_CMATOOL cmatest-placeholder.sh /bin/cmatest

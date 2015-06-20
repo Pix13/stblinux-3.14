@@ -50,6 +50,7 @@
 #define	OPCODE_SE		0xd8	/* Sector erase (usually 64KiB) */
 #define	OPCODE_RDID		0x9f	/* Read JEDEC ID */
 #define	OPCODE_RDCR             0x35    /* Read configuration register */
+#define OPCODE_RDFSR		0x70	/* Read flag status register */
 
 /* 4-byte address opcodes - used on Spansion and some Macronix flashes. */
 #define	OPCODE_NORM_READ_4B	0x13	/* Read data bytes (low frequency) */
@@ -81,6 +82,9 @@
 
 #define SR_QUAD_EN_MX           0x40    /* Macronix Quad I/O */
 
+/* Flag Status Register bits */
+#define FSR_READY		0x80
+
 /* Configuration Register bits. */
 #define CR_QUAD_EN_SPAN		0x2     /* Spansion Quad I/O */
 
@@ -98,6 +102,10 @@ enum read_type {
 	M25P80_QUAD,
 };
 
+enum m25p_option_flags {
+	M25P_F_USE_FSR		= BIT(0),
+};
+
 struct m25p {
 	struct spi_device	*spi;
 	struct mutex		lock;
@@ -109,6 +117,8 @@ struct m25p {
 	u8			program_opcode;
 	u8			*command;
 	enum read_type		flash_read;
+
+	u32			flags;
 };
 
 static inline struct m25p *mtd_to_m25p(struct mtd_info *mtd)
@@ -139,6 +149,26 @@ static int read_sr(struct m25p *flash)
 		dev_err(&flash->spi->dev, "error %d reading SR\n",
 				(int) retval);
 		return retval;
+	}
+
+	return val;
+}
+
+/*
+ * Read the flag status register, returning its value in the location
+ * Return the status register value.
+ * Returns negative if error occurred.
+ */
+static int read_fsr(struct m25p *flash)
+{
+	ssize_t ret;
+	u8 code = OPCODE_RDFSR;
+	u8 val;
+
+	ret = spi_write_then_read(flash->spi, &code, 1, &val, 1);
+	if (ret < 0) {
+		dev_err(&flash->spi->dev, "error %d reading FSR\n", (int)ret);
+		return ret;
 	}
 
 	return val;
@@ -233,7 +263,7 @@ static inline int set_4byte(struct m25p *flash, u32 jedec_id, int enable)
  * Service routine to read status register until ready, or timeout occurs.
  * Returns non-zero if error.
  */
-static int wait_till_ready(struct m25p *flash)
+static int wait_till_sr_ready(struct m25p *flash)
 {
 	unsigned long deadline;
 	int sr;
@@ -251,6 +281,40 @@ static int wait_till_ready(struct m25p *flash)
 	} while (!time_after_eq(jiffies, deadline));
 
 	return 1;
+}
+
+static int wait_till_fsr_ready(struct m25p *flash)
+{
+	unsigned long deadline;
+	int sr;
+	int fsr;
+
+	deadline = jiffies + MAX_READY_WAIT_JIFFIES;
+
+	do {
+		cond_resched();
+
+		sr = read_sr(flash);
+		if (sr < 0) {
+			break;
+		} else if (!(sr & SR_WIP)) {
+			fsr = read_fsr(flash);
+			if (fsr < 0)
+				break;
+			if (fsr & FSR_READY)
+				return 0;
+		}
+	} while (!time_after_eq(jiffies, deadline));
+
+	return -ETIMEDOUT;
+}
+
+static int wait_till_ready(struct m25p *flash)
+{
+	if (flash->flags & M25P_F_USE_FSR)
+		return wait_till_fsr_ready(flash);
+	else
+		return wait_till_sr_ready(flash);
 }
 
 /*
@@ -856,6 +920,7 @@ struct flash_info {
 #define	M25P_NO_FR	0x08		/* Can't do fastread */
 #define	SECT_4K_PMC	0x10		/* OPCODE_BE_4K_PMC works uniformly */
 #define	M25P80_QUAD_READ	0x20    /* Flash supports Quad Read */
+#define USE_FSR		0x80		/* use flag status register */
 };
 
 #define INFO(_jedec_id, _ext_id, _sector_size, _n_sectors, _flags)	\
@@ -941,6 +1006,8 @@ static const struct spi_device_id m25p_ids[] = {
 	{ "n25q128a13",  INFO(0x20ba18, 0, 64 * 1024,  256, 0) },
 	{ "n25q256a",    INFO(0x20ba19, 0, 64 * 1024,  512, SECT_4K) },
 	{ "n25q512a",    INFO(0x20bb20, 0, 64 * 1024, 1024, SECT_4K) },
+	{ "n25q512ax3",  INFO(0x20ba20, 0, 64 * 1024, 1024, USE_FSR) },
+	{ "n25q00",      INFO(0x20ba21, 0, 64 * 1024, 2048, USE_FSR) },
 
 	/* PMC */
 	{ "pm25lv512",   INFO(0,        0, 32 * 1024,    2, SECT_4K_PMC) },
@@ -1190,6 +1257,9 @@ static int m25p_probe(struct spi_device *spi)
 		flash->mtd._write = sst_write;
 	else
 		flash->mtd._write = m25p80_write;
+
+	if ((info->flags & USE_FSR))
+		flash->flags |= M25P_F_USE_FSR;
 
 	/* prefer "small sector" erase if possible */
 	if (info->flags & SECT_4K) {

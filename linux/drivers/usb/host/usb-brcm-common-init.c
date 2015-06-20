@@ -1,15 +1,29 @@
 /*
- * Copyright (C) 2014 Broadcom Corporation
+ * Copyright (C) 2014-2015 Broadcom Corporation
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 /*
@@ -22,12 +36,10 @@
 #include "common.h"
 #include "bchp_common.h"
 #include "bchp_usb_ctrl.h"
+#include "bchp_sun_top_ctrl.h"
 #include "timer.h"
 #define msleep bolt_msleep
 #define udelay bolt_usleep
-#if defined(BCHP_USB1_CTRL_REG_START)
-#include "bchp_usb1_ctrl.h"
-#endif
 #else
 #include <linux/delay.h>
 #include <linux/brcmstb/brcmstb.h>
@@ -35,23 +47,15 @@
 
 #include "usb-brcm-common-init.h"
 
-#if defined(BCHP_USB_CTRL_REG_START)
 #define USB_CTRL_REG(base, reg)	(base + BCHP_USB_CTRL_##reg - \
 		BCHP_USB_CTRL_SETUP)
 #define USB_CTRL_MASK(reg, field) (BCHP_USB_CTRL_##reg##_##field##_MASK)
-#define USB_CTRL_SHIFT(reg, field) (BCHP_USB_CTRL_##reg##_##field##_SHIFT)
-#elif defined(BCHP_USB1_CTRL_REG_START)
-#define USB_CTRL_REG(base, reg)	(base + BCHP_USB1_CTRL_##reg - \
-		BCHP_USB1_CTRL_SETUP)
-#define USB_CTRL_MASK(reg, field) (BCHP_USB1_CTRL_##reg##_##field##_MASK)
-#define USB_CTRL_SHIFT(reg, field) (BCHP_USB1_CTRL_##reg##_##field##_SHIFT)
-#endif
-
 #define USB_CTRL_SET(base, reg, mask) DEV_SET(USB_CTRL_REG(base, reg),	\
 						USB_CTRL_MASK(reg, mask))
-
 #define USB_CTRL_UNSET(base, reg, mask) DEV_UNSET(USB_CTRL_REG(base, reg),  \
 						USB_CTRL_MASK(reg, mask))
+#define USB_XHCI_EC_REG(base, reg) (base + BCHP_USB_XHCI_EC_##reg - \
+		BCHP_USB_XHCI_EC_REG_START)
 
 #define MDIO_USB2	0
 #define MDIO_USB3	(1 << 31)
@@ -106,30 +110,22 @@ static void usb_mdio_write(uintptr_t ctrl_base, uint32_t reg,
 }
 
 
-static void usb_phy_ldo_fix(uintptr_t usbctrl)
+static void usb_phy_ldo_fix(uintptr_t ctrl_base)
 {
-	USB_CTRL_UNSET(usbctrl, PLL_CTL, PLL_RESETB);
-	DEV_WR(USB_CTRL_REG(usbctrl, UTMI_CTL_1), 0);
-	DEV_WR(USB_CTRL_REG(usbctrl, PLL_LDO_CTL),
-		USB_CTRL_MASK(PLL_LDO_CTL, AFE_CORERDY_VDDC));
-#if defined(BCHP_USB_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK) || \
-	defined(BCHP_USB1_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK)
-	USB_CTRL_SET(usbctrl, PLL_CTL, PLL_IDDQ_PWRDN);
-	msleep(10);
-	USB_CTRL_UNSET(usbctrl, PLL_CTL, PLL_IDDQ_PWRDN);
-#else
-	USB_CTRL_SET(usbctrl, USB_PM, USB_PWRDN);
-	msleep(10);
-	USB_CTRL_UNSET(usbctrl, USB_PM, USB_PWRDN);
-#endif
-	USB_CTRL_SET(usbctrl, PLL_LDO_CTL, AFE_BG_PWRDWNB);
-	USB_CTRL_SET(usbctrl, PLL_LDO_CTL, AFE_LDO_PWRDWNB);
+	/* first disable FSM but also leave it that way */
+	/* to allow normal suspend/resume */
+	DEV_UNSET(USB_CTRL_REG(ctrl_base, UTMI_CTL_1),
+		USB_CTRL_MASK(UTMI_CTL_1, POWER_UP_FSM_EN_P1) |
+		USB_CTRL_MASK(UTMI_CTL_1, POWER_UP_FSM_EN));
+
+	/* reset USB 2.0 PLL */
+	USB_CTRL_UNSET(ctrl_base, PLL_CTL, PLL_RESETB);
 	msleep(1);
-	DEV_WR(USB_CTRL_REG(usbctrl, UTMI_CTL_1),
-		USB_CTRL_MASK(UTMI_CTL_1, UTMI_SOFT_RESETB) |
-		USB_CTRL_MASK(UTMI_CTL_1, UTMI_SOFT_RESETB_P1));
-	USB_CTRL_SET(usbctrl, PLL_CTL, PLL_RESETB);
+	USB_CTRL_SET(ctrl_base, PLL_CTL, PLL_RESETB);
+	msleep(10);
+
 }
+
 
 static void usb2_eye_fix(uintptr_t ctrl_base)
 {
@@ -153,37 +149,8 @@ static void usb3_ssc_enable(uintptr_t ctrl_base)
 
 	/* Enable USB 3.0 TX spread spectrum */
 	usb_mdio_write(ctrl_base, 0x1f, 0x8040, MDIO_USB3);
-	val = usb_mdio_read(ctrl_base, 0x01, MDIO_USB3) | 3;
+	val = usb_mdio_read(ctrl_base, 0x01, MDIO_USB3) | 0xf;
 	usb_mdio_write(ctrl_base, 0x01, val, MDIO_USB3);
-}
-
-
-void brcm_usb_common_ctrl_xhci_soft_reset(uintptr_t ctrl, int on_off)
-{
-#if defined(BCHP_USB_CTRL_USB_PM_xhc_soft_resetb_MASK) || \
-	defined(BCHP_USB1_CTRL_USB_PM_xhc_soft_resetb_MASK)
-	/* Assert reset */
-	if (on_off) {
-		DEV_UNSET(USB_CTRL_REG(ctrl, USB_PM),
-			USB_CTRL_MASK(USB_PM, xhc_soft_resetb));
-	}
-	/* De-assert reset */
-	else {
-		DEV_SET(USB_CTRL_REG(ctrl, USB_PM),
-			USB_CTRL_MASK(USB_PM, xhc_soft_resetb));
-	}
-#else
-	/* Assert reset */
-	if (on_off) {
-		DEV_UNSET(USB_CTRL_REG(ctrl, USB30_CTL1),
-			USB_CTRL_MASK(USB30_CTL1, xhc_soft_resetb));
-	}
-	/* De-assert reset */
-	else {
-		DEV_SET(USB_CTRL_REG(ctrl, USB30_CTL1),
-			USB_CTRL_MASK(USB30_CTL1, xhc_soft_resetb));
-	}
-#endif
 }
 
 
@@ -194,7 +161,7 @@ static void memc_fix(uintptr_t ctrl_base)
 	 * This is a workaround for HW7445-1869 where a DMA write ends up
 	 * doing a read pre-fetch after the end of the DMA buffer. This
 	 * causes a problem when the DMA buffer is at the end of physical
-	 * memory, causing the pre-fetch read to access non-existand memory,
+	 * memory, causing the pre-fetch read to access non-existent memory,
 	 * and the chip bondout has MEMC2 disabled. When the pre-fetch read
 	 * tries to use the disabled MEMC2, it hangs the bus. The workaround
 	 * is to disable MEMC2 access in the usb controller which avoids
@@ -215,68 +182,122 @@ static void memc_fix(uintptr_t ctrl_base)
 #endif
 }
 
-void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
+#if defined(CONFIG_BCM74371A0)
+#if defined(_BOLT_)
+#include "bchp_usb_xhci_ec.h"
+#endif
+static void usb3_otp_fix(uintptr_t ctrl_base, uintptr_t xhci_ec_base)
+{
+	uintptr_t val;
+
+	if (xhci_ec_base == 0)
+		return;
+	DEV_WR(USB_XHCI_EC_REG(xhci_ec_base, IRAADR), 0xa20c);
+	val = DEV_RD(USB_XHCI_EC_REG(xhci_ec_base, IRADAT));
+
+	/* set cfg_pick_ss_lock */
+	val |= (1 << 27);
+	DEV_WR(USB_XHCI_EC_REG(xhci_ec_base, IRADAT), val);
+
+	/* Reset USB 3.0 PHY for workaround to take effect */
+	USB_CTRL_UNSET(ctrl_base, USB30_CTL1, phy3_resetb);
+	USB_CTRL_SET(ctrl_base, USB30_CTL1, phy3_resetb);
+}
+#else
+static void usb3_otp_fix(uintptr_t ctrl_base, uintptr_t xhci_ec_regs)
+{
+}
+#endif
+
+
+static void xhci_soft_reset(uintptr_t ctrl, int on_off)
+{
+	/* Assert reset */
+	if (on_off) {
+#if defined(BCHP_USB_CTRL_USB_PM_xhc_soft_resetb_MASK)
+		USB_CTRL_UNSET(ctrl, USB_PM, xhc_soft_resetb);
+#else
+		USB_CTRL_UNSET(ctrl, USB30_CTL1, xhc_soft_resetb);
+#endif
+	}
+	/* De-assert reset */
+	else {
+#if defined(BCHP_USB_CTRL_USB_PM_xhc_soft_resetb_MASK)
+		USB_CTRL_SET(ctrl, USB_PM, xhc_soft_resetb);
+#else
+		USB_CTRL_SET(ctrl, USB30_CTL1, xhc_soft_resetb);
+#endif
+	}
+}
+
+
+void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 {
 	uint32_t reg;
+	uintptr_t ctrl = params->ctrl_regs;
 
+	xhci_soft_reset(ctrl, 1);
 #if defined(CONFIG_BCM7366)
 	/*
 	 * The PHY3_SOFT_RESETB bits default to the wrong state.
 	 */
-	DEV_SET(USB_CTRL_REG(ctrl, USB30_PCTL), 0x20002);
+	DEV_SET(USB_CTRL_REG(ctrl, USB30_PCTL),
+		USB_CTRL_MASK(USB30_PCTL, PHY3_SOFT_RESETB_P1) |
+		USB_CTRL_MASK(USB30_PCTL, PHY3_SOFT_RESETB));
+#endif
+#if defined(CONFIG_BCM7366C0)
+	/*
+	 * Don't enable this so the memory controller doesn't read
+	 * into memory holes. NOTE: This bit is low true  on 7366C0.
+	 */
+	DEV_SET(USB_CTRL_REG(ctrl, EBRIDGE),
+		USB_CTRL_MASK(EBRIDGE, ESTOP_SCB_REQ));
 #endif
 
-#if defined(BCHP_USB_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK) || \
-	defined(BCHP_USB1_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK)
 	/* Take USB out of power down */
-	DEV_UNSET(USB_CTRL_REG(ctrl, PLL_CTL),
-		USB_CTRL_MASK(PLL_CTL, PLL_IDDQ_PWRDN));
+#if defined(BCHP_USB_CTRL_PLL_CTL_PLL_IDDQ_PWRDN_MASK)
+	USB_CTRL_UNSET(ctrl, PLL_CTL, PLL_IDDQ_PWRDN);
 	/* 1 millisecond - for USB clocks to settle down */
 	msleep(1);
-#else
-	/* Take USB out of power down */
-	DEV_UNSET(USB_CTRL_REG(ctrl, USB_PM),
-		USB_CTRL_MASK(USB_PM, USB_PWRDN));
+#endif
+#if defined(BCHP_USB_CTRL_USB_PM_USB_PWRDN_MASK)
+	/* 3390a0 & 7439b0 so far. */
+	USB_CTRL_UNSET(ctrl, USB_PM, USB_PWRDN);
 	/* 1 millisecond - for USB clocks to settle down */
 	msleep(1);
 #endif
 
-#if defined(CONFIG_BCM7445D0)
-	DEV_UNSET(USB_CTRL_REG(ctrl, UTMI_CTL_1),
-		USB_CTRL_MASK(UTMI_CTL_1, POWER_UP_FSM_EN_P1) |
-		USB_CTRL_MASK(UTMI_CTL_1, POWER_UP_FSM_EN));
-#endif
-
-#if defined(BCHP_USB_CTRL_USB30_CTL1_usb3_ipp_MASK) || \
-	defined(BCHP_USB1_CTRL_USB30_CTL1_usb3_ipp_MASK)
+#if defined(BCHP_USB_CTRL_USB30_CTL1_usb3_ipp_MASK)
 	/* Starting with the 7445d0, there are no longer separate 3.0
 	 * versions of IOC and IPP.
 	 */
-	DEV_SET(USB_CTRL_REG(ctrl, USB30_CTL1),
-		USB_CTRL_MASK(USB30_CTL1, usb3_ipp) |
-		USB_CTRL_MASK(USB30_CTL1, usb3_ioc));
+	if (params->ioc)
+		USB_CTRL_SET(ctrl, USB30_CTL1, usb3_ioc);
+	if (params->ipp)
+		USB_CTRL_SET(ctrl, USB30_CTL1, usb3_ipp);
 #endif
 
-#if !defined(CONFIG_BCM74371A0) && \
-	!defined(CONFIG_BCM7364A0)
+#if !defined(CONFIG_BCM74371A0) && !defined(CONFIG_BCM7364)
 	/*
 	 * HW7439-637: 7439a0 and its derivatives do not have large enough
 	 * descriptor storage for this.
 	 */
-	DEV_SET(USB_CTRL_REG(ctrl, SETUP),
-		USB_CTRL_MASK(SETUP, ss_ehci64bit_en));
+	USB_CTRL_SET(ctrl, SETUP, ss_ehci64bit_en);
 #endif
-	/* Make sure it's low to insure a rising edge. */
-	DEV_UNSET(USB_CTRL_REG(ctrl, USB30_CTL1),
-		USB_CTRL_MASK(USB30_CTL1, phy3_pll_seq_start));
-	DEV_SET(USB_CTRL_REG(ctrl, USB30_CTL1),
-		USB_CTRL_MASK(USB30_CTL1, phy3_pll_seq_start));
-	DEV_SET(USB_CTRL_REG(ctrl, PLL_CTL),
-		USB_CTRL_MASK(PLL_CTL, PLL_SUSPEND_EN));
+
+	/*
+	 * Kick start USB3 PHY
+	 * Make sure it's low to insure a rising edge.
+	 */
+	USB_CTRL_UNSET(ctrl, USB30_CTL1, phy3_pll_seq_start);
+	USB_CTRL_SET(ctrl, USB30_CTL1, phy3_pll_seq_start);
+
+	/* Block auto PLL suspend by USB2 PHY */
+	USB_CTRL_SET(ctrl, PLL_CTL, PLL_SUSPEND_EN);
 
 	usb2_eye_fix(ctrl);
 	usb_phy_ldo_fix(ctrl);
-	if (xhci) {
+	if (params->has_xhci) {
 		usb3_pll_fix(ctrl);
 		usb3_ssc_enable(ctrl);
 	}
@@ -286,11 +307,16 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 	reg &= ~USB_CTRL_SETUP_CONDITIONAL_BITS;
 	reg |= ENDIAN_SETTINGS;
 
-#if defined(CONFIG_BCM7364A0)
-	/* Suppress overcurrent indication from USB30 ports */
-	reg |= BCHP_USB_CTRL_SETUP_OC3_DISABLE_MASK;
+#if defined(CONFIG_BCM7364)
+	if ((BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID) == 0x73640000))
+		/* Suppress overcurrent indication from USB30 ports for A0 */
+		reg |= USB_CTRL_MASK(SETUP, OC3_DISABLE);
 #endif
 
+#if defined(BCHP_USB_CTRL_SETUP_strap_ipp_sel_MASK)
+	/* override ipp strap pin (if it exits) */
+	reg &= ~(USB_CTRL_MASK(SETUP, strap_ipp_sel));
+#endif
 	/*
 	 * Make sure the the second and third memory controller
 	 * interfaces are enabled.
@@ -299,21 +325,16 @@ void brcm_usb_common_ctrl_init(uintptr_t ctrl, int ioc, int ipp, int xhci)
 		USB_CTRL_MASK(SETUP, scb2_en));
 
 	/* Override the default OC and PP polarity */
-	if (ioc)
+	if (params->ioc)
 		reg |= USB_CTRL_MASK(SETUP, IOC);
-	if (ipp)
+	if (params->ipp)
 		reg |= USB_CTRL_MASK(SETUP, IPP);
 	DEV_WR(USB_CTRL_REG(ctrl, SETUP), reg);
 
-	/* override lame bridge defaults */
-	reg = DEV_RD(USB_CTRL_REG(ctrl, OBRIDGE));
-	reg &= ~USB_CTRL_MASK(OBRIDGE, OBR_SEQ_EN);
-	DEV_WR(USB_CTRL_REG(ctrl, OBRIDGE), reg);
-	reg = DEV_RD(USB_CTRL_REG(ctrl, EBRIDGE));
-	reg &= ~USB_CTRL_MASK(EBRIDGE, EBR_SEQ_EN);
-	reg &= ~USB_CTRL_MASK(EBRIDGE, EBR_SCB_SIZE);
-	reg |= (0x08 << USB_CTRL_SHIFT(EBRIDGE, EBR_SCB_SIZE));
-	DEV_WR(USB_CTRL_REG(ctrl, EBRIDGE), reg);
 	memc_fix(ctrl);
+	if (params->has_xhci) {
+		xhci_soft_reset(ctrl, 0);
+		usb3_otp_fix(ctrl, params->xhci_ec_regs);
+	}
 }
 

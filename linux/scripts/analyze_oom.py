@@ -47,6 +47,7 @@ def main():
     min_kB = None
     free_cma_kB = None
     free_highmem_kB = None
+    min_highmem_kB = None
     free_highmem_cma_kB = None
     lowmem_reserve = None
 
@@ -83,6 +84,10 @@ def main():
             m = re.search("((?<=HighMem free:)\d+)kB", line)
             if (m):
                 free_highmem_kB = int(m.group(1))
+        if min_highmem_kB is None:
+            m = re.search("(?<=HighMem ).*min:(\d+)kB", line)
+            if (m):
+                min_highmem_kB = int(m.group(1))
         if free_highmem_cma_kB is None:
             m = re.search("(?<=HighMem free:).*((?<=free_cma:)\d+)kB", line)
             if (m):
@@ -97,7 +102,8 @@ def main():
         sys.exit(1)
 
     gfp_flag_names    = get_flag_names(d_gfp, gfp_mask)
-    has_cma           = free_cma_kB is not None
+    has_cma           = (free_cma_kB is not None) or \
+                        (free_highmem_cma_kB is not None)
     highmem           = '___GFP_HIGHMEM' in gfp_flag_names
     lowmem_reserve_kB = lowmem_reserve * PAGE_SIZE_kB
     # assume page group by mobility enabled (see include/linux/gfp.h)
@@ -131,7 +137,13 @@ def main():
 
     print("Total free: {} = {:d} kB.".format(my_free_kB_calc, my_free_kB))
 
-    print("Minimum RAM allowed: {} kB".format(min_kB))
+    my_min_kB = min_kB
+    my_min_kB_calc = str(min_kB)
+    if highmem and min_highmem_kB:
+        my_min_kB += min_highmem_kB
+        my_min_kB_calc += " + " + str(min_highmem_kB)
+
+    print("Minimum RAM allowed: {} = {} kB".format(my_min_kB_calc, my_min_kB))
 
     if highmem and lowmem_reserve_kB:
         print("__GFP_HIGHMEM was set, must also exclude lowmem_reserve: {} kB"
@@ -143,9 +155,9 @@ def main():
     had_enough_memory_lhs = my_free_kB - (PAGE_SIZE_kB << order)
     calc_lhs = str(my_free_kB) + " - " + str(PAGE_SIZE_kB << order)
     calcstr_lhs = "my_free_kB - (PAGE_SIZE_kB << order)"
-    had_enough_memory_rhs = min_kB
-    calc_rhs = str(min_kB)
-    calcstr_rhs = "min_kB"
+    had_enough_memory_rhs = my_min_kB
+    calc_rhs = str(my_min_kB)
+    calcstr_rhs = "my_min_kB"
     if highmem:
         had_enough_memory_rhs += lowmem_reserve_kB
         calc_rhs += " + " + str(lowmem_reserve_kB)

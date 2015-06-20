@@ -44,6 +44,7 @@ parameter is applicable:
 	AVR32	AVR32 architecture is enabled.
 	AX25	Appropriate AX.25 support is enabled.
 	BLACKFIN Blackfin architecture is enabled.
+	BRCMSTB	Broadcom STB platform support is enabled.
 	CLK	Common clock infrastructure is enabled.
 	CMA	Contiguous Memory Area support is enabled.
 	DRM	Direct Rendering Management support is enabled.
@@ -503,12 +504,25 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			embedded devices based on command line input.
 			See Documentation/block/cmdline-partition.txt
 
+	bmem=size[KMG][@offset[KMG]] 	[KNL,BRCM]
+			Set aside a contiguous reserved memory region at the
+			specified location.  Can be provided multiple times,
+			once for each reservation.  Note: there is a default
+			reservation, and manually specifying any region will
+			disable the defaults.  Specifying bmem=0 will disable
+			bmem entirely.
+
 	boot_delay=	Milliseconds to delay each printk during boot.
 			Values larger than 10 seconds (10000) are changed to
 			no delay (0).
 			Format: integer
 
 	bootmem_debug	[KNL] Enable bootmem allocator debug messages.
+
+	brcm_cma=size[KMG][@offset[KMG]] 	[KNL,BRCM]
+			Set aside a contiguous memory region to be used as a
+			CMA area at the specified location.  Can be provided
+			multiple times, once for each reservation.
 
 	bttv.card=	[HW,V4L] bttv (bt848 + bt878 based grabber cards)
 	bttv.radio=	Most important insmod options are available as

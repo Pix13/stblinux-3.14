@@ -49,6 +49,7 @@ struct cma_dev {
 	int memc;
 };
 
+
 /*
  * Note to kernel module / driver developers:
  * This interface is subject to change!
@@ -66,5 +67,15 @@ int cma_dev_get_region_info(struct cma_dev *cma_dev, int region_num,
 void *cma_dev_kva_map(struct page *page, int num_pages, pgprot_t pgprot);
 int cma_dev_kva_unmap(const void *kva);
 int cma_drvr_is_ready(void);
+
+/* Below functions are for calling during initialization and may need stubs */
+
+#ifdef CONFIG_BRCMSTB_CMA
+void __init cma_reserve(void);
+void __init cma_register(void);
+#else
+static inline void cma_reserve(void) {}
+static inline void cma_register(void) {}
+#endif
 
 #endif /* __CMA_DRIVER_H__ */

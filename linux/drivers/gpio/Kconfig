@@ -55,6 +55,9 @@ config GPIO_ACPI
 	def_bool y
 	depends on ACPI
 
+config GPIOLIB_IRQCHIP
+	bool
+
 config DEBUG_GPIO
 	bool "Debug GPIO calls"
 	depends on DEBUG_KERNEL
@@ -107,6 +110,15 @@ config GPIO_MAX730X
 	tristate
 
 comment "Memory mapped GPIO drivers:"
+
+config GPIO_BRCMSTB
+	tristate "BRCMSTB GPIO support"
+	default y if ARCH_BRCMSTB
+	depends on OF_GPIO && (ARCH_BRCMSTB || COMPILE_TEST)
+	select GPIO_GENERIC
+	select GPIOLIB_IRQCHIP
+	help
+	  Say yes here to enable GPIO support for Broadcom STB (BCM7XXX) SoCs.
 
 config GPIO_CLPS711X
 	tristate "CLPS711X GPIO support"

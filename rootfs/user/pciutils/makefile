@@ -13,6 +13,7 @@ MAKE_FLAGS		+= \
 			   HOST="Linux" \
 			   CROSS_COMPILE="$(CROSS_COMPILE)" \
 			   ZLIB="yes" \
+			   HWDB="no"
 
 export CC CFLAGS
 
@@ -27,9 +28,9 @@ clean distclean::
 .PHONY: romfs
 romfs::
 	$(ROMFSINST) -e CONFIG_USER_PCIUTILS_SETPCI setpci \
-		/usr/bin/setpci
+		/bin/setpci
 	$(ROMFSINST) -e CONFIG_USER_PCIUTILS_LSPCI lspci \
-		/usr/bin/lspci
+		/bin/lspci
 
 # These targets must not be passed through to the original Makefile
 .PHONY: $(BOGUS_TARGETS)

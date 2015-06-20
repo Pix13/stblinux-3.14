@@ -29,7 +29,7 @@
 #include <asm/mach-types.h>
 #include <asm/smp_plat.h>
 
-#include "brcmstb.h"
+#include "headsmp-brcmstb.h"
 
 enum {
 	ZONE_MAN_CLKEN_MASK		= BIT(0),

@@ -62,7 +62,8 @@ static int bcmgenet_mii_read(struct mii_bus *bus, int phy_id, int location)
 	/* Don't check error codes from switches, as some of them are
 	 * known to return MDIO_READ_FAIL on good transactions
 	 */
-	if (!priv->sw_type && (ret & MDIO_READ_FAIL)) {
+	if (!(bus->phy_ignore_ta_mask & 1 << phy_id) &&
+	    (ret & MDIO_READ_FAIL)) {
 		netif_dbg(priv, hw, dev, "MDIO read failure\n");
 		ret = 0;
 	}
@@ -267,13 +268,8 @@ static int bcmgenet_mii_probe(struct net_device *dev)
 		phydev = phy_connect(dev, phy_id, bcmgenet_mii_setup,
 				priv->phy_interface);
 	} else {
-		if (priv->phy_dn)
-			phydev = of_phy_connect(dev, priv->phy_dn,
+		phydev = of_phy_connect(dev, priv->phy_dn,
 					bcmgenet_mii_setup, phy_flags,
-					priv->phy_interface);
-		else
-			phydev = of_phy_connect_fixed_link(dev,
-					bcmgenet_mii_setup,
 					priv->phy_interface);
 	}
 
@@ -388,6 +384,7 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 
 	switch (priv->phy_interface) {
 	case PHY_INTERFACE_MODE_NA:
+	case PHY_INTERFACE_MODE_MOCA:
 		phy_name = "internal PHY";
 		/* Irrespective of the actually configured PHY speed (100 or
 		 * 1000) GENETv4 only has an internal GPHY so we will just end
@@ -447,9 +444,6 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 			phy_name = "external RGMII (no delay)";
 		else
 			phy_name = "external RGMII (TX delay)";
-		reg = bcmgenet_ext_readl(priv, EXT_RGMII_OOB_CTRL);
-		reg |= RGMII_MODE_EN | id_mode_dis;
-		bcmgenet_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
 		bcmgenet_sys_writel(priv,
 				PORT_MODE_EXT_GPHY, SYS_PORT_CTRL);
 		priv->phy_supported = PHY_GBIT_FEATURES;
@@ -462,6 +456,15 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 		dev_err(&priv->pdev->dev, "unknown phy_interface: %d\n",
 			priv->phy_interface);
 		return -EINVAL;
+	}
+
+	/* This is an external PHY, aka xMII, so we need to enable the RGMII
+	 * block for the interface to work
+	 */
+	if (priv->ext_phy) {
+		reg = bcmgenet_ext_readl(priv, EXT_RGMII_OOB_CTRL);
+		reg |= RGMII_MODE_EN | id_mode_dis;
+		bcmgenet_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
 	}
 
 	if (init)
@@ -477,10 +480,9 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 	struct device *kdev = &priv->pdev->dev;
 	struct device_node *mdio_dn;
 	const char *phy_mode_str = NULL;
-	const __be32 *fixed_link;
 	u32 propval;
 	int phy_mode;
-	int ret, sz;
+	int ret;
 
 	mdio_dn = of_get_next_child(dn, NULL);
 	if (!mdio_dn) {
@@ -500,14 +502,13 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 		if (!of_property_read_u32(priv->phy_dn, "max-speed", &propval))
 			priv->phy_speed = propval;
 	} else {
-		/* Read the link speed from the fixed-link property */
-		fixed_link = of_get_property(dn, "fixed-link", &sz);
-		if (!fixed_link || sz < sizeof(*fixed_link)) {
-			ret = -ENODEV;
-			goto out;
+		if (of_phy_is_fixed_link(dn)) {
+			ret = of_phy_register_fixed_link(dn);
+			if (ret)
+				return ret;
 		}
 
-		priv->phy_speed = be32_to_cpu(fixed_link[2]);
+		priv->phy_dn = of_node_get(dn);
 	}
 
 	/* Get the link mode */

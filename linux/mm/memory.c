@@ -62,6 +62,7 @@
 #include <linux/dma-debug.h>
 #ifdef CONFIG_BRCMSTB
 #include <linux/brcmstb/cma_driver.h>
+#include <linux/brcmstb/bmem.h>
 #endif
 
 #include <asm/io.h>
@@ -1646,17 +1647,30 @@ static inline int stack_guard_page(struct vm_area_struct *vma, unsigned long add
 }
 
 #if defined(CONFIG_BRCMSTB)
-static int cma_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
+/*
+ * Special handling for __get_user_pages() on BMEM or CMA reserved memory:
+ *
+ * 1) Override the VM_IO | VM_PFNMAP sanity checks
+ * 2) No cache flushes (this is explicitly under application control)
+ * 3) vm_normal_page() does not work on these regions
+ * 4) Don't need to worry about any kinds of faults; pages are always present
+ *
+ * The vanilla kernel behavior was to prohibit O_DIRECT operations on our
+ * BMEM or CMA regions, but direct I/O is absolutely required for PVR and
+ * video playback from SATA/USB.
+ */
+static int brcmstb_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
 			unsigned long start, struct page **page)
 {
-#if defined(CONFIG_CMA)
+#if defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_BRCMSTB_CMA)
 	const unsigned long pg = start & PAGE_MASK;
 	int ret = -EFAULT;
 	pgd_t *pgd;
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
-	struct page *tmp_page;
+	struct page *tmp_page __maybe_unused;
+	unsigned long pfn;
 
 	pgd = pgd_offset(mm, pg);
 	BUG_ON(pgd_none(*pgd));
@@ -1668,16 +1682,23 @@ static int cma_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		return ret;
 
 	pte = pte_offset_map(pmd, pg);
-	if (!pte)
-		return ret;
-
 	if (pte_none(*pte))
 		goto out;
 
-	tmp_page = pte_page(*pte);
+	pfn = pte_pfn(*pte);
+	if (!pfn_valid(pfn))
+		goto out;
+
+	tmp_page = pfn_to_page(pfn);
 	if (!tmp_page)
 		goto out;
 
+#ifdef CONFIG_BRCMSTB_BMEM
+	if (likely(bmem_find_region(pfn << PAGE_SHIFT, PAGE_SIZE) >= 0))
+		goto found_page;
+#endif
+
+#ifdef CONFIG_CMA
 	if (!page_count(tmp_page))
 		goto out;
 
@@ -1685,8 +1706,10 @@ static int cma_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		goto out;
 
 	if (get_pageblock_migratetype(tmp_page) != MIGRATE_CMA)
-		goto out;
+		goto found_page;
+#endif
 
+found_page:
 	if (page) {
 		*page = tmp_page;
 		get_page(*page);
@@ -1698,9 +1721,9 @@ out:
 	return ret;
 #else
 	return -ENOSYS;
-#endif
+#endif /* defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_BRCMSTB_CMA) */
 }
-#endif
+#endif /* defined(CONFIG_BRCMSTB) */
 
 /**
  * __get_user_pages() - pin user pages in memory
@@ -1841,9 +1864,9 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 		}
 
 #ifdef CONFIG_BRCMSTB
-		/* handle direct I/O on CMA regions */
-		if (vma && !cma_get_page(mm, vma, start,
-				      pages ? &pages[i] : NULL)) {
+		/* handle direct I/O on CMA or BMEM regions */
+		if (vma && (!brcmstb_get_page(mm, vma, start,
+				      pages ? &pages[i] : NULL))) {
 			if (vmas)
 				vmas[i] = vma;
 			i++;

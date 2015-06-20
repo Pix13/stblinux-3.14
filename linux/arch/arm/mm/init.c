@@ -323,11 +323,24 @@ void __init arm_memblock_init(struct meminfo *mi,
 	arm_mm_memblock_reserve();
 	arm_dt_memblock_reserve();
 
+#ifdef CONFIG_BRCMSTB
+	/*
+	 * Moved before platform reserve so that we can find all the
+	 * non-cma, non-bmem reserved areas without implementing interval
+	 * subtraction
+	 */
+	early_init_fdt_scan_reserved_mem();
+
+	/* reserve any platform specific memblock areas */
+	if (mdesc->reserve)
+		mdesc->reserve();
+#else
 	/* reserve any platform specific memblock areas */
 	if (mdesc->reserve)
 		mdesc->reserve();
 
 	early_init_fdt_scan_reserved_mem();
+#endif
 
 	/*
 	 * reserve memory for DMA contigouos allocations,
