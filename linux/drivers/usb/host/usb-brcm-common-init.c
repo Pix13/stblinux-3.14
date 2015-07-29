@@ -151,6 +151,14 @@ static void usb3_ssc_enable(uintptr_t ctrl_base)
 	usb_mdio_write(ctrl_base, 0x1f, 0x8040, MDIO_USB3);
 	val = usb_mdio_read(ctrl_base, 0x01, MDIO_USB3) | 0xf;
 	usb_mdio_write(ctrl_base, 0x01, val, MDIO_USB3);
+
+	/* Currently, USB 3.0 SSC is enabled via port 0 MDIO registers,
+	 * which should have been adequate. However, due to a bug in the
+	 * USB 3.0 PHY, it must be enabled via both ports (HWUSB3DVT-26).
+	 */
+	usb_mdio_write(ctrl_base, 0x1f, 0x9040, MDIO_USB3);
+	val = usb_mdio_read(ctrl_base, 0x01, MDIO_USB3) | 0xf;
+	usb_mdio_write(ctrl_base, 0x01, val, MDIO_USB3);
 }
 
 
@@ -336,5 +344,23 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 		xhci_soft_reset(ctrl, 0);
 		usb3_otp_fix(ctrl, params->xhci_ec_regs);
 	}
+#ifdef BCHP_USB_CTRL_USB_DEVICE_CTL1_port_mode_MASK
+	reg = DEV_RD(USB_CTRL_REG(ctrl, USB_DEVICE_CTL1));
+	reg &= ~BCHP_USB_CTRL_USB_DEVICE_CTL1_port_mode_MASK;
+	reg |= params->device_mode;
+	DEV_WR(USB_CTRL_REG(ctrl, USB_DEVICE_CTL1), reg);
+#endif
+#ifdef BCHP_USB_CTRL_USB_PM_bdc_soft_resetb_MASK
+	switch (params->device_mode) {
+	case USB_CTLR_DEVICE_OFF:
+		USB_CTRL_UNSET(ctrl, USB_PM, bdc_soft_resetb);
+		break;
+	case USB_CTLR_DEVICE_ON:
+	case USB_CTLR_DEVICE_DUAL:
+		USB_CTRL_SET(ctrl, USB_PM, bdc_soft_resetb);
+		break;
+	}
+#endif
+
 }
 

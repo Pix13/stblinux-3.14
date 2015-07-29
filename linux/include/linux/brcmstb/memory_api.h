@@ -67,6 +67,9 @@ struct brcmstb_memory {
 
 int brcmstb_memory_get(struct brcmstb_memory *mem);
 int brcmstb_memory_phys_addr_to_memc(phys_addr_t pa);
+void *brcmstb_memory_kva_map(struct page *page, int num_pges, pgprot_t pgprot);
+void *brcmstb_memory_kva_map_phys(phys_addr_t phys, size_t size, bool cached);
+int brcmstb_memory_kva_unmap(const void *kva);
 
 /* Below functions are for calling during initialization and may need stubs */
 

@@ -938,7 +938,6 @@ static void bcmgenet_power_up(struct bcmgenet_priv *priv,
 			reg |= EXT_PWR_DN_EN_LD;
 			bcmgenet_ext_writel(priv, reg, EXT_EXT_PWR_MGMT);
 			bcmgenet_phy_power_set(priv->dev, true);
-			bcmgenet_mii_reset(priv->dev);
 		}
 	default:
 		break;
@@ -2317,15 +2316,18 @@ static int bcmgenet_open(struct net_device *dev)
 
 	bcmgenet_mii_config(priv->dev, false);
 
-	phy_connect_direct(dev, priv->phydev, bcmgenet_mii_setup,
-			   priv->phy_interface);
+	ret = bcmgenet_mii_probe(dev);
+	if (ret)
+		goto err_irq1;
 
 	bcmgenet_netif_start(dev);
 
 	return 0;
 
+err_irq1:
+	free_irq(priv->irq1, priv);
 err_irq0:
-	free_irq(priv->irq0, dev);
+	free_irq(priv->irq0, priv);
 err_fini_dma:
 	bcmgenet_fini_dma(priv);
 err_clk_disable:

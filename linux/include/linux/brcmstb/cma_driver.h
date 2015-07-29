@@ -26,6 +26,7 @@
 #include <linux/uaccess.h>
 #include <linux/list.h>
 #include <linux/dma-contiguous.h>
+#include <linux/brcmstb/memory_api.h>
 #include <uapi/linux/brcmstb/cma_driver.h>
 
 /* Incremented when public API changes */
@@ -64,9 +65,18 @@ int cma_dev_put_mem(struct cma_dev *cma_dev, u64 addr, u32 len);
 int cma_dev_get_num_regions(struct cma_dev *cma_dev);
 int cma_dev_get_region_info(struct cma_dev *cma_dev, int region_num,
 	s32 *memc, u64 *addr, u32 *num_bytes);
-void *cma_dev_kva_map(struct page *page, int num_pages, pgprot_t pgprot);
-int cma_dev_kva_unmap(const void *kva);
 int cma_drvr_is_ready(void);
+
+static inline void *cma_dev_kva_map(struct page *page, int num_pages,
+		pgprot_t pgprot)
+{
+	return brcmstb_memory_kva_map(page, num_pages, pgprot);
+}
+
+static inline int cma_dev_kva_unmap(const void *kva)
+{
+	return brcmstb_memory_kva_unmap(kva);
+}
 
 /* Below functions are for calling during initialization and may need stubs */
 

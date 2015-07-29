@@ -1348,7 +1348,8 @@ err:
 
 static int mmc_can_sleep(struct mmc_card *card)
 {
-	return (card && card->ext_csd.rev >= 3);
+	return card && card->ext_csd.rev >= 3 &&
+		((card->quirks & MMC_QUIRK_BROKEN_SLEEP) == 0);
 }
 
 static int mmc_sleep(struct mmc_host *host)

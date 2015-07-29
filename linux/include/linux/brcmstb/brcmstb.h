@@ -27,7 +27,7 @@
 #ifndef _ASM_BRCMSTB_BRCMSTB_H
 #define _ASM_BRCMSTB_BRCMSTB_H
 
-#define BRCMSTB_H_VERSION  2
+#define BRCMSTB_H_VERSION  4
 
 #if !defined(__ASSEMBLY__)
 
@@ -123,6 +123,44 @@
 #include <linux/brcmstb/3390a0/bchp_switch_mdio.h>
 #include <linux/brcmstb/3390a0/bchp_switch_reg.h>
 #include <linux/brcmstb/3390a0/bchp_usb_ctrl.h>
+
+#elif defined(CONFIG_BCM3390B0)
+#include <linux/brcmstb/3390b0/bchp_aon_ctrl.h>
+#include <linux/brcmstb/3390b0/bchp_aon_pin_ctrl.h>
+#include <linux/brcmstb/3390b0/bchp_aon_pm_l2.h>
+#include <linux/brcmstb/3390b0/bchp_bspi.h>
+#include <linux/brcmstb/3390b0/bchp_bspi_raf.h>
+#include <linux/brcmstb/3390b0/bchp_clkgen.h>
+#include <linux/brcmstb/3390b0/bchp_common.h>
+#include <linux/brcmstb/3390b0/bchp_ebi.h>
+#include <linux/brcmstb/3390b0/bchp_gio.h>
+#include <linux/brcmstb/3390b0/bchp_gio_aon.h>
+#include <linux/brcmstb/3390b0/bchp_hif_continuation.h>
+#include <linux/brcmstb/3390b0/bchp_hif_cpubiuctrl.h>
+#include <linux/brcmstb/3390b0/bchp_hif_intr2.h>
+#include <linux/brcmstb/3390b0/bchp_hif_mspi.h>
+#include <linux/brcmstb/3390b0/bchp_hif_spi_intr2.h>
+#include <linux/brcmstb/3390b0/bchp_hif_top_ctrl.h>
+#include <linux/brcmstb/3390b0/bchp_irq0.h>
+#include <linux/brcmstb/3390b0/bchp_irq1.h>
+#include <linux/brcmstb/3390b0/bchp_moca_hostmisc.h>
+#include <linux/brcmstb/3390b0/bchp_nand.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_dma.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_ext_cfg.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_intr2.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_misc.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_misc_perst.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_rc_cfg_pcie.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_rc_cfg_type1.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_rc_cfg_vendor.h>
+#include <linux/brcmstb/3390b0/bchp_pcie_0_rgr1.h>
+#include <linux/brcmstb/3390b0/bchp_sdio_0_cfg.h>
+#include <linux/brcmstb/3390b0/bchp_sun_top_ctrl.h>
+#include <linux/brcmstb/3390b0/bchp_switch_acb.h>
+#include <linux/brcmstb/3390b0/bchp_switch_core.h>
+#include <linux/brcmstb/3390b0/bchp_switch_fcb.h>
+#include <linux/brcmstb/3390b0/bchp_switch_reg.h>
+#include <linux/brcmstb/3390b0/bchp_usb_ctrl.h>
 
 #elif defined(CONFIG_BCM7145A0)
 #include <linux/brcmstb/7145a0/bchp_aon_ctrl.h>

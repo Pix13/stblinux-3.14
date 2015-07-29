@@ -21,16 +21,16 @@
  * file. You must edit the source file for changes to be made to this file.
  *
  *
- * Date:           Generated on              Fri Dec 19 03:17:34 2014
- *                 Full Compile MD5 Checksum 9e27b6ad4c64ff5a28f048a17a7bb056
- *                   (minus title and desc)  
- *                 MD5 Checksum              a1a4b86f7693c062faaafa50c5ca64ce
+ * Date:           Generated on               Thu May 21 03:17:16 2015
+ *                 Full Compile MD5 Checksum  b5494139f25b08eff6eb1cba25d3c5d1
+ *                     (minus title and desc)
+ *                 MD5 Checksum               16ece07df81fe10189597886243daa5b
  *
- * Compiled with:  RDB Utility               combo_header.pl
- *                 RDB Parser                3.0
- *                 unknown                   unknown
- *                 Perl Interpreter          5.008008
- *                 Operating System          linux
+ * Compiled with:  RDB Utility                combo_header.pl
+ *                 RDB.pm                     15517
+ *                 unknown                    unknown
+ *                 Perl Interpreter           5.008008
+ *                 Operating System           linux
  *
  * Revision History:
  *
@@ -317,10 +317,10 @@
 #define BCHP_USB_CTRL_EBRIDGE_EBR_SPARE_SHIFT                      18
 #define BCHP_USB_CTRL_EBRIDGE_EBR_SPARE_DEFAULT                    0x00000000
 
-/* USB_CTRL :: EBRIDGE :: ESTOP_SCB_REQ [17:17] */
-#define BCHP_USB_CTRL_EBRIDGE_ESTOP_SCB_REQ_MASK                   0x00020000
-#define BCHP_USB_CTRL_EBRIDGE_ESTOP_SCB_REQ_SHIFT                  17
-#define BCHP_USB_CTRL_EBRIDGE_ESTOP_SCB_REQ_DEFAULT                0x00000000
+/* USB_CTRL :: EBRIDGE :: ESTOP_SCB_REQB [17:17] */
+#define BCHP_USB_CTRL_EBRIDGE_ESTOP_SCB_REQB_MASK                  0x00020000
+#define BCHP_USB_CTRL_EBRIDGE_ESTOP_SCB_REQB_SHIFT                 17
+#define BCHP_USB_CTRL_EBRIDGE_ESTOP_SCB_REQB_DEFAULT               0x00000000
 
 /* USB_CTRL :: EBRIDGE :: EBR_RD_THRESH [16:12] */
 #define BCHP_USB_CTRL_EBRIDGE_EBR_RD_THRESH_MASK                   0x0001f000
@@ -375,10 +375,10 @@
 #define BCHP_USB_CTRL_OBRIDGE_ohci_memreq_disable_SHIFT            18
 #define BCHP_USB_CTRL_OBRIDGE_ohci_memreq_disable_DEFAULT          0x00000000
 
-/* USB_CTRL :: OBRIDGE :: OSTOP_SCB_REQ [17:17] */
-#define BCHP_USB_CTRL_OBRIDGE_OSTOP_SCB_REQ_MASK                   0x00020000
-#define BCHP_USB_CTRL_OBRIDGE_OSTOP_SCB_REQ_SHIFT                  17
-#define BCHP_USB_CTRL_OBRIDGE_OSTOP_SCB_REQ_DEFAULT                0x00000000
+/* USB_CTRL :: OBRIDGE :: OSTOP_SCB_REQB [17:17] */
+#define BCHP_USB_CTRL_OBRIDGE_OSTOP_SCB_REQB_MASK                  0x00020000
+#define BCHP_USB_CTRL_OBRIDGE_OSTOP_SCB_REQB_SHIFT                 17
+#define BCHP_USB_CTRL_OBRIDGE_OSTOP_SCB_REQB_DEFAULT               0x00000000
 
 /* USB_CTRL :: OBRIDGE :: OBR_RD_THRESH [16:12] */
 #define BCHP_USB_CTRL_OBRIDGE_OBR_RD_THRESH_MASK                   0x0001f000
@@ -850,10 +850,10 @@
 #define BCHP_USB_CTRL_USB_PM_bond_dis_usb30_p1_SHIFT               24
 #define BCHP_USB_CTRL_USB_PM_bond_dis_usb30_p1_DEFAULT             0x00000000
 
-/* USB_CTRL :: USB_PM :: xdc_soft_resetb [23:23] */
-#define BCHP_USB_CTRL_USB_PM_xdc_soft_resetb_MASK                  0x00800000
-#define BCHP_USB_CTRL_USB_PM_xdc_soft_resetb_SHIFT                 23
-#define BCHP_USB_CTRL_USB_PM_xdc_soft_resetb_DEFAULT               0x00000000
+/* USB_CTRL :: USB_PM :: bdc_soft_resetb [23:23] */
+#define BCHP_USB_CTRL_USB_PM_bdc_soft_resetb_MASK                  0x00800000
+#define BCHP_USB_CTRL_USB_PM_bdc_soft_resetb_SHIFT                 23
+#define BCHP_USB_CTRL_USB_PM_bdc_soft_resetb_DEFAULT               0x00000000
 
 /* USB_CTRL :: USB_PM :: xhc_soft_resetb [22:22] */
 #define BCHP_USB_CTRL_USB_PM_xhc_soft_resetb_MASK                  0x00400000

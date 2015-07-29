@@ -76,6 +76,15 @@ config BCM3390A0
 	select BRCM_HAS_MOCA_20_GEN23
 	select BRCM_MSPI_64B_WORDS
 
+config BCM3390B0
+	bool "3390 Bx"
+	select BCM7145
+	select BRCM_HAS_NAND_MAJOR_7
+	select BRCM_HAS_NAND_MINOR_1
+	select BRCM_HAS_BSPI_V4
+	select BRCM_HAS_MOCA_20_GEN23
+	select BRCM_MSPI_64B_WORDS
+
 config BCM7145B0
 	bool "7145 Bx"
 	select BCM7145

@@ -29,11 +29,16 @@
 #ifndef _USB_BRCM_COMMON_INIT_H
 #define _USB_BRCM_COMMON_INIT_H
 
+#define USB_CTLR_DEVICE_OFF 0
+#define USB_CTLR_DEVICE_ON 1
+#define USB_CTLR_DEVICE_DUAL 2
+
 struct  brcm_usb_common_init_params {
 	uintptr_t ctrl_regs;
 	int ioc;
 	int ipp;
 	int has_xhci;
+	int device_mode;
 	uintptr_t xhci_ec_regs;
 };
 

@@ -28,13 +28,11 @@
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
-#include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/brcmstb/cma_driver.h>
 #include <linux/brcmstb/memory_api.h>
 #include <linux/mmzone.h>
-#include <linux/vmalloc.h>
 #include <linux/memblock.h>
 #include <linux/device.h>
 #include <linux/bitmap.h>
@@ -540,64 +538,6 @@ int cma_dev_get_region_info(struct cma_dev *cma_dev, int region_num,
 }
 EXPORT_SYMBOL(cma_dev_get_region_info);
 
-static int pte_callback(pte_t *pte, unsigned long x, unsigned long y,
-			struct mm_walk *walk)
-{
-	const pgprot_t pte_prot = __pgprot(*pte);
-	const pgprot_t req_prot = *((pgprot_t *)walk->private);
-	const pgprot_t prot_msk = L_PTE_MT_MASK | L_PTE_VALID;
-	return (((pte_prot ^ req_prot) & prot_msk) == 0) ? 0 : -1;
-}
-
-static void *page_to_virt_contig(const struct page *page, unsigned int pg_cnt,
-					pgprot_t pgprot)
-{
-	int rc;
-	struct mm_walk walk;
-	unsigned long pfn;
-	unsigned long pfn_start;
-	unsigned long pfn_end;
-	unsigned long va_start;
-	unsigned long va_end;
-
-	if ((page == NULL) || !pg_cnt)
-		return ERR_PTR(-EINVAL);
-
-	pfn_start = page_to_pfn(page);
-	pfn_end = pfn_start + pg_cnt;
-	for (pfn = pfn_start; pfn < pfn_end; pfn++) {
-		const struct page *cur_pg = pfn_to_page(pfn);
-		phys_addr_t pa;
-
-		/* Verify range is in low memory only */
-		if (PageHighMem(cur_pg))
-			return NULL;
-
-		/* Must be mapped */
-		pa = page_to_phys(cur_pg);
-		if (page_address(cur_pg) == NULL)
-			return NULL;
-	}
-
-	/*
-	 * Aliased mappings with different cacheability attributes on ARM can
-	 * lead to trouble!
-	 */
-	memset(&walk, 0, sizeof(walk));
-	walk.pte_entry = &pte_callback;
-	walk.private = (void *)&pgprot;
-	walk.mm = current->mm;
-	va_start = (unsigned long)page_address(page);
-	va_end = (unsigned long)(page_address(page) + (pg_cnt << PAGE_SHIFT));
-	rc = walk_page_range(va_start,
-			     va_end,
-			     &walk);
-	if (rc)
-		pr_debug("cacheability mismatch\n");
-
-	return rc ? NULL : page_address(page);
-}
-
 static int cma_dev_ioctl_check_cmd(unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
@@ -620,104 +560,6 @@ static int cma_dev_ioctl_check_cmd(unsigned int cmd, unsigned long arg)
 
 	return 0;
 }
-
-static struct page **get_pages(struct page *page, int num_pages)
-{
-	struct page **pages;
-	long pfn;
-	int i;
-
-	if (num_pages == 0) {
-		pr_err("bad count\n");
-		return NULL;
-	}
-
-	if (page == NULL) {
-		pr_err("bad page\n");
-		return NULL;
-	}
-
-	pages = kmalloc(sizeof(struct page *) * num_pages, GFP_KERNEL);
-	if (pages == NULL)
-		return NULL;
-
-	pfn = page_to_pfn(page);
-	for (i = 0; i < num_pages; i++) {
-		/*
-		 * pfn_to_page() should resolve to simple arithmetic for the
-		 * FLATMEM memory model.
-		 */
-		pages[i] = pfn_to_page(pfn++);
-	}
-
-	return pages;
-}
-
-/**
- * cma_dev_kva_map() - Map page(s) to a kernel virtual address
- *
- * @page: A struct page * that points to the beginning of a chunk of physical
- * contiguous memory.
- * @num_pages: Number of pages
- * @pgprot: Page protection bits
- *
- * Return: pointer to mapping, or NULL on failure
- */
-void *cma_dev_kva_map(struct page *page, int num_pages, pgprot_t pgprot)
-{
-	void *va;
-
-	/* get the virtual address for this range if it exists */
-	va = page_to_virt_contig(page, num_pages, pgprot);
-	if (IS_ERR(va)) {
-		pr_debug("page_to_virt_contig() failed (%ld)\n", PTR_ERR(va));
-		return NULL;
-	} else if (va == NULL || is_vmalloc_addr(va)) {
-		struct page **pages;
-
-		pages = get_pages(page, num_pages);
-		if (pages == NULL) {
-			pr_err("couldn't get pages\n");
-			return NULL;
-		}
-
-		va = vmap(pages, num_pages, 0, pgprot);
-
-		kfree(pages);
-
-		if (va == NULL) {
-			pr_err("vmap failed (num_pgs=%d)\n", num_pages);
-			return NULL;
-		}
-	}
-
-	return va;
-}
-EXPORT_SYMBOL(cma_dev_kva_map);
-
-/**
- * cma_dev_kva_unmap() - Unmap a kernel virtual address associated
- * to physical pages mapped by cma_dev_kva_map()
- *
- * @kva: Kernel virtual address previously mapped by cma_dev_kva_map()
- *
- * Return: 0 on success, negative on failure.
- */
-int cma_dev_kva_unmap(const void *kva)
-{
-	if (kva == NULL)
-		return -EINVAL;
-
-	if (!is_vmalloc_addr(kva)) {
-		/* unmapping not necessary for low memory VAs */
-		return 0;
-	}
-
-	vunmap(kva);
-
-	return 0;
-}
-EXPORT_SYMBOL(cma_dev_kva_unmap);
 
 static long cma_dev_ioctl(struct file *filp, unsigned int cmd,
 			  unsigned long arg)
