@@ -21,6 +21,7 @@ netdev_tx_t trailer_xmit(struct sk_buff *skb, struct net_device *dev)
 	int padlen;
 	u8 *trailer;
 
+
 	dev->stats.tx_packets++;
 	dev->stats.tx_bytes += skb->len;
 
@@ -59,6 +60,9 @@ netdev_tx_t trailer_xmit(struct sk_buff *skb, struct net_device *dev)
 	trailer[3] = 0x00;
 
 	nskb->protocol = htons(ETH_P_TRAILER);
+
+	if (unlikely(netpoll_tx_running(dev)))
+		return dsa_netpoll_send_skb(p, skb);
 
 	nskb->dev = p->parent->dst->master_netdev;
 	dev_queue_xmit(nskb);

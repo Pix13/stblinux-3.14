@@ -62,8 +62,8 @@ TFTPPATH	:= $(subst $(TFTPBOOT)/,,$(TFTPDIR))
 PLAT		= $(shell cat .target)
 ARCH		= $(shell cat .arch)
 
-VERSION		:= $(shell cat version)
-DOTVERSION	:= $(patsubst 26%,2.6.%,$(patsubst 3%,3.%,$(VERSION)))
+VERSION		:= $(shell bin/linuxver.sh $(LINUXDIR))
+DOTVERSION	:= $(patsubst 26%,2.6.%,$(patsubst 3%,3.%,$(patsubst 4%,4.%,$(VERSION))))
 
 REL_TFTPHOST	:= stb-irva-01
 REL_TFTPDIR	:= $(TFTPBOOT)/$(VERSION)

@@ -522,8 +522,9 @@ sub cmd_defaults($)
 	my $capchip = $chip;
 	$capchip =~ tr/a-z/A-Z/;
 
+	# Unset any old chip selector options; we only want one set at a time.
 	foreach my $x (keys(%linux)) {
-		if ($x =~ m/^CONFIG_BCM7[0-9]{3,}/) {
+		if ($x =~ m/^CONFIG_BCM[37][0-9]{3,}(?!_)/) {
 			$linux{$x} = "n";
 		}
 	}

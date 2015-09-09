@@ -29,16 +29,18 @@
 #include <linux/pm_wakeup.h>
 #include <linux/reboot.h>
 
+#include <asm/mach/time.h>
+
 #define DRV_NAME	"brcm-waketimer"
 
-struct brcmstb_waketmr {
+static struct brcmstb_waketmr {
 	struct device *dev;
 	void __iomem *base;
 	unsigned int irq;
 
 	int wake_timeout;
 	struct notifier_block reboot_notifier;
-};
+} wktimer;
 
 /* No timeout */
 #define BRCMSTB_WKTMR_DEFAULT_TIMEOUT	(-1)
@@ -47,7 +49,7 @@ struct brcmstb_waketmr {
 #define BRCMSTB_WKTMR_COUNTER		0x04
 #define BRCMSTB_WKTMR_ALARM		0x08
 #define BRCMSTB_WKTMR_PRESCALER		0x0C
-#define BRCMSTB_WKTMR_PRESACALER_VAL	0x10
+#define BRCMSTB_WKTMR_PRESCALER_VAL	0x10
 
 static inline void brcmstb_waketmr_clear_alarm(struct brcmstb_waketmr *timer)
 {
@@ -71,6 +73,38 @@ static irqreturn_t brcmstb_waketmr_irq(int irq, void *data)
 	struct brcmstb_waketmr *timer = data;
 	pm_wakeup_event(timer->dev, 0);
 	return IRQ_HANDLED;
+}
+
+/* Fixed 27Mhz frequency since WKTMR is in the UPG clock domain. This
+ * information should come from Device Tree eventually
+ */
+#define WKTMR_FREQ		27000000
+
+struct wktmr_time {
+	u32			sec;
+	u32			pre;
+};
+
+static void wktmr_read(struct wktmr_time *t)
+{
+	u32 tmp;
+
+	do {
+		t->sec = readl_relaxed(wktimer.base + BRCMSTB_WKTMR_COUNTER);
+		tmp = readl_relaxed(wktimer.base + BRCMSTB_WKTMR_PRESCALER_VAL);
+	} while (tmp >= WKTMR_FREQ);
+
+	t->pre = WKTMR_FREQ - tmp;
+}
+
+static void brcmstb_waketmr_read_persistent_clock(struct timespec *ts)
+{
+	struct wktmr_time now;
+
+	wktmr_read(&now);
+
+	ts->tv_sec = now.sec;
+	ts->tv_nsec = now.pre * (1000000000 / WKTMR_FREQ);
 }
 
 static ssize_t brcmstb_waketmr_timeout_show(struct device *dev,
@@ -136,17 +170,17 @@ static int brcmstb_waketmr_reboot(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-static int brcmstb_waketmr_probe(struct platform_device *pdev)
+static int __init brcmstb_waketmr_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct brcmstb_waketmr *timer;
+	struct brcmstb_waketmr *timer = &wktimer;
 	struct resource *res;
 	int ret;
 
-	timer = devm_kzalloc(dev, sizeof(*timer), GFP_KERNEL);
-	if (!timer)
-		return -ENOMEM;
 	platform_set_drvdata(pdev, timer);
+
+	if (timer->dev)
+		return -EBUSY;
 
 	timer->dev = dev;
 
@@ -177,10 +211,14 @@ static int brcmstb_waketmr_probe(struct platform_device *pdev)
 	timer->wake_timeout = BRCMSTB_WKTMR_DEFAULT_TIMEOUT;
 
 	ret = device_create_file(dev, &dev_attr_timeout);
-	if (ret)
+	if (ret) {
 		unregister_reboot_notifier(&timer->reboot_notifier);
-	else
-		dev_info(dev, "registered, with irq %d\n", timer->irq);
+		return ret;
+	}
+
+	register_persistent_clock(NULL, brcmstb_waketmr_read_persistent_clock);
+
+	dev_info(dev, "registered, with irq %d\n", timer->irq);
 	return ret;
 }
 
@@ -227,7 +265,6 @@ static const struct of_device_id brcmstb_waketmr_of_match[] = {
 };
 
 static struct platform_driver brcmstb_waketmr_driver = {
-	.probe			= brcmstb_waketmr_probe,
 	.remove			= brcmstb_waketmr_remove,
 	.driver = {
 		.name		= DRV_NAME,
@@ -236,7 +273,20 @@ static struct platform_driver brcmstb_waketmr_driver = {
 		.of_match_table	= of_match_ptr(brcmstb_waketmr_of_match),
 	}
 };
-module_platform_driver(brcmstb_waketmr_driver);
+
+static int __init brcmstb_waketmr_init(void)
+{
+	return platform_driver_probe(&brcmstb_waketmr_driver,
+				     brcmstb_waketmr_probe);
+}
+
+static void __exit brcmstb_waketmr_exit(void)
+{
+	platform_driver_unregister(&brcmstb_waketmr_driver);
+}
+
+module_init(brcmstb_waketmr_init);
+module_exit(brcmstb_waketmr_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Broadcom Corporation");

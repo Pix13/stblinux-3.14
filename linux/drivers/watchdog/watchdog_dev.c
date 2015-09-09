@@ -41,6 +41,7 @@
 #include <linux/miscdevice.h>	/* For handling misc devices */
 #include <linux/init.h>		/* For __init/__exit/... */
 #include <linux/uaccess.h>	/* For copy_to_user/put_user/... */
+#include <linux/of.h>
 
 #include "watchdog_core.h"
 
@@ -522,7 +523,13 @@ static struct miscdevice watchdog_miscdev = {
 
 int watchdog_dev_register(struct watchdog_device *watchdog)
 {
-	int err, devno;
+	int err, devno, ret;
+
+	if (watchdog->parent) {
+		ret = of_alias_get_id(watchdog->parent->of_node, "watchdog");
+		if (ret >= 0)
+			watchdog->id = ret;
+	}
 
 	if (watchdog->id == 0) {
 		old_wdd = watchdog;

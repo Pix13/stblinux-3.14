@@ -224,6 +224,7 @@ int bcmgenet_mii_probe(struct net_device *dev)
 	const char *fixed_bus = NULL;
 	int phy_addr = priv->phy_addr;
 	u32 phy_flags;
+	int ret;
 
 	if (priv->old_dt_binding) {
 		/* Bind to fixed-0 for MOCA and switches */
@@ -264,14 +265,20 @@ int bcmgenet_mii_probe(struct net_device *dev)
 		return -ENODEV;
 	}
 
+	priv->phydev = phydev;
+
+	ret = bcmgenet_mii_config(dev);
+	if (ret) {
+		phy_disconnect(phydev);
+		return ret;
+	}
+
 	phydev->supported &= priv->phy_supported;
 	/* Adjust advertised speeds based on configured speed */
 	if (priv->phy_speed == SPEED_1000)
 		phydev->advertising = PHY_GBIT_FEATURES;
 	else
 		phydev->advertising = PHY_BASIC_FEATURES;
-
-	priv->phydev = phydev;
 
 	return 0;
 }
@@ -378,6 +385,15 @@ static void bcmgenet_mii_free(struct bcmgenet_priv *priv)
 	mdiobus_free(priv->mii_bus);
 }
 
+static int bcmgenet_fixed_phy_link_update(struct net_device *dev,
+					  struct fixed_phy_status *status)
+{
+	if (dev && dev->phydev && status)
+		status->link = dev->phydev->link;
+
+	return 0;
+}
+
 static void bcmgenet_internal_phy_setup(struct net_device *dev)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
@@ -399,9 +415,14 @@ static void bcmgenet_moca_phy_setup(struct bcmgenet_priv *priv)
 	reg = bcmgenet_sys_readl(priv, SYS_PORT_CTRL);
 	reg |= LED_ACT_SOURCE_MAC;
 	bcmgenet_sys_writel(priv, reg, SYS_PORT_CTRL);
+
+	/* Register a fixed PHY link_update callback for this interface */
+	if (priv->hw_params->flags & GENET_HAS_MOCA_LINK_DET)
+		fixed_phy_set_link_update(priv->phydev,
+					  bcmgenet_fixed_phy_link_update);
 }
 
-int bcmgenet_mii_config(struct net_device *dev, bool init)
+int bcmgenet_mii_config(struct net_device *dev)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
 	const char *phy_name = NULL;
@@ -497,9 +518,8 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 		bcmgenet_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
 	}
 
-	if (init)
-		dev_info(&priv->pdev->dev, "configuring instance for %s\n",
-			 phy_name);
+	pr_info_once("%s: configuring instance for %s\n",
+		     dev_name(&priv->pdev->dev), phy_name);
 
 	return 0;
 }
@@ -509,6 +529,7 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 	struct device_node *dn = priv->pdev->dev.of_node;
 	struct device *kdev = &priv->pdev->dev;
 	const char *phy_mode_str = NULL;
+	struct phy_device *phydev;
 	u32 propval;
 	int phy_mode;
 	int ret;
@@ -555,14 +576,22 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 		priv->phy_interface = PHY_INTERFACE_MODE_NA;
 		if (!strcasecmp(phy_mode_str, "internal"))
 			priv->phy_type = BRCM_PHY_TYPE_INT;
-		else if (!strcasecmp(phy_mode_str, "moca"))
-			priv->phy_type = BRCM_PHY_TYPE_MOCA;
 		else {
 			dev_err(kdev, "invalid PHY mode: %s\n", phy_mode_str);
 			ret = -EINVAL;
 			goto out;
 		}
 	}
+
+	if (phy_mode == PHY_INTERFACE_MODE_MOCA) {
+		priv->phy_type = BRCM_PHY_TYPE_MOCA;
+
+		/* Make sure we initialize MoCA PHY with a link down */
+		phydev = of_phy_find_device(dn);
+		if (phydev)
+			phydev->link = 0;
+	}
+
 
 	return 0;
 out:
@@ -629,10 +658,6 @@ int bcmgenet_mii_init(struct net_device *dev)
 	} else
 		ret = bcmgenet_mii_new_dt_init(priv);
 
-	if (ret)
-		goto out;
-
-	ret = bcmgenet_mii_config(dev, true);
 	if (ret)
 		goto out;
 

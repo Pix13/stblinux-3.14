@@ -27,8 +27,6 @@
 
 #include "irqchip.h"
 
-#include <asm/mach/irq.h>
-
 /* Register offset in the L2 interrupt controller */
 #define IRQEN		0x00
 #define IRQSTAT		0x04
@@ -37,34 +35,34 @@ struct bcm7120_l2_intc_data {
 	void __iomem *base;
 	struct irq_domain *domain;
 	bool can_wake;
+	unsigned int num_parents;
+	struct bcm7120_l1_intc_data *l1_data;
 	u32 irq_fwd_mask;
-	u32 irq_map_mask;
 	u32 saved_mask;
+};
+
+struct bcm7120_l1_intc_data {
+	struct bcm7120_l2_intc_data *b;
+	u32 irq_map_mask;
 };
 
 static void bcm7120_l2_intc_irq_handle(unsigned int irq, struct irq_desc *desc)
 {
-	struct bcm7120_l2_intc_data *b = irq_desc_get_handler_data(desc);
+	struct bcm7120_l1_intc_data *data = irq_desc_get_handler_data(desc);
+	struct bcm7120_l2_intc_data *b = data->b;
 	struct irq_chip *chip = irq_desc_get_chip(desc);
-	struct irq_chip_generic *gc = irq_get_domain_generic_chip(b->domain, 0);
 	u32 status;
 
 	chained_irq_enter(chip, desc);
 
-	status = __raw_readl(b->base + IRQSTAT);
-
-	if (status == 0) {
-		do_bad_IRQ(irq, desc);
-		goto out;
-	}
-
-	do {
+	/* Mask status with only the per-L1 interrupt map_mask */
+	status = __raw_readl(b->base + IRQSTAT) & data->irq_map_mask;
+	while (status) {
 		irq = ffs(status) - 1;
 		status &= ~(1 << irq);
 		generic_handle_irq(irq_find_mapping(b->domain, irq));
-	} while (status);
+	}
 
-out:
 	chained_irq_exit(chip, desc);
 }
 
@@ -97,8 +95,10 @@ static void bcm7120_l2_intc_resume(struct irq_data *d)
 
 static int bcm7120_l2_intc_init_one(struct device_node *dn,
 					struct bcm7120_l2_intc_data *data,
-					int irq, const __be32 *map_mask)
+					int irq, const __be32 *map_mask,
+					u32 *valid_mask)
 {
+	struct bcm7120_l1_intc_data *l1_data = &data->l1_data[irq];
 	int parent_irq;
 
 	parent_irq = irq_of_parse_and_map(dn, irq);
@@ -107,9 +107,15 @@ static int bcm7120_l2_intc_init_one(struct device_node *dn,
 		return parent_irq;
 	}
 
-	data->irq_map_mask |= be32_to_cpup(map_mask + irq);
+	/* We need to bind a given L1 interrupt with its map_mask to
+	 * properly mask the status register since we utilize the same
+	 * handler function with different parent interrupts
+	 */
+	l1_data->irq_map_mask = be32_to_cpup(map_mask + irq);
+	l1_data->b = data;
+	*valid_mask |= l1_data->irq_map_mask;
 
-	irq_set_handler_data(parent_irq, data);
+	irq_set_handler_data(parent_irq, l1_data);
 	irq_set_chained_handler(parent_irq, bcm7120_l2_intc_irq_handle);
 
 	return 0;
@@ -125,6 +131,7 @@ int __init bcm7120_l2_intc_of_init(struct device_node *dn,
 	const __be32 *map_mask;
 	int num_parent_irqs;
 	int ret = 0, len, irq;
+	u32 valid_mask = 0;
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -152,24 +159,32 @@ int __init bcm7120_l2_intc_of_init(struct device_node *dn,
 		goto out_unmap;
 	}
 
+	data->l1_data = kcalloc(num_parent_irqs, sizeof(*data->l1_data),
+				  GFP_KERNEL);
+	if (!data->l1_data) {
+		ret = -ENOMEM;
+		goto out_unmap;
+	}
+
 	map_mask = of_get_property(dn, "brcm,int-map-mask", &len);
 	if (!map_mask || (len != (sizeof(*map_mask) * num_parent_irqs))) {
 		pr_err("invalid brcm,int-map-mask property\n");
 		ret = -EINVAL;
-		goto out_unmap;
+		goto out_free_l1_data;
 	}
 
 	for (irq = 0; irq < num_parent_irqs; irq++) {
-		ret = bcm7120_l2_intc_init_one(dn, data, irq, map_mask);
+		ret = bcm7120_l2_intc_init_one(dn, data, irq, map_mask,
+					       &valid_mask);
 		if (ret)
-			goto out_unmap;
+			goto out_free_l1_data;
 	}
 
 	data->domain = irq_domain_add_linear(dn, 32,
 					&irq_generic_chip_ops, NULL);
 	if (!data->domain) {
 		ret = -ENOMEM;
-		goto out_unmap;
+		goto out_free_l1_data;
 	}
 
 	ret = irq_alloc_domain_generic_chips(data->domain, 32, 1,
@@ -181,7 +196,7 @@ int __init bcm7120_l2_intc_of_init(struct device_node *dn,
 	}
 
 	gc = irq_get_domain_generic_chip(data->domain, 0);
-	gc->unused = 0xfffffff & ~data->irq_map_mask;
+	gc->unused = 0xffffffff & ~valid_mask;
 	gc->reg_base = data->base;
 	gc->private = data;
 	ct = gc->chip_types;
@@ -210,6 +225,8 @@ int __init bcm7120_l2_intc_of_init(struct device_node *dn,
 
 out_free_domain:
 	irq_domain_remove(data->domain);
+out_free_l1_data:
+	kfree(data->l1_data);
 out_unmap:
 	iounmap(data->base);
 out_free:

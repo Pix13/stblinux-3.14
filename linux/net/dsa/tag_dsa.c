@@ -66,6 +66,9 @@ netdev_tx_t dsa_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	skb->protocol = htons(ETH_P_DSA);
 
+	if (unlikely(netpoll_tx_running(dev)))
+		return dsa_netpoll_send_skb(p, skb);
+
 	skb->dev = p->parent->dst->master_netdev;
 	dev_queue_xmit(skb);
 

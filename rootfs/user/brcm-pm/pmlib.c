@@ -85,14 +85,52 @@ struct brcm_pm_priv {
 #define SYS_CPUFREQ_GOV	"/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 #define SYS_STANDBY	"/sys/power/state"
 #define HALT_PATH	"/sbin/halt"
-#define AHCI_DEV_NAME_GLOB	"strict-ahci.*"
-#define SATA_SCSI_DEVICE "/sys/devices/platform/" AHCI_DEV_NAME_GLOB "/ata*/host*/target*/*/scsi_device/*/device"
-#define SATA_DELETE_GLOB SATA_SCSI_DEVICE "/delete"
+
+#define AHCI_DEV_NAME_GLOB_LEGACY	"brcmstb-ahci.*"
+#define AHCI_DEV_NAME_GLOB	"*.sata"
 #define SATA_RESCAN_GLOB "/sys/class/scsi_host/host*/scan"
-#define AHCI_PATH "/sys/bus/platform/drivers/ahci"
-#define SATA_DEVICE_PATH "/sys/bus/platform/devices/" AHCI_DEV_NAME_GLOB
-#define SATA_UNBIND_PATH AHCI_PATH "/unbind"
-#define SATA_BIND_PATH	AHCI_PATH "/bind"
+#define AHCI_PATH_LEGACY "/sys/bus/platform/drivers/ahci"
+#define AHCI_PATH "/sys/bus/platform/drivers/brcm-ahci"
+
+struct sata_paths {
+	const char *const sata_dev_glob;
+	const char *const delete_glob;
+	const char *const ahci_path;
+	const char *const sata_dev_path;
+	const char *const unbind_path;
+	const char *const bind_path;
+};
+
+struct available_sata_paths_s {
+	struct sata_paths legacy;
+	struct sata_paths current;
+};
+
+static const struct available_sata_paths_s available_sata_paths = {
+	/* used for stblinux 3.8 and 3.14 */
+	.legacy = {
+		.sata_dev_glob = AHCI_DEV_NAME_GLOB_LEGACY,
+		.delete_glob = "/sys/devices/platform/"
+			AHCI_DEV_NAME_GLOB_LEGACY
+			"/ata*/host*/target*/*/scsi_device/*/device/delete",
+		.ahci_path = AHCI_PATH_LEGACY,
+		.sata_dev_path = "/sys/bus/platform/devices/"
+			AHCI_DEV_NAME_GLOB_LEGACY,
+		.unbind_path = AHCI_PATH_LEGACY "/unbind",
+		.bind_path = AHCI_PATH_LEGACY "/bind",
+	},
+	/* used for upstream driver (in stblinux 4.1) */
+	.current = {
+		.sata_dev_glob = AHCI_DEV_NAME_GLOB,
+		.delete_glob = "/sys/devices/platform/rdb/" AHCI_DEV_NAME_GLOB
+			"/ata*/host*/target*/*/scsi_device/*/device/delete",
+		.ahci_path = AHCI_PATH,
+		.sata_dev_path = "/sys/bus/platform/devices/"
+			AHCI_DEV_NAME_GLOB,
+		.unbind_path = AHCI_PATH "/unbind",
+		.bind_path = AHCI_PATH "/bind",
+	},
+};
 
 static int file_exists(const char *path)
 {
@@ -374,12 +412,23 @@ static int sata_rescan_hosts(void)
 	return ret;
 }
 
+static const struct sata_paths *get_sata_paths(void)
+{
+	glob_t g;
+	if (glob(available_sata_paths.legacy.sata_dev_path, GLOB_NOSORT,
+				NULL, &g))
+		return &available_sata_paths.current;
+	else
+		return &available_sata_paths.legacy;
+}
+
 static int sata_delete_devices(void)
 {
+	const struct sata_paths *sp = get_sata_paths();
 	glob_t g;
 	int i, ret = 0;
 
-	if (glob(SATA_DELETE_GLOB, GLOB_NOSORT, NULL, &g) != 0)
+	if (glob(sp->delete_glob, GLOB_NOSORT, NULL, &g))
 		return 0;
 
 	for (i = 0; i < (int)g.gl_pathc; i++)
@@ -392,23 +441,23 @@ static int sata_delete_devices(void)
 
 static int get_sata_status(void)
 {
+	const struct sata_paths *sp = get_sata_paths();
 	glob_t g;
 	int i, is_on = 1;
 	char *path;
 	size_t len;
 
-	if (glob(SATA_DEVICE_PATH, GLOB_NOSORT, NULL, &g) != 0)
+	if (glob(sp->sata_dev_path, GLOB_NOSORT, NULL, &g) != 0)
 		/* No AHCI devices present? */
 		return BRCM_PM_UNDEF;
 
-	/* Allocate at least space for AHCI_PATH/strict-ahci.XX */
-	len = strlen(AHCI_PATH) + strlen(AHCI_DEV_NAME_GLOB) + 10;
+	/* Allocate at least space for ahci_path and "/brcmstb-ahci.XX" */
+	len = strlen(sp->ahci_path) + strlen(sp->sata_dev_glob) + 10;
 	path = calloc(len, sizeof(*path));
 
-	/* Check if any strict-ahci.* devices are present at AHCI_PATH */
+	/* Check if any brcmstb-ahci.* devices are present at ahci_path */
 	for (i = 0; i < (int)g.gl_pathc; i++) {
-		strncat(path, AHCI_PATH "/", len - 1);
-		strncat(path, basename(g.gl_pathv[i]), len - 1);
+		snprintf(path, len - 1, "%s/%s", sp->ahci_path, basename(g.gl_pathv[i]));
 		if (!file_exists(path)) {
 			/* At least one device is unbound */
 			is_on = 0;
@@ -425,11 +474,12 @@ out:
 
 static int sata_set_power(int on)
 {
+	const struct sata_paths *sp = get_sata_paths();
 	glob_t g;
 	int i, ret = 0;
-	const char *dest = on ? SATA_BIND_PATH : SATA_UNBIND_PATH;
+	const char *dest = on ? sp->bind_path : sp->unbind_path;
 
-	if (glob(SATA_DEVICE_PATH, GLOB_NOSORT, NULL, &g) != 0)
+	if (glob(sp->sata_dev_path, GLOB_NOSORT, NULL, &g) != 0)
 		return 0;
 
 	for (i = 0; i < (int)g.gl_pathc; i++)

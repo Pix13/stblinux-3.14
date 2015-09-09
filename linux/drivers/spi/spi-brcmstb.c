@@ -983,6 +983,10 @@ static int bcmspi_transfer(struct spi_device *spi, struct spi_message *msg)
 				if (bcmspi_emulate_flash_read(priv, msg) == 0)
 					return 0;
 				break;
+			case OPCODE_QOR:
+				if (bcmspi_emulate_flash_read(priv, msg) == 0)
+					return 0;
+				break;
 			case OPCODE_RDSR:
 				if (bcmspi_emulate_flash_rdsr(priv, msg) == 0)
 					return 0;

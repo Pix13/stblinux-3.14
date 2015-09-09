@@ -13,6 +13,7 @@
 
 #include <linux/phy.h>
 #include <net/dsa.h>
+#include <linux/netpoll.h>
 
 struct dsa_slave_priv {
 	/*
@@ -39,7 +40,22 @@ struct dsa_slave_priv {
 	int			old_duplex;
 
 	struct net_bridge	*bridge_dev;
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	struct netpoll		*netpoll;
+#endif
 };
+
+static inline netdev_tx_t dsa_netpoll_send_skb(struct dsa_slave_priv *p,
+					       struct sk_buff *skb)
+{
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	if (p->netpoll)
+		netpoll_send_skb(p->netpoll, skb);
+#else
+	BUG();
+#endif
+	return NETDEV_TX_OK;
+}
 
 /* dsa.c */
 extern char dsa_driver_version[];

@@ -16,6 +16,6 @@ AFLAGS_bcm_kona_smc_asm.o	:=-Wa,-march=armv7-a$(plus_sec)
 
 ifeq ($(CONFIG_ARCH_BRCMSTB),y)
 obj-y				+= brcmstb.o
-obj-$(CONFIG_SMP)		+= headsmp-brcmstb.o platsmp-brcmstb.o
+obj-$(CONFIG_SMP)		+= platsmp-brcmstb.o
 obj-$(CONFIG_PCI)		+= pci-brcmstb.o
 endif

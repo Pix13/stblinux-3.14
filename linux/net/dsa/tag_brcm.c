@@ -87,6 +87,9 @@ netdev_tx_t brcm_tag_xmit(struct sk_buff *skb, struct net_device *dev)
 		brcm_tag[2] = BRCM_IG_DSTMAP2_MASK;
 	brcm_tag[3] = (1 << p->port) & BRCM_IG_DSTMAP1_MASK;
 
+	if (unlikely(netpoll_tx_running(dev)))
+		return dsa_netpoll_send_skb(p, skb);
+
 	/* Queue the SKB for transmission on the parent interface, but
 	 * do not modify its EtherType
 	 */

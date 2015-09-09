@@ -3611,7 +3611,8 @@ int sata_link_resume(struct ata_link *link, const unsigned long *params,
 		 * immediately after resuming.  Delay 200ms before
 		 * debouncing.
 		 */
-		ata_msleep(link->ap, 200);
+		if (!(link->flags & ATA_LFLAG_NO_DB_DELAY))
+			ata_msleep(link->ap, 200);
 
 		/* is SControl restored correctly? */
 		if ((rc = sata_scr_read(link, SCR_CONTROL, &scontrol)))
@@ -5876,6 +5877,7 @@ struct ata_host *ata_host_alloc_pinfo(struct device *dev,
 		ap->mwdma_mask = pi->mwdma_mask;
 		ap->udma_mask = pi->udma_mask;
 		ap->flags |= pi->flags;
+		ap->flags2 |= pi->flags2;
 		ap->link.flags |= pi->link_flags;
 		ap->ops = pi->port_ops;
 

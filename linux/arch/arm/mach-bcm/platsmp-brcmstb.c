@@ -18,7 +18,7 @@
 #include <linux/io.h>
 #include <linux/jiffies.h>
 #include <linux/of_address.h>
-#include <linux/of_irq.h>
+#include <linux/of_platform.h>
 #include <linux/printk.h>
 #include <linux/regmap.h>
 #include <linux/smp.h>
@@ -57,6 +57,12 @@ static u32 cpu_rst_cfg_reg;
 static u32 hif_cont_reg;
 
 #ifdef CONFIG_HOTPLUG_CPU
+/*
+ * We must quiesce a dying CPU before it can be killed by the boot CPU. Because
+ * one or more cache may be disabled, we must flush to ensure coherency. We
+ * cannot use traditionl completion structures or spinlocks as they rely on
+ * coherency.
+ */
 static DEFINE_PER_CPU_ALIGNED(int, per_cpu_sw_state);
 
 static int per_cpu_sw_state_rd(u32 cpu)
@@ -71,10 +77,9 @@ static int per_cpu_sw_state_rd(u32 cpu)
  */
 static void per_cpu_sw_state_wr(u32 cpu, int val)
 {
-	per_cpu(per_cpu_sw_state, cpu) = val;
 	dmb();
+	per_cpu(per_cpu_sw_state, cpu) = val;
 	sync_cache_w(SHIFT_PERCPU_PTR(&per_cpu_sw_state, per_cpu_offset(cpu)));
-	dsb_sev();
 }
 #else
 static inline void per_cpu_sw_state_wr(u32 cpu, int val) { }
@@ -148,12 +153,12 @@ static void brcmstb_cpu_boot(u32 cpu)
 	per_cpu_sw_state_wr(cpu, 1);
 
 	/*
-	 * set the reset vector to point to the secondary_startup
+	 * Set the reset vector to point to the secondary_startup
 	 * routine
 	 */
-	cpu_set_boot_addr(cpu, virt_to_phys(brcmstb_secondary_startup));
+	cpu_set_boot_addr(cpu, virt_to_phys(secondary_startup));
 
-	/* unhalt the cpu */
+	/* Unhalt the cpu */
 	cpu_rst_cfg_set(cpu, 0);
 }
 
@@ -294,9 +299,7 @@ static int __init setup_hifcpubiuctrl_regs(struct device_node *np)
 	}
 
 cleanup:
-	if (syscon_np)
-		of_node_put(syscon_np);
-
+	of_node_put(syscon_np);
 	return rc;
 }
 
@@ -322,13 +325,11 @@ static int __init setup_hifcont_regs(struct device_node *np)
 		goto cleanup;
 	}
 
-	/* offset is at top of hif_cont_block */
+	/* Offset is at top of hif_cont_block */
 	hif_cont_reg = 0;
 
 cleanup:
-	if (syscon_np)
-		of_node_put(syscon_np);
-
+	of_node_put(syscon_np);
 	return rc;
 }
 
@@ -356,6 +357,10 @@ static void __init brcmstb_cpu_ctrl_setup(unsigned int max_cpus)
 
 static int brcmstb_boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
+	/* Missing the brcm,brcmstb-smpboot DT node? */
+	if (!cpubiuctrl_block || !hif_cont_block)
+		return -ENODEV;
+
 	/* Bring up power to the core if necessary */
 	if (brcmstb_cpu_get_power_state(cpu) == 0)
 		brcmstb_cpu_power_on(cpu);

@@ -15,6 +15,7 @@
 #include <linux/of_net.h>
 #include <linux/of_mdio.h>
 #include <linux/if_bridge.h>
+#include <linux/netpoll.h>
 #include "dsa_priv.h"
 
 /* slave mii_bus handling ***************************************************/
@@ -437,6 +438,51 @@ static int dsa_slave_get_eee(struct net_device *dev, struct ethtool_eee *e)
 	return ret;
 }
 
+#ifdef CONFIG_NET_POLL_CONTROLLER
+static int dsa_slave_netpoll_setup(struct net_device *dev,
+				   struct netpoll_info *ni,
+				   gfp_t gfp)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct dsa_switch *ds = p->parent;
+	struct net_device *master = ds->dst->master_netdev;
+	struct netpoll *netpoll;
+	int err = 0;
+
+	netpoll = kzalloc(sizeof(*netpoll), gfp);
+	if (!netpoll)
+		return -ENOMEM;
+
+	err = __netpoll_setup(netpoll, master, gfp);
+	if (err) {
+		kfree(netpoll);
+		goto out;
+	}
+
+	p->netpoll = netpoll;
+out:
+	return err;
+}
+
+static void dsa_slave_netpoll_cleanup(struct net_device *dev)
+{
+	struct dsa_slave_priv *p = netdev_priv(dev);
+	struct netpoll *netpoll = p->netpoll;
+
+	if (!netpoll)
+		return;
+
+	p->netpoll = NULL;
+
+	__netpoll_free_async(netpoll);
+}
+
+static void dsa_slave_poll_controller(struct net_device *dev)
+{
+}
+#endif
+
+
 static const struct ethtool_ops dsa_slave_ethtool_ops = {
 	.get_settings		= dsa_slave_get_settings,
 	.set_settings		= dsa_slave_set_settings,
@@ -465,6 +511,11 @@ static const struct net_device_ops brcm_netdev_ops = {
 	.ndo_br_join		= dsa_slave_br_join,
 	.ndo_br_leave		= dsa_slave_br_leave,
 	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_netpoll_setup	= dsa_slave_netpoll_setup,
+	.ndo_netpoll_cleanup	= dsa_slave_netpoll_cleanup,
+	.ndo_poll_controller	= dsa_slave_poll_controller,
+#endif
 };
 #endif
 #ifdef CONFIG_NET_DSA_TAG_DSA
@@ -480,6 +531,11 @@ static const struct net_device_ops dsa_netdev_ops = {
 	.ndo_br_join		= dsa_slave_br_join,
 	.ndo_br_leave		= dsa_slave_br_leave,
 	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_netpoll_setup	= dsa_slave_netpoll_setup,
+	.ndo_netpoll_cleanup	= dsa_slave_netpoll_cleanup,
+	.ndo_poll_controller	= dsa_slave_poll_controller,
+#endif
 };
 #endif
 #ifdef CONFIG_NET_DSA_TAG_EDSA
@@ -495,6 +551,11 @@ static const struct net_device_ops edsa_netdev_ops = {
 	.ndo_br_join		= dsa_slave_br_join,
 	.ndo_br_leave		= dsa_slave_br_leave,
 	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_netpoll_setup	= dsa_slave_netpoll_setup,
+	.ndo_netpoll_cleanup	= dsa_slave_netpoll_cleanup,
+	.ndo_poll_controller	= dsa_slave_poll_controller,
+#endif
 };
 #endif
 #ifdef CONFIG_NET_DSA_TAG_TRAILER
@@ -510,12 +571,20 @@ static const struct net_device_ops trailer_netdev_ops = {
 	.ndo_br_join		= dsa_slave_br_join,
 	.ndo_br_leave		= dsa_slave_br_leave,
 	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_netpoll_setup	= dsa_slave_netpoll_setup,
+	.ndo_netpoll_cleanup	= dsa_slave_netpoll_cleanup,
+	.ndo_poll_controller	= dsa_slave_poll_controller,
+#endif
 };
 #endif
 
 static netdev_tx_t dsa_slave_dummy_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct dsa_slave_priv *p = netdev_priv(dev);
+
+	if (unlikely(netpoll_tx_running(dev)))
+		return dsa_netpoll_send_skb(p, skb);
 
 	skb->dev = p->parent->dst->master_netdev;
 	dev_queue_xmit(skb);
@@ -535,6 +604,11 @@ static const struct net_device_ops dummy_netdev_ops = {
 	.ndo_br_join		= dsa_slave_br_join,
 	.ndo_br_leave		= dsa_slave_br_leave,
 	.ndo_br_set_stp_state	= dsa_slave_br_set_stp_state,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_netpoll_setup	= dsa_slave_netpoll_setup,
+	.ndo_netpoll_cleanup	= dsa_slave_netpoll_cleanup,
+	.ndo_poll_controller	= dsa_slave_poll_controller,
+#endif
 };
 
 static void dsa_slave_adjust_link(struct net_device *dev)

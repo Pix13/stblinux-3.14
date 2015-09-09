@@ -204,6 +204,7 @@ enum {
 	ATA_LFLAG_SW_ACTIVITY	= (1 << 7), /* keep activity stats */
 	ATA_LFLAG_NO_LPM	= (1 << 8), /* disable LPM on this link */
 	ATA_LFLAG_RST_ONCE	= (1 << 9), /* limit recovery to one reset */
+	ATA_LFLAG_NO_DB_DELAY	= (1 << 10), /* no debounce delay on link resume */
 
 	/* struct ata_port flags */
 	ATA_FLAG_SLAVE_POSS	= (1 << 0), /* host supports slave dev */
@@ -233,6 +234,8 @@ enum {
 
 	/* bits 24:31 of ap->flags are reserved for LLD specific flags */
 
+	/* struct ata_port flags2 */
+	ATA_FLAG2_WAKE_BEFORE_STOP = (1 << 0), /* wake link before DMA stop */
 
 	/* struct ata_port pflags */
 	ATA_PFLAG_EH_PENDING	= (1 << 0), /* EH pending */
@@ -796,6 +799,7 @@ struct ata_port {
 	/* Flags owned by the EH context. Only EH should touch these once the
 	   port is active */
 	unsigned long		flags;	/* ATA_FLAG_xxx */
+	unsigned long		flags2; /* ATA_FLAG2_xxx */
 	/* Flags that change dynamically, protected by ap->lock */
 	unsigned int		pflags; /* ATA_PFLAG_xxx */
 	unsigned int		print_id; /* user visible unique port ID */
@@ -981,6 +985,7 @@ struct ata_port_operations {
 
 struct ata_port_info {
 	unsigned long		flags;
+	unsigned long		flags2;
 	unsigned long		link_flags;
 	unsigned long		pio_mask;
 	unsigned long		mwdma_mask;

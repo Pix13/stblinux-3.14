@@ -319,6 +319,7 @@ struct bcmgenet_mib_counters {
 #define UMAC_IRQ_PHY_DET_F		(1 << 3)
 #define UMAC_IRQ_LINK_UP		(1 << 4)
 #define UMAC_IRQ_LINK_DOWN		(1 << 5)
+#define UMAC_IRQ_LINK_EVENT		(UMAC_IRQ_LINK_UP | UMAC_IRQ_LINK_DOWN)
 #define UMAC_IRQ_UMAC			(1 << 6)
 #define UMAC_IRQ_UMAC_TSV		(1 << 7)
 #define UMAC_IRQ_TBUF_UNDERRUN		(1 << 8)
@@ -521,6 +522,7 @@ enum bcmgenet_version {
 #define GENET_HAS_40BITS	(1 << 0)
 #define GENET_HAS_EXT		(1 << 1)
 #define GENET_HAS_MDIO_INTR	(1 << 2)
+#define GENET_HAS_MOCA_LINK_DET	(1 << 3)
 
 /* BCMGENET hardware parameters, keep this structure nicely aligned
  * since it is going to be used in hot paths
@@ -678,7 +680,7 @@ void bcmgenet_wol_power_up_cfg(struct bcmgenet_priv *priv,
 				enum bcmgenet_power_mode mode);
 
 int bcmgenet_mii_init(struct net_device *dev);
-int bcmgenet_mii_config(struct net_device *dev, bool init);
+int bcmgenet_mii_config(struct net_device *dev);
 int bcmgenet_mii_probe(struct net_device *dev);
 void bcmgenet_mii_exit(struct net_device *dev);
 void bcmgenet_phy_power_set(struct net_device *dev, bool enable);

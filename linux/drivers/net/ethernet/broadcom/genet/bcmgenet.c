@@ -389,44 +389,22 @@ static int bcmgenet_get_settings(struct net_device *dev,
 		struct ethtool_cmd *cmd)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
-	int rc = 0;
 
-	if (priv->phy_type == BRCM_PHY_TYPE_MOCA) {
-		/* see comments in bcmgenet_set_settings() */
-		cmd->autoneg = netif_carrier_ok(priv->dev);
-		cmd->speed = SPEED_1000;
-		cmd->duplex = DUPLEX_HALF;
-		cmd->port = PORT_BNC;
-	} else {
-		if (!netif_running(dev))
-			return -EINVAL;
+	if (!netif_running(dev))
+		return -EINVAL;
 
-		rc = phy_ethtool_gset(priv->phydev, cmd);
-	}
-
-	return rc;
+	return phy_ethtool_gset(priv->phydev, cmd);
 }
 
 static int bcmgenet_set_settings(struct net_device *dev,
 		struct ethtool_cmd *cmd)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
-	int err = 0;
 
-	if (priv->phy_type == BRCM_PHY_TYPE_MOCA) {
-		/* mocad uses cmd->autoneg to control our RUNNING flag */
-		if (cmd->autoneg)
-			netif_carrier_on(priv->dev);
-		else
-			netif_carrier_off(priv->dev);
-	} else {
-		if (!netif_running(dev))
-			return -EINVAL;
+	if (!netif_running(dev))
+		return -EINVAL;
 
-		err = phy_ethtool_sset(priv->phydev, cmd);
-	}
-
-	return err;
+	return phy_ethtool_sset(priv->phydev, cmd);
 }
 
 static int bcmgenet_set_rx_csum(struct net_device *dev,
@@ -1714,13 +1692,16 @@ static int init_umac(struct bcmgenet_priv *priv)
 
 	/* Monitor cable plug/unpluged event for internal PHY */
 	if (priv->phy_type == BRCM_PHY_TYPE_INT) {
-		cpu_mask_clear |= (UMAC_IRQ_LINK_DOWN | UMAC_IRQ_LINK_UP);
+		cpu_mask_clear |= (UMAC_IRQ_LINK_EVENT);
 		/* Turn on ENERGY_DET interrupt in bcmgenet_open()
 		 * TODO: fix me for active standby.
 		 */
 	} else if (priv->ext_phy) {
-		cpu_mask_clear |= (UMAC_IRQ_LINK_DOWN | UMAC_IRQ_LINK_UP);
+		cpu_mask_clear |= (UMAC_IRQ_LINK_EVENT);
 	} else if (priv->phy_type == BRCM_PHY_TYPE_MOCA) {
+		if (priv->hw_params->flags & GENET_HAS_MOCA_LINK_DET)
+			cpu_mask_clear |= UMAC_IRQ_LINK_EVENT;
+
 		reg = bcmgenet_bp_mc_get(priv);
 		reg |= BIT(priv->hw_params->bp_in_en_shift);
 
@@ -2077,10 +2058,10 @@ static void bcmgenet_irq_task(struct work_struct *work)
 
 	/* Link UP/DOWN event */
 	if ((priv->hw_params->flags & GENET_HAS_MDIO_INTR) &&
-		(priv->irq0_stat & (UMAC_IRQ_LINK_UP|UMAC_IRQ_LINK_DOWN))) {
+		(priv->irq0_stat & UMAC_IRQ_LINK_EVENT)) {
 		phy_mac_interrupt(priv->phydev,
-				(priv->irq0_stat & UMAC_IRQ_LINK_UP));
-		priv->irq0_stat &= ~(UMAC_IRQ_LINK_UP|UMAC_IRQ_LINK_DOWN);
+				!!(priv->irq0_stat & UMAC_IRQ_LINK_UP));
+		priv->irq0_stat &= ~UMAC_IRQ_LINK_EVENT;
 	}
 }
 
@@ -2146,8 +2127,7 @@ static irqreturn_t bcmgenet_isr0(int irq, void *dev_id)
 	}
 	if (priv->irq0_stat & (UMAC_IRQ_PHY_DET_R |
 				UMAC_IRQ_PHY_DET_F |
-				UMAC_IRQ_LINK_UP |
-				UMAC_IRQ_LINK_DOWN |
+				UMAC_IRQ_LINK_EVENT |
 				UMAC_IRQ_HFB_SM |
 				UMAC_IRQ_HFB_MM |
 				UMAC_IRQ_MPD_R)) {
@@ -2172,6 +2152,19 @@ static irqreturn_t bcmgenet_wol_isr(int irq, void *dev_id)
 
 	return IRQ_HANDLED;
 }
+
+#ifdef CONFIG_NET_POLL_CONTROLLER
+static void bcmgenet_poll_controller(struct net_device *dev)
+{
+	struct bcmgenet_priv *priv = netdev_priv(dev);
+
+	disable_irq(priv->irq0);
+	bcmgenet_isr0(priv->irq0, priv);
+	enable_irq(priv->irq0);
+
+	bcmgenet_tx_reclaim_all(dev);
+}
+#endif
 
 static void bcmgenet_umac_reset(struct bcmgenet_priv *priv)
 {
@@ -2313,8 +2306,6 @@ static int bcmgenet_open(struct net_device *dev)
 		netdev_err(dev, "can't request IRQ %d\n", priv->irq1);
 		goto err_irq0;
 	}
-
-	bcmgenet_mii_config(priv->dev, false);
 
 	ret = bcmgenet_mii_probe(dev);
 	if (ret)
@@ -2509,6 +2500,9 @@ static const struct net_device_ops bcmgenet_netdev_ops = {
 	.ndo_set_mac_address	= bcmgenet_set_mac_addr,
 	.ndo_do_ioctl		= bcmgenet_ioctl,
 	.ndo_set_features	= bcmgenet_set_features,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_poll_controller	= bcmgenet_poll_controller,
+#endif
 };
 
 /* Array of GENET hardware parameters/characteristics */
@@ -2556,7 +2550,8 @@ static struct bcmgenet_hw_params bcmgenet_hw_params[] = {
 		.rdma_offset = 0x10000,
 		.tdma_offset = 0x11000,
 		.words_per_bd = 2,
-		.flags = GENET_HAS_EXT | GENET_HAS_MDIO_INTR,
+		.flags = GENET_HAS_EXT | GENET_HAS_MDIO_INTR |
+			 GENET_HAS_MOCA_LINK_DET,
 	},
 	[GENET_V4] = {
 		.tx_queues = 4,
@@ -2572,7 +2567,8 @@ static struct bcmgenet_hw_params bcmgenet_hw_params[] = {
 		.rdma_offset = 0x2000,
 		.tdma_offset = 0x4000,
 		.words_per_bd = 3,
-		.flags = GENET_HAS_40BITS | GENET_HAS_EXT | GENET_HAS_MDIO_INTR,
+		.flags = GENET_HAS_40BITS | GENET_HAS_EXT |
+			 GENET_HAS_MDIO_INTR | GENET_HAS_MOCA_LINK_DET,
 	},
 };
 
@@ -2953,7 +2949,7 @@ static int bcmgenet_resume(struct device *d)
 		clk_disable_unprepare(priv->clk_wol);
 
 	/* Speed settings must be restored */
-	bcmgenet_mii_config(priv->dev, false);
+	bcmgenet_mii_config(priv->dev);
 
 	/* disable ethernet MAC while updating its registers */
 	umac_enable_set(priv, CMD_TX_EN | CMD_RX_EN, 0);

@@ -9,6 +9,9 @@ mount -t sysfs sys /sys
 if grep -qs debugfs /proc/filesystems; then
 	mount -t debugfs debugfs /sys/kernel/debug
 fi
+if grep -qs configfs /proc/filesystems; then
+	mount -t configfs none /sys/kernel/config
+fi
 grep -q devtmpfs /proc/mounts || mount -t devtmpfs none /dev
 mkdir -p /dev/pts
 mount -t devpts devpts /dev/pts
