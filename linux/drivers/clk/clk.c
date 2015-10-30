@@ -929,6 +929,9 @@ int __clk_prepare(struct clk *clk)
 	if (clk->prepare_count == 0) {
 		if (clk->flags & CLK_IS_SW)
 			for (i = 0; i < clk->num_parents; i++) {
+				if (!clk->parents[i])
+					clk->parents[i] =
+						__clk_lookup(clk->parent_names[i]);
 				ret = __clk_prepare(clk->parents[i]);
 				if (ret) {
 					for (j = i - 1; j >= 0; j--)
@@ -1042,6 +1045,9 @@ static int __clk_enable(struct clk *clk)
 	if (clk->enable_count == 0) {
 		if (clk->flags & CLK_IS_SW)
 			for (i = 0; i < clk->num_parents && !ret; i++) {
+				if (!clk->parents[i])
+					clk->parents[i] =
+						__clk_lookup(clk->parent_names[i]);
 				ret = __clk_enable(clk->parents[i]);
 				if (ret) {
 					for (j = i - 1; j >= 0; j--)

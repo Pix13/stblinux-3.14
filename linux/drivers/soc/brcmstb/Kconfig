@@ -71,4 +71,10 @@ config BRCMSTB_WKTMR
 config BRCMSTB_XPT_HASH
 	bool
 
+config BRCMSTB_NEXUS_API
+	tristate "Support for Nexus APIs"
+	help
+	   Provides APIs for Nexus kernel-mode driver to facilitate
+	   sharing of resources: IRQs, GPIOs, Pinmuxing etc.
+
 endmenu

@@ -27,7 +27,7 @@
 #ifndef _ASM_BRCMSTB_BRCMSTB_H
 #define _ASM_BRCMSTB_BRCMSTB_H
 
-#define BRCMSTB_H_VERSION  4
+#define BRCMSTB_H_VERSION  5
 
 #if !defined(__ASSEMBLY__)
 
@@ -35,6 +35,9 @@
 #include <linux/smp.h>
 #include <linux/device.h>
 #include <linux/brcmstb/memory_api.h>
+#include <linux/brcmstb/irq_api.h>
+#include <linux/brcmstb/gpio_api.h>
+#include <linux/brcmstb/reg_api.h>
 
 #if defined(CONFIG_MIPS)
 #include <linux/brcmstb/brcmapi.h>

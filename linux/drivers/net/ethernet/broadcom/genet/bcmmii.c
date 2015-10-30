@@ -570,7 +570,7 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 		ret = of_property_read_string(dn, "phy-mode", &phy_mode_str);
 		if (ret < 0) {
 			dev_err(kdev, "invalid PHY mode property\n");
-			goto out;
+			return ret;
 		}
 
 		priv->phy_interface = PHY_INTERFACE_MODE_NA;
@@ -578,8 +578,7 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 			priv->phy_type = BRCM_PHY_TYPE_INT;
 		else {
 			dev_err(kdev, "invalid PHY mode: %s\n", phy_mode_str);
-			ret = -EINVAL;
-			goto out;
+			return ret;
 		}
 	}
 
@@ -594,9 +593,6 @@ static int bcmgenet_mii_new_dt_init(struct bcmgenet_priv *priv)
 
 
 	return 0;
-out:
-	mdiobus_unregister(priv->mii_bus);
-	return ret;
 }
 
 static int bcmgenet_mii_old_dt_init(struct bcmgenet_priv *priv)

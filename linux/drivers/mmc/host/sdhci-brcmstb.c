@@ -31,6 +31,18 @@
 #define SDIO_CFG_REG(x, y)	(x + BCHP_SDIO_0_CFG_##y -	\
 				BCHP_SDIO_0_CFG_REG_START)
 
+struct sdhci_brcmstb_priv {
+	void __iomem *cfg_regs;
+	int host_driver_type;
+	int host_hs_driver_type;
+	int card_driver_type;
+};
+
+#define MASK_OFF_DRV (SDHCI_PRESET_SDCLK_FREQ_MASK |	\
+			SDHCI_PRESET_CLKGEN_SEL_MASK)
+
+static char *strength_type_to_string[] = {"B", "A", "C", "D"};
+
 #if defined(CONFIG_BCM74371A0)
 /*
  * HW7445-1183
@@ -47,27 +59,128 @@ static void sdhci_brcmstb_writeb(struct sdhci_host *host, u8 val, int reg)
 	writeb(val, host->ioaddr + reg);
 }
 
+/* We don't support drive strength override on chips that use the
+ * old version of the SDIO core.
+ */
+static void set_host_driver_strength_overrides(
+	struct sdhci_host *host,
+	struct sdhci_brcmstb_priv *priv)
+{
+}
+
+#else /* CONFIG_BCM74371A0 */
+
+static void set_host_driver_strength_overrides(
+	struct sdhci_host *host,
+	struct sdhci_brcmstb_priv *priv)
+{
+	u16 strength;
+	u16 sdr25;
+	u16 sdr50;
+	u16 ddr50;
+	u16 sdr104;
+	u32 val;
+	u32 cfg_base = (u32)priv->cfg_regs;
+
+	if (priv->host_driver_type) {
+		dev_info(mmc_dev(host->mmc),
+			"Changing UHS Host Driver TYPE Presets to TYPE %s\n",
+			strength_type_to_string[priv->host_driver_type]);
+		strength = (u16)priv->host_driver_type << 11;
+		sdr25 = sdhci_readw(host,
+				SDHCI_PRESET_FOR_SDR25) & MASK_OFF_DRV;
+		sdr50 = sdhci_readw(host,
+				SDHCI_PRESET_FOR_SDR50) & MASK_OFF_DRV;
+		ddr50 = sdhci_readw(host,
+				SDHCI_PRESET_FOR_DDR50) & MASK_OFF_DRV;
+		sdr104 = sdhci_readw(host,
+				SDHCI_PRESET_FOR_SDR104) & MASK_OFF_DRV;
+		val = (sdr25 | strength);
+		val |= ((u32)(sdr50 | strength)) << 16;
+		val |= 0x80000000;
+		DEV_WR(SDIO_CFG_REG(cfg_base, PRESET3), val);
+		val = (sdr104 | strength);
+		val |= ((u32)(ddr50 | strength)) << 16;
+		val |= 0x80000000;
+		DEV_WR(SDIO_CFG_REG(cfg_base, PRESET4), val);
+	}
+
+	/*
+	 * The Host Controller Specification states that the driver
+	 * strength setting is only valid for UHS modes, but our
+	 * host controller allows this setting to be used for HS modes
+	 * as well.
+	 */
+	if (priv->host_hs_driver_type) {
+		u16 sdr12;
+		u16 hs;
+
+		dev_info(mmc_dev(host->mmc),
+			"Changing HS Host Driver TYPE Presets to TYPE %s\n",
+			strength_type_to_string[priv->host_hs_driver_type]);
+		strength = (u16)priv->host_hs_driver_type << 11;
+		sdr12 = sdhci_readw(host, SDHCI_PRESET_FOR_SDR12) &
+			MASK_OFF_DRV;
+		hs = sdhci_readw(host, SDHCI_PRESET_FOR_HS) & MASK_OFF_DRV;
+		val = (hs | strength);
+		val |= ((u32)(sdr12 | strength)) << 16;
+		val |= 0x80000000;
+		DEV_WR(SDIO_CFG_REG(cfg_base, PRESET2), val);
+	}
+}
+#endif /* CONFIG_BCM74371A0 */
+
+static int select_one_drive_strength(struct sdhci_host *host, int supported,
+				int requested, char *type)
+{
+	char strength_ok_msg[] = "Changing %s Driver to TYPE %s\n";
+	char strength_err_msg[] =
+		"Request to change %s Driver to TYPE %s not supported by %s\n";
+	if (supported & (1 << requested)) {
+		if (requested)
+			dev_info(mmc_dev(host->mmc), strength_ok_msg, type,
+				strength_type_to_string[requested], type);
+		return requested;
+	} else {
+		dev_warn(mmc_dev(host->mmc), strength_err_msg, type,
+			strength_type_to_string[requested], type);
+		return 0;
+	}
+}
+
+static int sdhci_brcmstb_select_drive_strength(struct sdhci_host *host,
+					struct mmc_card *card,
+					unsigned int max_dtr, int host_drv,
+					int card_drv, int *drv_type)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_brcmstb_priv *priv = sdhci_pltfm_priv(pltfm_host);
+
+	*drv_type = select_one_drive_strength(host, host_drv,
+					priv->host_driver_type,	"Host");
+	return select_one_drive_strength(host, card_drv,
+					priv->card_driver_type,	"Card");
+}
+
 static struct sdhci_ops sdhci_brcmstb_ops = {
-	.write_b	= sdhci_brcmstb_writeb,
+	.select_drive_strength	= sdhci_brcmstb_select_drive_strength,
 };
-#endif
 
 static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
 };
 
 #if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7145B0) ||		\
 	defined(CONFIG_BCM7250B0) || defined(CONFIG_BCM7364A0) ||	\
-	defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7445D0)
-static int sdhci_override_caps(struct platform_device *pdev,
-			uint32_t cap0_setbits,
-			uint32_t cap0_clearbits,
-			uint32_t cap1_setbits,
-			uint32_t cap1_clearbits)
+	defined(CONFIG_BCM7445D0)
+static void sdhci_override_caps(struct sdhci_host *host,
+				struct sdhci_brcmstb_priv *priv,
+				uint32_t cap0_setbits,
+				uint32_t cap0_clearbits,
+				uint32_t cap1_setbits,
+				uint32_t cap1_clearbits)
 {
 	uint32_t val;
-	struct resource *iomem;
-	uintptr_t cfg_base;
-	struct sdhci_host *host = platform_get_drvdata(pdev);
+	void *cfg_base = priv->cfg_regs;
 
 	/*
 	 * The CAP's override bits in the CFG registers default to all
@@ -75,32 +188,33 @@ static int sdhci_override_caps(struct platform_device *pdev,
 	 * CAPS registers and then modify the requested bits and write
 	 * them to the override CFG registers.
 	 */
-	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!iomem)
-		return -EINVAL;
-	cfg_base = iomem->start;
 	val = sdhci_readl(host, SDHCI_CAPABILITIES);
 	val &= ~cap0_clearbits;
 	val |= cap0_setbits;
-	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG0), val);
+	DEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG0), val);
 	val = sdhci_readl(host, SDHCI_CAPABILITIES_1);
 	val &= ~cap1_clearbits;
 	val |= cap1_setbits;
-	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG1), val);
-	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG_OVERRIDE),
+	DEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG1), val);
+	DEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG_OVERRIDE),
 		BCHP_SDIO_0_CFG_CAP_REG_OVERRIDE_CAP_REG_OVERRIDE_MASK);
-	return 0;
 }
 
-static int sdhci_fix_caps(struct platform_device *pdev)
+static void sdhci_fix_caps(struct sdhci_host *host,
+			struct sdhci_brcmstb_priv *priv)
 {
+#if defined(CONFIG_BCM7445D0)
+	/* Fixed for E0 and above */
+	if (BRCM_CHIP_REV() >= 0x40)
+		return 0;
+#endif
 	/* Disable SDR50 support because tuning is broken. */
-	return sdhci_override_caps(pdev, 0, 0, 0, SDHCI_SUPPORT_SDR50);
+	sdhci_override_caps(host, priv, 0, 0, 0, SDHCI_SUPPORT_SDR50);
 }
 #else
-static int sdhci_fix_caps(struct platform_device *pdev)
+static void sdhci_fix_caps(struct sdhci_host *host,
+			struct sdhci_brcmstb_priv *priv)
 {
-	return 0;
 }
 #endif
 
@@ -123,11 +237,14 @@ static int sdhci_brcmstb_resume(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_brcmstb_priv *priv = sdhci_pltfm_priv(pltfm_host);
 	int err;
 
 	err = clk_enable(pltfm_host->clk);
 	if (err)
 		return err;
+	sdhci_fix_caps(host, priv);
+	set_host_driver_strength_overrides(host, priv);
 	return sdhci_resume_host(host);
 }
 
@@ -136,12 +253,34 @@ static int sdhci_brcmstb_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(sdhci_brcmstb_pmops, sdhci_brcmstb_suspend,
 			sdhci_brcmstb_resume);
 
+static void sdhci_brcmstb_of_get_driver_type(struct device_node *dn,
+					char *name, int *dtype)
+{
+	const char *driver_type;
+	int res;
+
+	res = of_property_read_string(dn, name, &driver_type);
+	if (res == 0) {
+		if (strcmp(driver_type, "A") == 0)
+			*dtype = MMC_SET_DRIVER_TYPE_A;
+		else if (strcmp(driver_type, "B") == 0)
+			*dtype = MMC_SET_DRIVER_TYPE_B;
+		else if (strcmp(driver_type, "C") == 0)
+			*dtype = MMC_SET_DRIVER_TYPE_C;
+		else if (strcmp(driver_type, "D") == 0)
+			*dtype = MMC_SET_DRIVER_TYPE_D;
+	}
+}
+
+
 static int sdhci_brcmstb_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = pdev->dev.of_node;
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
+	struct sdhci_brcmstb_priv *priv;
 	struct clk *clk;
+	struct resource *resource;
 	int res;
 
 	clk = of_clk_get_by_name(dn, "sw_sdio");
@@ -153,27 +292,46 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 	if (res)
 		goto undo_clk_get;
 
-/* Only enable reset workaround for 7439a0 and 74371a0 senior */
 #if defined(CONFIG_BCM74371A0)
+	/* Only enable reset workaround for 74371a0 senior */
 	if (BRCM_CHIP_ID() == 0x7439)
-		sdhci_brcmstb_pdata.ops = &sdhci_brcmstb_ops;
-#endif
-	host = sdhci_pltfm_init(pdev, &sdhci_brcmstb_pdata, 0);
+		sdhci_brcmstb_ops.write_b = sdhci_brcmstb_writeb;
+#endif /* CONFIG_BCM74371A0 */
+	sdhci_brcmstb_pdata.ops = &sdhci_brcmstb_ops;
+	host = sdhci_pltfm_init(pdev, &sdhci_brcmstb_pdata,
+				sizeof(struct sdhci_brcmstb_priv));
 	if (IS_ERR(host)) {
 		res = PTR_ERR(host);
 		goto undo_clk_prep;
 	}
 	sdhci_get_of_property(pdev);
 	mmc_of_parse(host->mmc);
-	res = sdhci_fix_caps(pdev);
-	if (res)
-		goto undo_pltfm_init;
+	pltfm_host = sdhci_priv(host);
+	priv = sdhci_pltfm_priv(pltfm_host);
+	resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (resource == NULL) {
+		dev_err(&pdev->dev, "can't get SDHCI CFG base address\n");
+		return -EINVAL;
+	}
+	priv->cfg_regs = devm_request_and_ioremap(&pdev->dev, resource);
+	if (!priv->cfg_regs) {
+		dev_err(&pdev->dev, "can't map register space\n");
+		return -EINVAL;
+	}
+	sdhci_fix_caps(host, priv);
+
+	sdhci_brcmstb_of_get_driver_type(dn, "host-driver-strength",
+					&priv->host_driver_type);
+	sdhci_brcmstb_of_get_driver_type(dn, "host-hs-driver-strength",
+					&priv->host_hs_driver_type);
+	sdhci_brcmstb_of_get_driver_type(dn, "card-driver-strength",
+					&priv->card_driver_type);
+	set_host_driver_strength_overrides(host, priv);
 
 	res = sdhci_add_host(host);
 	if (res)
 		goto undo_pltfm_init;
 
-	pltfm_host = sdhci_priv(host);
 	pltfm_host->clk = clk;
 	return res;
 

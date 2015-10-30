@@ -273,7 +273,7 @@ int __init brcmstb_memory_get_default_reserve(int bank_nr,
 		PAGE_SIZE << max(MAX_ORDER - 1, pageblock_order);
 	struct membank *bank = &meminfo.bank[bank_nr];
 	phys_addr_t start = bank->start;
-	phys_addr_t size = 0;
+	phys_addr_t size = 0, adj = 0;
 	phys_addr_t newstart, newsize;
 	int i;
 
@@ -291,8 +291,15 @@ int __init brcmstb_memory_get_default_reserve(int bank_nr,
 				return -EINVAL;
 			}
 
+			if (brcmstb_default_reserve == BRCMSTB_RESERVE_BMEM) {
+				if (bank->size <= SZ_128M)
+					return -EINVAL;
+
+				adj = SZ_128M;
+			}
+
 			/* kernel reserves X percent, bmem gets the rest */
-			tmp = ((u64)bank->size) * (100 - DEFAULT_LOWMEM_PCT);
+			tmp = ((u64)(bank->size - adj)) * (100 - DEFAULT_LOWMEM_PCT);
 			rem = do_div(tmp, 100);
 			size = tmp + rem;
 			start = bank->start + bank->size - size;

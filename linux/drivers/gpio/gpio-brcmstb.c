@@ -551,7 +551,18 @@ static struct platform_driver brcmstb_gpio_driver = {
 	.probe = brcmstb_gpio_probe,
 	.remove = brcmstb_gpio_remove,
 };
-module_platform_driver(brcmstb_gpio_driver);
+
+static int __init brcmstb_gpio_init(void)
+{
+	return platform_driver_register(&brcmstb_gpio_driver);
+}
+subsys_initcall(brcmstb_gpio_init);
+
+static void __exit brcmstb_gpio_exit(void)
+{
+	platform_driver_unregister(&brcmstb_gpio_driver);
+}
+module_exit(brcmstb_gpio_exit);
 
 MODULE_AUTHOR("Gregory Fong");
 MODULE_DESCRIPTION("Driver for Broadcom BRCMSTB SoC UPG GPIO");

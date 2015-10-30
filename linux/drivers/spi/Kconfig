@@ -138,6 +138,13 @@ config SPI_BITBANG
 	  need it.  You only need to select this explicitly to support driver
 	  modules that aren't part of this kernel tree.
 
+config SPI_BRCMSTB_MSPI
+	tristate "Broadcom MSPI master support for STB chips"
+	depends on (ARCH_BRCMSTB && BCM7120_L2_IRQ) || COMPILE_TEST
+	help
+	  Enables support for the Broadcom MSPI controller.  Currently only
+	  supports BRCMSTB, but that should change soon.
+
 config SPI_BUTTERFLY
 	tristate "Parallel port adapter for AVR Butterfly (DEVELOPMENT)"
 	depends on PARPORT

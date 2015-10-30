@@ -229,6 +229,7 @@
 
 /* 60-FB reserved */
 
+#define SDHCI_PRESET_FOR_HS 0x64
 #define SDHCI_PRESET_FOR_SDR12 0x66
 #define SDHCI_PRESET_FOR_SDR25 0x68
 #define SDHCI_PRESET_FOR_SDR50 0x6A
@@ -296,6 +297,10 @@ struct sdhci_ops {
 	void    (*adma_workaround)(struct sdhci_host *host, u32 intmask);
 	void	(*platform_init)(struct sdhci_host *host);
 	void    (*card_event)(struct sdhci_host *host);
+	int	(*select_drive_strength)(struct sdhci_host *host,
+					 struct mmc_card *card,
+					 unsigned int max_dtr, int host_drv,
+					 int card_drv, int *drv_type);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

@@ -1067,7 +1067,7 @@ static void __init brcmstb_maybe_increase_vmalloc(void)
 #ifdef CONFIG_BRCMSTB
 	if (brcmstb_did_override_vmalloc)
 		return;
-	if (meminfo.bank[0].size >= SZ_1G || meminfo.nr_banks > 1) {
+	if (meminfo.bank[0].size > (760 << 20) || meminfo.nr_banks > 1) {
 		vmalloc_min = (void *)(VMALLOC_END - (744 << 20) -
 				VMALLOC_OFFSET);
 	}

@@ -167,6 +167,7 @@ static SIMPLE_DEV_PM_OPS(xhci_brcm_pm_ops, xhci_brcm_suspend,
 static const struct of_device_id brcm_xhci_of_match[] = {
 	{ .compatible = "xhci-platform" },
 	{ .compatible = "brcm,xhci-brcm" },
+	{ .compatible = "brcm,xhci-brcm-v2" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, brcm_xhci_of_match);

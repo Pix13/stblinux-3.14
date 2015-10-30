@@ -42,6 +42,13 @@ Optional Properties:
   brcm,ssc -- (boolean) indicates usage of spread-spectrum clocking.
   brcm,gen --  (integer) indicates desired generation of link:
       1 => 2.5 Gbps, 2 => 5.0 Gbps, 3 => 8.0 Gbps.
+  supply-names -- the names of voltage regulators that the root
+      complex should turn off/on/on on suspend/resume/boot.  This
+      is a string list.  
+  supplies -- A collection of phandles to a regulator nodes, see
+	Documentation/devicetree/bindings/regulator/ for specific
+	bindings. The number and order of phandles must match
+	exactly the number of strings in the "supply-names" property.
 
 Example Node:
 
@@ -67,4 +74,7 @@ Example Node:
 		clock-names = "sw_pcie";
 		brcm,ssc;
 		brcm,gen = <1>;
+		supply-names = "vreg-wifi-pwr";
+		supplies = <&vreg-wifi-pwr>;
+
 	};
