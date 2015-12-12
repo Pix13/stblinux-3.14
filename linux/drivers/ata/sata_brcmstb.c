@@ -299,8 +299,6 @@ static int brcm_ahci_parse_dt_node(struct platform_device *pdev)
 	int status = 0;
 	struct sata_brcm_pdata *brcm_pdata = pdev->dev.platform_data;
 	struct device_node *of_node = pdev->dev.of_node;
-	struct property *prop;
-	char *propname;
 
 	/* MANDATORY */
 	status = brcm_ahci_parse_dt_prop_u32(of_node, "phy-generation",
@@ -325,22 +323,6 @@ static int brcm_ahci_parse_dt_node(struct platform_device *pdev)
 					     &brcm_pdata->phy_enable_ssc_mask);
 	if (status)
 		brcm_pdata->phy_enable_ssc_mask = 0;
-
-	/* OPTIONAL */
-	propname = "phy-force-spd";
-	prop = of_find_property(of_node, propname, NULL);
-	if (prop) {
-		if ((prop->length % 8) == 0) {
-			int num_entries = prop->length / sizeof(u32) / 2;
-			const __be32 *ptr = prop->value;
-			while (num_entries-- != 0) {
-				const u32 port = be32_to_cpup(ptr++);
-				const u32 val = be32_to_cpup(ptr++);
-				brcm_sata3_phy_spd_set(brcm_pdata, port, val);
-			}
-		} else
-			pr_err("%s property is malformed!\n", propname);
-	}
 
 err:
 	return status;

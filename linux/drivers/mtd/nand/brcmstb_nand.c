@@ -1105,13 +1105,14 @@ static int brcmstb_nand_read(struct mtd_info *mtd,
 	struct brcmstb_nand_controller *ctrl = host->ctrl;
 	u64 err_addr = 0;
 	int err;
+	bool retry = true;
 
 	DBG("%s %llx -> %p\n", __func__, (unsigned long long)addr, buf);
 
+try_dmaread:
 #if CONTROLLER_VER >= 60
 	BDEV_WR_RB(BCHP_NAND_UNCORR_ERROR_COUNT, 0);
 #endif
-
 	if (has_flash_dma(ctrl) && !oob && flash_dma_buf_ok(buf)) {
 		err = brcmstb_nand_dma_trans(host, addr, buf, trans * FC_BYTES,
 					     CMD_PAGE_READ);
@@ -1130,7 +1131,20 @@ static int brcmstb_nand_read(struct mtd_info *mtd,
 	}
 
 	if (mtd_is_eccerr(err)) {
-		int ret = brcmstb_nand_verify_erased_page(mtd, chip, buf, addr);
+		int ret = 0;
+		/*
+		 * CRNAND-32 : if we are doing a DMA read after a prior
+		 * PIO read that reported uncorrectable error, the DMA
+		 * engine captures this error in the first DMA read
+		 * after this PIO read, cleared only on subsequent DMA
+		 * read, so just retry once to clear a possible false
+		 * error reported for current DMA read
+		 */
+		if (retry) {
+			retry = false;
+			goto try_dmaread;
+		}
+		ret = brcmstb_nand_verify_erased_page(mtd, chip, buf, addr);
 		if (ret < 0) {
 			dev_dbg(&host->pdev->dev,
 					"uncorrectable error at 0x%llx\n",

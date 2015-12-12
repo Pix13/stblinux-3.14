@@ -1,6 +1,6 @@
 include $(ROOTDIR)/config.arch
 
-CFLAGS += -I. -L. -Wall
+CFLAGS += -I. -L. -Wall -Werror
 
 .PHONY: all
 all: libbrcm-pm.a pmtest

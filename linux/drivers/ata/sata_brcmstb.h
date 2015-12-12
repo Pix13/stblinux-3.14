@@ -40,12 +40,6 @@
  * rather than having a separate map per port. */
 #define SATA_MDIO_REG_LEGACY_BANK_OFS	0x10
 
-#define SPD_SETTING_WIDTH		4
-#define SPD_SETTING_PER_U32		(32 / SPD_SETTING_WIDTH)
-#define SPD_SETTING_MASK		0xf
-#define SPD_SETTING_SHIFT(port)		\
-	(((port) % SPD_SETTING_PER_U32) * SPD_SETTING_WIDTH)
-
 #define MAX_PHY_CTRL_PORTS			2
 #define SATA_TOP_CTRL_REG_LENGTH		0x24
 #define SATA_TOP_CTRL_BUS_CTRL			0x4
@@ -109,7 +103,6 @@ struct sata_brcm_pdata {
 	u32 phy_generation;
 	u32 phy_base_addr;
 	u32 phy_enable_ssc_mask;
-	u32 phy_force_spd[MAX_PORTS / SPD_SETTING_PER_U32];
 	u32 top_ctrl_base_addr;
 	u32 quirks;
 	struct clk *sata_clk;
@@ -125,8 +118,6 @@ enum sata_phy_mdio_gen {
 	SATA_PHY_MDIO_END,
 };
 
-int brcm_sata3_phy_spd_get(const struct sata_brcm_pdata *pdata, int port);
-void brcm_sata3_phy_spd_set(struct sata_brcm_pdata *pdata, int port, int val);
 void brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 			int enable);
 

@@ -133,27 +133,6 @@ static struct sata_phy_cfg_ops cfg_op_tbl[SATA_PHY_MDIO_END] = {
 
 static struct sata_phy_cfg_ops *cfg_op;
 
-int brcm_sata3_phy_spd_get(const struct sata_brcm_pdata *pdata, int port)
-{
-	int val = (pdata->phy_force_spd[port / SPD_SETTING_PER_U32]
-		   >> SPD_SETTING_SHIFT(port));
-
-	return val & SPD_SETTING_MASK;
-}
-EXPORT_SYMBOL(brcm_sata3_phy_spd_get);
-
-void brcm_sata3_phy_spd_set(struct sata_brcm_pdata *pdata, int port, int val)
-{
-	int tmp = pdata->phy_force_spd[port / SPD_SETTING_PER_U32];
-
-	pr_debug("Forcing port %d to gen %d speed\n", port, val);
-
-	tmp &= ~(SPD_SETTING_MASK << SPD_SETTING_SHIFT(port));
-	tmp |= (val & SPD_SETTING_MASK) << SPD_SETTING_SHIFT(port);
-	pdata->phy_force_spd[port / SPD_SETTING_WIDTH] = tmp;
-}
-EXPORT_SYMBOL(brcm_sata3_phy_spd_set);
-
 static void _brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 			       int enable)
 {
@@ -257,3 +236,5 @@ err:
 	return;
 }
 EXPORT_SYMBOL(brcm_sata3_phy_cfg);
+
+MODULE_LICENSE("GPL");

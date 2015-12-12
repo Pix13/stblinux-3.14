@@ -206,7 +206,7 @@ static void sdhci_fix_caps(struct sdhci_host *host,
 #if defined(CONFIG_BCM7445D0)
 	/* Fixed for E0 and above */
 	if (BRCM_CHIP_REV() >= 0x40)
-		return 0;
+		return;
 #endif
 	/* Disable SDR50 support because tuning is broken. */
 	sdhci_override_caps(host, priv, 0, 0, 0, SDHCI_SUPPORT_SDR50);
