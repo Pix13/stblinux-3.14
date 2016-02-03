@@ -198,7 +198,7 @@ static int sysfs_get_string(const char *path, char *in, int size)
 	f = fopen(path, "r");
 	if (!f)
 		return -1;
-	if (fgets(in, size, f) < 0) {
+	if (fgets(in, size, f) != in) {
 		fclose(f);
 		return -1;
 	}
@@ -548,7 +548,7 @@ int brcm_pm_set_status(void *vctx, struct brcm_pm_state *st)
 	return ret;
 }
 
-int brcm_pm_suspend(void *vctx, int suspend_mode)
+int brcm_pm_suspend(__attribute__((unused))void *vctx, int suspend_mode)
 {
 	if (suspend_mode == BRCM_PM_STANDBY)
 		return sysfs_set_string(SYS_STANDBY, "standby");

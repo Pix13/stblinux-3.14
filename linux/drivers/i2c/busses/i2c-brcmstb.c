@@ -11,33 +11,30 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/sched.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
-#include <linux/platform_device.h>
-#include <linux/clk.h>
 #include <linux/io.h>
-#include <linux/clk.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/version.h>
-#include <linux/delay.h>
-#include <linux/brcmstb/brcmstb.h>
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0))
-	#define reinit_completion(x) INIT_COMPLETION(*(x))
-#endif
 
 #define N_DATA_REGS					8
-#define N_DATA_BYTES					(N_DATA_REGS * 4)
 
-/* BSC count register field definitions */
-#define BSC_CNT_REG1_MASK				0x0000003f
-#define BSC_CNT_REG1_SHIFT				0
-#define BSC_CNT_REG2_MASK				0x00000fc0
-#define BSC_CNT_REG2_SHIFT				6
+/*
+ * PER_I2C/BSC count register mask depends on 1 byte/4 byte data register
+ * size. Cable modem and DSL SoCs with Peripheral i2c cores use 1 byte per
+ * data register whereas STB SoCs use 4 byte per data register transfer,
+ * account for this difference in total count per transaction and mask to
+ * use.
+ */
+#define BSC_CNT_REG1_MASK(nb)	(nb == 1 ? GENMASK(3, 0) : GENMASK(5, 0))
+#define BSC_CNT_REG1_SHIFT	0
 
 /* BSC CTL register field definitions */
 #define BSC_CTL_REG_DTF_MASK				0x00000003
@@ -47,7 +44,7 @@
 #define BSC_CTL_REG_INT_EN_SHIFT			6
 #define BSC_CTL_REG_DIV_CLK_MASK			0x00000080
 
-/* BSC_IIC_ENABLE r/w enable and interrupt field defintions */
+/* BSC_IIC_ENABLE r/w enable and interrupt field definitions */
 #define BSC_IIC_EN_RESTART_MASK				0x00000040
 #define BSC_IIC_EN_NOSTART_MASK				0x00000020
 #define BSC_IIC_EN_NOSTOP_MASK				0x00000010
@@ -66,7 +63,7 @@
 /* Condition mask used for non combined transfer */
 #define COND_RESTART		BSC_IIC_EN_RESTART_MASK
 #define COND_NOSTART		BSC_IIC_EN_NOSTART_MASK
-#define	COND_NOSTOP		BSC_IIC_EN_NOSTOP_MASK
+#define COND_NOSTOP		BSC_IIC_EN_NOSTOP_MASK
 #define COND_START_STOP		(COND_RESTART | COND_NOSTART | COND_NOSTOP)
 
 /* BSC data transfer direction */
@@ -75,18 +72,20 @@
 /* BSC data transfer direction combined format */
 #define DTF_RD_WR_MASK		0x00000002
 #define DTF_WR_RD_MASK		0x00000003
-/* default bus speed  */
-#define DEFAULT_BUS_SPEEDHZ     375000
 
+#define INT_ENABLE		true
+#define INT_DISABLE		false
+
+/* BSC block register map structure to cache fields to be written */
 struct bsc_regs {
-	u32	chip_address;
-	u32	data_in[N_DATA_REGS];
-	u32	cnt_reg;
-	u32	ctl_reg;
-	u32	iic_enable;
-	u32	data_out[N_DATA_REGS];
-	u32	ctlhi_reg;
-	u32	scl_param;
+	u32	chip_address;           /* slave address */
+	u32	data_in[N_DATA_REGS];   /* tx data buffer*/
+	u32	cnt_reg;		/* rx/tx data length */
+	u32	ctl_reg;		/* control register */
+	u32	iic_enable;		/* xfer enable and status */
+	u32	data_out[N_DATA_REGS];  /* rx data buffer */
+	u32	ctlhi_reg;		/* more control fields */
+	u32	scl_param;		/* reserved */
 };
 
 struct bsc_clk_param {
@@ -120,7 +119,7 @@ enum bus_speeds {
 	SPD_50K
 };
 
-static const struct bsc_clk_param  bsc_clk[] = {
+static const struct bsc_clk_param bsc_clk[] = {
 	[SPD_375K] = {
 		.hz = 375000,
 		.scl_mask = SPD_375K << BSC_CTL_REG_SCL_SEL_SHIFT,
@@ -173,37 +172,45 @@ struct brcmstb_i2c_dev {
 	struct completion done;
 	bool is_suspended;
 	u32 clk_freq_hz;
+	int data_regsz;
 };
 
-#define bsc_readl(_dev, reg)						\
-	__bsc_readl(_dev, offsetof(struct bsc_regs, reg))
+/* register accessors for both be and le cpu arch */
+#ifdef CONFIG_CPU_BIG_ENDIAN
+#define __bsc_readl(_reg) ioread32be(_reg)
+#define __bsc_writel(_val, _reg) iowrite32be(_val, _reg)
+#else
+#define __bsc_readl(_reg) ioread32(_reg)
+#define __bsc_writel(_val, _reg) iowrite32(_val, _reg)
+#endif
 
-#define bsc_writel(_dev, val, reg)					\
-	__bsc_writel(_dev, val, offsetof(struct bsc_regs, reg))
+#define bsc_readl(_dev, _reg)						\
+	__bsc_readl(_dev->base + offsetof(struct bsc_regs, _reg))
 
-static inline u32 __bsc_readl(struct brcmstb_i2c_dev *dev, u32 reg)
+#define bsc_writel(_dev, _val, _reg)					\
+	__bsc_writel(_val, _dev->base + offsetof(struct bsc_regs, _reg))
+
+static inline int brcmstb_i2c_get_xfersz(struct brcmstb_i2c_dev *dev)
 {
-	return __raw_readl(dev->base + reg);
+	return (N_DATA_REGS * dev->data_regsz);
 }
 
-static inline void __bsc_writel(struct brcmstb_i2c_dev *dev, u32 val,
-				  u32 reg)
+static inline int brcmstb_i2c_get_data_regsz(struct brcmstb_i2c_dev *dev)
 {
-	__raw_writel(val, dev->base + reg);
+	return dev->data_regsz;
 }
 
-static void brcmstb_i2c_disable_irq(struct brcmstb_i2c_dev *dev)
+static void brcmstb_i2c_enable_disable_irq(struct brcmstb_i2c_dev *dev,
+					   bool int_en)
 {
-	/* Disable BSC CTL interrupt line */
-	dev->bsc_regmap->ctl_reg &= ~BSC_CTL_REG_INT_EN_MASK;
-	barrier();
-	bsc_writel(dev, dev->bsc_regmap->ctl_reg, ctl_reg);
-}
 
-static void brcmstb_i2c_enable_irq(struct brcmstb_i2c_dev *dev)
-{
-	/* Enable BSC  CTL interrupt line */
-	dev->bsc_regmap->ctl_reg |= BSC_CTL_REG_INT_EN_MASK;
+	if (int_en)
+		/* Enable BSC  CTL interrupt line */
+		dev->bsc_regmap->ctl_reg |= BSC_CTL_REG_INT_EN_MASK;
+	else
+		/* Disable BSC CTL interrupt line */
+		dev->bsc_regmap->ctl_reg &= ~BSC_CTL_REG_INT_EN_MASK;
+
 	barrier();
 	bsc_writel(dev, dev->bsc_regmap->ctl_reg, ctl_reg);
 }
@@ -220,7 +227,7 @@ static irqreturn_t brcmstb_i2c_isr(int irq, void *devid)
 	if (!(status_bsc_ctl & BSC_CTL_REG_INT_EN_MASK))
 		return IRQ_NONE;
 
-	brcmstb_i2c_disable_irq(dev);
+	brcmstb_i2c_enable_disable_irq(dev, INT_DISABLE);
 	complete_all(&dev->done);
 
 	dev_dbg(dev->device, "isr handled");
@@ -231,18 +238,17 @@ static irqreturn_t brcmstb_i2c_isr(int irq, void *devid)
 static int brcmstb_i2c_wait_if_busy(struct brcmstb_i2c_dev *dev)
 {
 	unsigned long timeout = jiffies + msecs_to_jiffies(I2C_TIMEOUT);
+
 	while ((bsc_readl(dev, iic_enable) & BSC_IIC_EN_INTRP_MASK)) {
-		if (time_after(jiffies, timeout)) {
-			dev_err(dev->device, "i2c device busy timeout\n");
+		if (time_after(jiffies, timeout))
 			return -ETIMEDOUT;
-		}
+		cpu_relax();
 	}
 	return 0;
 }
 
-/* i2c xfer completion function, handles both irq and polling mode
- */
-static int brcmstb_i2c_waitforcompletion(struct brcmstb_i2c_dev *dev)
+/* i2c xfer completion function, handles both irq and polling mode */
+static int brcmstb_i2c_wait_for_completion(struct brcmstb_i2c_dev *dev)
 {
 	int ret = 0;
 	unsigned long timeout = msecs_to_jiffies(I2C_TIMEOUT);
@@ -254,6 +260,7 @@ static int brcmstb_i2c_waitforcompletion(struct brcmstb_i2c_dev *dev)
 		/* we are in polling mode */
 		u32 bsc_intrp;
 		unsigned long time_left = jiffies + timeout;
+
 		do {
 			bsc_intrp = bsc_readl(dev, iic_enable) &
 				BSC_IIC_EN_INTRP_MASK;
@@ -261,10 +268,12 @@ static int brcmstb_i2c_waitforcompletion(struct brcmstb_i2c_dev *dev)
 				ret = -ETIMEDOUT;
 				break;
 			}
-			udelay(100);
+			cpu_relax();
 		} while (!bsc_intrp);
-		brcmstb_i2c_disable_irq(dev);
 	}
+
+	if (dev->irq < 0 || ret == -ETIMEDOUT)
+		brcmstb_i2c_enable_disable_irq(dev, INT_DISABLE);
 
 	return ret;
 }
@@ -274,58 +283,43 @@ static void brcmstb_set_i2c_start_stop(struct brcmstb_i2c_dev *dev,
 				       u32 cond_flag)
 {
 	u32 regval = dev->bsc_regmap->iic_enable;
+
 	dev->bsc_regmap->iic_enable = (regval & ~COND_START_STOP) | cond_flag;
 }
 
-/* Send I2C request */
+/* Send I2C request check completion */
 static int brcmstb_send_i2c_cmd(struct brcmstb_i2c_dev *dev,
 				enum bsc_xfer_cmd cmd)
 {
-	int rc = 0, ignore_ack = 0;
+	int rc = 0;
 	struct bsc_regs *pi2creg = dev->bsc_regmap;
-	u32 ctl_reg;
 
 	/* Make sure the hardware is ready */
 	rc = brcmstb_i2c_wait_if_busy(dev);
 	if (rc < 0)
 		return rc;
 
-	dev_dbg(dev->device, "%s, %d\n", __func__, cmd);
-
-	/* see if the transaction needs check NACK conditions */
-	ignore_ack = (cmd == CMD_WR || cmd == CMD_RD) ? 0 : 1;
-	if (ignore_ack)
-		pi2creg->ctlhi_reg |= BSC_CTLHI_REG_IGNORE_ACK_MASK;
-	else
-		pi2creg->ctlhi_reg &= ~BSC_CTLHI_REG_IGNORE_ACK_MASK;
-	bsc_writel(dev, pi2creg->ctlhi_reg, ctlhi_reg);
-
+	/* only if we are in interrupt mode */
 	if (dev->irq >= 0)
 		reinit_completion(&dev->done);
 
-	/* set data transfer direction */
-	ctl_reg = pi2creg->ctl_reg & ~BSC_CTL_REG_DTF_MASK;
-	if (cmd == CMD_WR || cmd == CMD_WR_NOACK)
-		pi2creg->ctl_reg = ctl_reg | DTF_WR_MASK;
-	else
-		pi2creg->ctl_reg = ctl_reg | DTF_RD_MASK;
-
 	/* enable BSC CTL interrupt line */
-	brcmstb_i2c_enable_irq(dev);
+	brcmstb_i2c_enable_disable_irq(dev, INT_ENABLE);
 
 	/* initiate transfer by setting iic_enable */
 	pi2creg->iic_enable |= BSC_IIC_EN_ENABLE_MASK;
 	bsc_writel(dev, pi2creg->iic_enable, iic_enable);
 
 	/* Wait for transaction to finish or timeout */
-	rc = brcmstb_i2c_waitforcompletion(dev);
+	rc = brcmstb_i2c_wait_for_completion(dev);
 	if (rc) {
-		dev_err(dev->device, "intr timeout for cmd %s\n",
+		dev_dbg(dev->device, "intr timeout for cmd %s\n",
 			cmd_string[cmd]);
 		goto cmd_out;
 	}
 
-	if (!ignore_ack && bsc_readl(dev, iic_enable) & BSC_IIC_EN_NOACK_MASK) {
+	if ((CMD_RD || CMD_WR) &&
+	    bsc_readl(dev, iic_enable) & BSC_IIC_EN_NOACK_MASK) {
 		rc = -EREMOTEIO;
 		dev_dbg(dev->device, "controller received NOACK intr for %s\n",
 			cmd_string[cmd]);
@@ -338,41 +332,74 @@ cmd_out:
 	return rc;
 }
 
+/* Actual data transfer through the BSC master */
 static int brcmstb_i2c_xfer_bsc_data(struct brcmstb_i2c_dev *dev,
 				     u8 *buf, unsigned int len,
-				     enum bsc_xfer_cmd cmd)
+				     struct i2c_msg *pmsg)
 {
-	int i, j, rc;
+	int cnt, byte, i, rc;
+	enum bsc_xfer_cmd cmd;
+	u32 ctl_reg;
+	struct bsc_regs *pi2creg = dev->bsc_regmap;
+	int no_ack = pmsg->flags & I2C_M_IGNORE_NAK;
+	int data_regsz = brcmstb_i2c_get_data_regsz(dev);
+	int xfersz = brcmstb_i2c_get_xfersz(dev);
+
+	/* see if the transaction needs to check NACK conditions */
+	if (no_ack || len <= xfersz) {
+		cmd = (pmsg->flags & I2C_M_RD) ? CMD_RD_NOACK
+			: CMD_WR_NOACK;
+		pi2creg->ctlhi_reg |= BSC_CTLHI_REG_IGNORE_ACK_MASK;
+	} else {
+		cmd = (pmsg->flags & I2C_M_RD) ? CMD_RD : CMD_WR;
+		pi2creg->ctlhi_reg &= ~BSC_CTLHI_REG_IGNORE_ACK_MASK;
+	}
+	bsc_writel(dev, pi2creg->ctlhi_reg, ctlhi_reg);
+
+	/* set data transfer direction */
+	ctl_reg = pi2creg->ctl_reg & ~BSC_CTL_REG_DTF_MASK;
+	if (cmd == CMD_WR || cmd == CMD_WR_NOACK)
+		pi2creg->ctl_reg = ctl_reg | DTF_WR_MASK;
+	else
+		pi2creg->ctl_reg = ctl_reg | DTF_RD_MASK;
 
 	/* set the read/write length */
-	bsc_writel(dev, BSC_CNT_REG1_MASK & (len << BSC_CNT_REG1_SHIFT),
-		   cnt_reg);
+	bsc_writel(dev, BSC_CNT_REG1_MASK(data_regsz) &
+		   (len << BSC_CNT_REG1_SHIFT), cnt_reg);
 
 	/* Write data into data_in register */
+
 	if (cmd == CMD_WR || cmd == CMD_WR_NOACK) {
-		for (i = 0; i < len; i += 4) {
+		for (cnt = 0, i = 0; cnt < len; cnt += data_regsz, i++) {
 			u32 word = 0;
-			for (j = 0; j < 4; j++) {
-				word >>= 8;
-				if ((i + j) < len)
-					word |= buf[i + j] << 24;
+
+			for (byte = 0; byte < data_regsz; byte++) {
+				word >>= BITS_PER_BYTE;
+				if ((cnt + byte) < len)
+					word |= buf[cnt + byte] <<
+					(BITS_PER_BYTE * (data_regsz - 1));
 			}
-			bsc_writel(dev, word, data_in[i >> 2]);
+			bsc_writel(dev, word, data_in[i]);
 		}
 	}
 
-	/* Initiate xfer */
+	/* Initiate xfer, the function will return on completion */
 	rc = brcmstb_send_i2c_cmd(dev, cmd);
 
-	if (rc != 0)
+	if (rc != 0) {
+		dev_dbg(dev->device, "%s failure", cmd_string[cmd]);
 		return rc;
+	}
 
+	/* Read data from data_out register */
 	if (cmd == CMD_RD || cmd == CMD_RD_NOACK) {
-		for (i = 0; i < len; i += 4) {
-			u32 data = bsc_readl(dev, data_out[i >> 2]);
-			for (j = 0; j < 4 && (j + i) < len; j++) {
-				buf[i + j] = data & 0xff;
-				data >>= 8;
+		for (cnt = 0, i = 0; cnt < len; cnt += data_regsz, i++) {
+			u32 data = bsc_readl(dev, data_out[i]);
+
+			for (byte = 0; byte < data_regsz &&
+				     (byte + cnt) < len; byte++) {
+				buf[cnt + byte] = data & 0xff;
+				data >>= BITS_PER_BYTE;
 			}
 		}
 	}
@@ -399,7 +426,6 @@ static int brcmstb_i2c_do_addr(struct brcmstb_i2c_dev *dev,
 	unsigned char addr;
 
 	if (msg->flags & I2C_M_TEN) {
-
 		/* First byte is 11110XX0 where XX is upper 2 bits */
 		addr = 0xF0 | ((msg->addr & 0x300) >> 7);
 		bsc_writel(dev, addr, chip_address);
@@ -439,10 +465,9 @@ static int brcmstb_i2c_xfer(struct i2c_adapter *adapter,
 	int rc = 0;
 	int i;
 	int bytes_to_xfer;
-	enum bsc_xfer_cmd cmd;
 	u8 *tmp_buf;
 	int len = 0;
-	int ignore_nack = 0;
+	int xfersz = brcmstb_i2c_get_xfersz(dev);
 
 	if (dev->is_suspended)
 		return -EBUSY;
@@ -452,7 +477,6 @@ static int brcmstb_i2c_xfer(struct i2c_adapter *adapter,
 		pmsg = &msgs[i];
 		len = pmsg->len;
 		tmp_buf = pmsg->buf;
-		ignore_nack = pmsg->flags & I2C_M_IGNORE_NAK;
 
 		dev_dbg(dev->device,
 			"msg# %d/%d flg %x buf %x len %d\n", i,
@@ -476,27 +500,18 @@ static int brcmstb_i2c_xfer(struct i2c_adapter *adapter,
 			}
 		}
 
-		cmd = (pmsg->flags & I2C_M_RD) ? CMD_RD : CMD_WR;
-
 		/* Perform data transfer */
 		while (len) {
-			bytes_to_xfer = min(len, N_DATA_BYTES);
+			bytes_to_xfer = min(len, xfersz);
 
-			if (ignore_nack || len <= N_DATA_BYTES)
-				cmd = (pmsg->flags & I2C_M_RD) ? CMD_RD_NOACK
-					: CMD_WR_NOACK;
-
-			if (len <= N_DATA_BYTES && i == (num - 1))
+			if (len <= xfersz && i == (num - 1))
 				brcmstb_set_i2c_start_stop(dev,
 							   ~(COND_START_STOP));
 
 			rc = brcmstb_i2c_xfer_bsc_data(dev, tmp_buf,
-						       bytes_to_xfer, cmd);
-			if (rc < 0) {
-				dev_dbg(dev->device, "%s failure",
-					cmd_string[cmd]);
+						       bytes_to_xfer, pmsg);
+			if (rc < 0)
 				goto out;
-			}
 
 			len -=  bytes_to_xfer;
 			tmp_buf += bytes_to_xfer;
@@ -536,11 +551,10 @@ static void brcmstb_i2c_set_bus_speed(struct brcmstb_i2c_dev *dev)
 		}
 	}
 
+	/* in case we did not get find a valid speed */
 	if (i == num_speeds) {
 		i = (bsc_readl(dev, ctl_reg) & BSC_CTL_REG_SCL_SEL_MASK) >>
 			BSC_CTL_REG_SCL_SEL_SHIFT;
-		dev_warn(dev->device, "invalid input clock-frequency %dHz\n",
-			clk_freq_hz);
 		dev_warn(dev->device, "leaving current clock-frequency @ %dHz\n",
 			bsc_clk[i].hz);
 	}
@@ -548,8 +562,12 @@ static void brcmstb_i2c_set_bus_speed(struct brcmstb_i2c_dev *dev)
 
 static void brcmstb_i2c_set_bsc_reg_defaults(struct brcmstb_i2c_dev *dev)
 {
-	/* 4 byte data register */
-	dev->bsc_regmap->ctlhi_reg = BSC_CTLHI_REG_DATAREG_SIZE_MASK;
+	if (brcmstb_i2c_get_data_regsz(dev) == sizeof(u32))
+		/* set 4 byte data in/out xfers  */
+		dev->bsc_regmap->ctlhi_reg = BSC_CTLHI_REG_DATAREG_SIZE_MASK;
+	else
+		dev->bsc_regmap->ctlhi_reg &= ~BSC_CTLHI_REG_DATAREG_SIZE_MASK;
+
 	bsc_writel(dev, dev->bsc_regmap->ctlhi_reg, ctlhi_reg);
 	/* set bus speed */
 	brcmstb_i2c_set_bus_speed(dev);
@@ -568,7 +586,8 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 	if (!dev)
 		return -ENOMEM;
 
-	dev->bsc_regmap = kzalloc(sizeof(struct bsc_regs), GFP_KERNEL);
+	dev->bsc_regmap = devm_kzalloc(&pdev->dev, sizeof(struct bsc_regs *),
+				       GFP_KERNEL);
 	if (!dev->bsc_regmap)
 		return -ENOMEM;
 
@@ -578,7 +597,7 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 
 	/* Map hardware registers */
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	dev->base = devm_request_and_ioremap(&pdev->dev, iomem);
+	dev->base = devm_ioremap_resource(dev->device, iomem);
 	if (IS_ERR(dev->base)) {
 		rc = -ENOMEM;
 		goto probe_errorout;
@@ -593,7 +612,7 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 	dev->irq = platform_get_irq(pdev, 0);
 
 	/* disable the bsc interrupt line */
-	brcmstb_i2c_disable_irq(dev);
+	brcmstb_i2c_enable_disable_irq(dev, INT_DISABLE);
 
 	/* register the ISR handler */
 	rc = devm_request_irq(&pdev->dev, dev->irq, brcmstb_i2c_isr,
@@ -605,6 +624,22 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 		dev_dbg(dev->device, "falling back to polling mode");
 		dev->irq = -1;
 	}
+
+	if (of_property_read_u32(dev->device->of_node,
+				 "clock-frequency", &dev->clk_freq_hz)) {
+		dev_warn(dev->device, "setting clock-frequency@%dHz\n",
+			 bsc_clk[0].hz);
+		dev->clk_freq_hz = bsc_clk[0].hz;
+	}
+
+	/* set the data in/out register size for compatible SoCs */
+	if (of_device_is_compatible(dev->device->of_node,
+				    "brcmstb,brcmper-i2c"))
+		dev->data_regsz = sizeof(u8);
+	else
+		dev->data_regsz = sizeof(u32);
+
+	brcmstb_i2c_set_bsc_reg_defaults(dev);
 
 	/* Add the i2c adapter */
 	adap = &dev->adapter;
@@ -622,15 +657,6 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 		goto probe_errorout;
 	}
 
-	if (of_property_read_u32(dev->device->of_node,
-				 "clock-frequency", &dev->clk_freq_hz)) {
-		dev_warn(dev->device, "missing clock-frequency property\n");
-		dev_warn(dev->device, "setting default clock-frequency %dHz\n",
-			 bsc_clk[0].hz);
-		dev->clk_freq_hz = bsc_clk[0].hz;
-	}
-
-	brcmstb_i2c_set_bsc_reg_defaults(dev);
 	dev_info(dev->device, "%s@%dhz registered in %s mode\n",
 		 int_name ? int_name : " ", dev->clk_freq_hz,
 		 (dev->irq >= 0) ? "interrupt" : "polling");
@@ -638,7 +664,6 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 	return 0;
 
 probe_errorout:
-	kfree(dev->bsc_regmap);
 	return rc;
 }
 
@@ -646,9 +671,7 @@ static int brcmstb_i2c_remove(struct platform_device *pdev)
 {
 	struct brcmstb_i2c_dev *dev = platform_get_drvdata(pdev);
 
-	kfree(dev->bsc_regmap);
 	i2c_del_adapter(&dev->adapter);
-
 	return 0;
 }
 
@@ -682,6 +705,7 @@ static SIMPLE_DEV_PM_OPS(brcmstb_i2c_pm, brcmstb_i2c_suspend,
 
 static const struct of_device_id brcmstb_i2c_of_match[] = {
 	{.compatible = "brcm,brcmstb-i2c"},
+	{.compatible = "brcm,brcmper-i2c"},
 	{},
 };
 MODULE_DEVICE_TABLE(of, brcmstb_i2c_of_match);
@@ -689,7 +713,6 @@ MODULE_DEVICE_TABLE(of, brcmstb_i2c_of_match);
 static struct platform_driver brcmstb_i2c_driver = {
 	.driver = {
 		   .name = "brcmstb-i2c",
-		   .owner = THIS_MODULE,
 		   .of_match_table = brcmstb_i2c_of_match,
 		   .pm = &brcmstb_i2c_pm,
 		   },

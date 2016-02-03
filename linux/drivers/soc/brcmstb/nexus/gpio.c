@@ -1,7 +1,7 @@
 /*
  * Nexus GPIO(s) resolution API
  *
- * Copyright (C) 2015, Broadcom Corporation
+ * Copyright (C) 2015-2016, Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -30,6 +30,8 @@
 #include <linux/brcmstb/gpio_api.h>
 
 #include "gpio.h"
+#define GIO_DATA_OFFSET 4
+#define GIO_DIR_OFFSET	8
 
 static const char *brcmstb_gpio_compat = GPIO_DT_COMPAT;
 
@@ -50,7 +52,7 @@ static int brcmstb_gpio_chip_find(struct gpio_chip *chip, void *data)
  */
 static DECLARE_BITMAP(brcmstb_gpio_requested, CONFIG_ARCH_NR_GPIO);
 
-int brcmstb_gpio_request(unsigned int gpio)
+static int brcmstb_gpio_request(unsigned int gpio)
 {
 	int ret = 0;
 
@@ -72,13 +74,12 @@ int brcmstb_gpio_request(unsigned int gpio)
 	return ret;
 }
 
-int brcmstb_gpio_find_by_addr(uint32_t addr, unsigned int shift)
+static int brcmstb_gpio_find_base_by_addr(uint32_t addr, phys_addr_t *start)
 {
 	struct device_node *dn;
 	struct gpio_chip *gc;
 	struct resource res;
-	int ret, gpio;
-	u32 bank_offset;
+	int ret;
 
 	for_each_compatible_node(dn, NULL, brcmstb_gpio_compat) {
 		ret = of_address_to_resource(dn, 0, &res);
@@ -110,20 +111,116 @@ int brcmstb_gpio_find_by_addr(uint32_t addr, unsigned int shift)
 			continue;
 		}
 
+		if (start)
+			*start = (phys_addr_t)res.start;
+
+		return gc->base;
+	}
+
+	return -ENODEV;
+
+}
+
+static int brcmstb_gpio_find_by_addr(uint32_t addr, unsigned int shift)
+{
+	int gpio, gpio_base;
+	phys_addr_t start, bank_offset;
+
+	gpio_base = brcmstb_gpio_find_base_by_addr(addr, &start);
+	if (gpio_base >= 0) {
 		/* Now find out what GPIO bank this pin belongs to */
-		bank_offset = (addr - res.start) / GIO_BANK_SIZE;
+		bank_offset = ((phys_addr_t)addr - start) / GIO_BANK_SIZE;
 
-		pr_debug("%s: bank_offset is %d\n", __func__, bank_offset);
+		gpio = gpio_base + shift + bank_offset * GPIO_PER_BANK;
 
-		gpio = gc->base + shift + bank_offset * GIO_BANK_SIZE;
-
-		pr_debug("%s: xlate base=%d, offset=%d, shift=%d gpio=%d\n",
-			__func__, gc->base, bank_offset, shift, gpio - gc->base);
+		pr_debug("%s: xlate base=%d, offset=%d, shift=%d, gpio=%d\n",
+			__func__, (int)gpio_base, (int)bank_offset, shift,
+			(int)(gpio - gpio_base));
 
 		return gpio;
 	}
 
-	return -ENODEV;
+	return gpio_base;
+}
+
+int brcmstb_gpio_update32(uint32_t addr, uint32_t mask, uint32_t value)
+{
+	struct bgpio_chip *bgc;
+	struct gpio_chip *gc;
+	int ret, bit, gpio_base;
+	phys_addr_t start, offset, bank_offset;
+	unsigned long flags;
+	uint32_t ivalue;
+	void __iomem *reg;
+
+	gpio_base = brcmstb_gpio_find_base_by_addr(addr, &start);
+	if (gpio_base < 0) {
+		pr_err("%s: addr is not in GPIO range\n", __func__);
+		return -EPERM;
+	}
+
+	/* Now find out what GPIO bank this pin belongs to */
+	offset = (phys_addr_t)addr - start;
+	bank_offset = offset / GIO_BANK_SIZE;
+	offset -= bank_offset * GIO_BANK_SIZE;
+
+	pr_debug("%s: xlate base=%d, offset=%d, gpio=%d\n",
+		__func__, (int)gpio_base, (int)bank_offset,
+		(int)(bank_offset * GPIO_PER_BANK));
+
+	gpio_base += bank_offset * GPIO_PER_BANK;
+
+	for (bit = 0; bit < GPIO_PER_BANK; bit++) {
+		/* Ignore bits which are not in mask */
+		if (!((1 << bit) & mask))
+			continue;
+
+		ret = brcmstb_gpio_request(gpio_base + bit);
+		if (ret < 0) {
+			pr_err("%s: unable to request gpio %d\n",
+				__func__, gpio_base + bit);
+			return ret;
+		}
+	}
+
+	/* We got full access to the entire mask, do the write */
+
+	pr_info("%s: offset=0x%08x mask=0x%08x, value=0x%08x\n",
+		__func__, addr, mask, value);
+
+	gc = gpiod_to_chip(gpio_to_desc(gpio_base));
+	if (gc == NULL) {
+		pr_err("%s: unable to resolve gpio chip\n", __func__);
+		return -EPERM;
+	}
+	bgc = to_bgpio_chip(gc);
+	reg = bgc->reg_dat;
+	if (reg == 0) {
+		pr_err("%s: unable to resolve GIO mapped address\n", __func__);
+		return -EPERM;
+	}
+
+	spin_lock_irqsave(&bgc->lock, flags);
+	ivalue = bgc->read_reg(reg + offset - GIO_DATA_OFFSET);
+	ivalue &= ~(mask);
+	ivalue |= (value & mask);
+
+	/* update shadows */
+	switch (offset) {
+	case GIO_DATA_OFFSET:
+		bgc->data = ivalue;
+		break;
+	case GIO_DIR_OFFSET:
+		bgc->dir = ivalue;
+		break;
+	default:
+		break;
+	}
+
+	bgc->write_reg(reg + offset - GIO_DATA_OFFSET, ivalue);
+	spin_unlock_irqrestore(&bgc->lock, flags);
+
+	return 0;
 }
 
 int brcmstb_gpio_irq(uint32_t addr, unsigned int shift)
@@ -148,3 +245,22 @@ int brcmstb_gpio_irq(uint32_t addr, unsigned int shift)
 	return ret;
 }
 EXPORT_SYMBOL(brcmstb_gpio_irq);
+
+static void brcmstb_gpio_free(unsigned int gpio)
+{
+    if (test_bit(gpio, brcmstb_gpio_requested)) {
+        gpio_free(gpio);
+        clear_bit(gpio, brcmstb_gpio_requested);
+    }
+}
+
+void brcmstb_gpio_remove(void)
+{
+    unsigned i;
+
+    for (i = 0; i < CONFIG_ARCH_NR_GPIO; i++)
+    {
+        brcmstb_gpio_free(i);
+    }
+}
+EXPORT_SYMBOL(brcmstb_gpio_remove);

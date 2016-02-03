@@ -169,9 +169,8 @@ static struct sdhci_ops sdhci_brcmstb_ops = {
 static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
 };
 
-#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7145B0) ||		\
-	defined(CONFIG_BCM7250B0) || defined(CONFIG_BCM7364A0) ||	\
-	defined(CONFIG_BCM7445D0)
+#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7250B0) ||	\
+	defined(CONFIG_BCM7364A0) || defined(CONFIG_BCM7445D0)
 static void sdhci_override_caps(struct sdhci_host *host,
 				struct sdhci_brcmstb_priv *priv,
 				uint32_t cap0_setbits,

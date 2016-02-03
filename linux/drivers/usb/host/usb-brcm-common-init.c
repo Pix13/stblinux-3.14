@@ -243,6 +243,7 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 {
 	uint32_t reg;
 	uintptr_t ctrl = params->ctrl_regs;
+	int change_ipp = 0;
 
 	xhci_soft_reset(ctrl, 1);
 #if defined(CONFIG_BCM7366)
@@ -335,10 +336,18 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	/* Override the default OC and PP polarity */
 	if (params->ioc)
 		reg |= USB_CTRL_MASK(SETUP, IOC);
-	if (params->ipp)
+	if (params->ipp && ((reg & USB_CTRL_MASK(SETUP, IPP)) == 0)) {
+		change_ipp = 1;
 		reg |= USB_CTRL_MASK(SETUP, IPP);
+	}
 	DEV_WR(USB_CTRL_REG(ctrl, SETUP), reg);
 
+	/*
+	 * If we're changing IPP, make sure power is off long enough
+	 * to turn off any connected devices.
+	 */
+	if (change_ipp)
+		msleep(50);
 	memc_fix(ctrl);
 	if (params->has_xhci) {
 		xhci_soft_reset(ctrl, 0);

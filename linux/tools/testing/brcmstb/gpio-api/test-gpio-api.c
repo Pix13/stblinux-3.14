@@ -5,6 +5,7 @@
 #include <linux/brcmstb/gpio_api.h>
 
 #define GIO_BANK_SIZE	0x20
+#define GPIO_PER_BANK	32
 
 static int test_gpio_bank(uint32_t offset, unsigned int width)
 {
@@ -24,7 +25,7 @@ static int test_gpio_bank(uint32_t offset, unsigned int width)
 				continue;
 
 			pr_info("%s: GPIO%d -> IRQ%d\n",
-				__func__, shift + bank * GIO_BANK_SIZE, ret);
+				__func__, shift + bank * GPIO_PER_BANK, ret);
 		}
 	}
 

@@ -30,6 +30,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/of_pci.h>
 #include <linux/module.h>
 #include <linux/irqdomain.h>
 #include <linux/regulator/consumer.h>
@@ -127,6 +128,7 @@ struct brcm_pcie {
 	struct pci_sys_data	*sys;
 	struct device		*dev;
 	struct list_head	pwr_supplies;
+	bool			broken_pcie_irq_map_dt;
 };
 
 static struct list_head brcm_pcie;
@@ -663,6 +665,8 @@ static int __init brcm_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 	struct brcm_pcie *pcie = sys->private_data;
 
 	if (pcie) {
+		if (!pcie->broken_pcie_irq_map_dt)
+			return of_irq_parse_and_map_pci(dev, slot, pin);
 		if ((pin - 1) > 3)
 			return 0;
 		return pcie->pcie_irq[pin - 1];
@@ -681,6 +685,9 @@ brcm_pcibios_fixup(struct pci_dev *dev)
 	struct brcm_pcie *pcie = sys->private_data;
 	int slot = PCI_SLOT(dev->devfn);
 
+	/* Set the root pci_dev's device node */
+	if (dev->bus->self == NULL && !dev->dev.of_node)
+		dev->dev.of_node = pcie->dn;
 	dev_info(pcie->dev,
 		 "found device %04x:%04x on bus %d (%s), slot %d (irq %d)\n",
 		 dev->vendor, dev->device, dev->bus->number, pcie->name,
@@ -752,15 +759,21 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	imap_prop = of_get_property(dn, "interrupt-map", &len);
+
 	if (imap_prop == NULL) {
 		dev_err(&pdev->dev, "missing interrupt-map\n");
 		return -EINVAL;
 	}
 
-	irq_offset = irq_of_parse_and_map(dn, 0);
-	for (i = 0; i < 4 && i*4 < len; i++)
-		pcie->pcie_irq[i] = irq_offset
-			+ of_read_number(imap_prop + (i * 7 + 5), 1);
+	if (len == sizeof(u32) * 4 * 7) {
+		/* broken method for getting INT{ABCD} */
+		dev_info(&pdev->dev, "adjusting to legacy (broken) pcie DT\n");
+		pcie->broken_pcie_irq_map_dt = true;
+		irq_offset = irq_of_parse_and_map(dn, 0);
+		for (i = 0; i < 4 && i*4 < len; i++)
+			pcie->pcie_irq[i] = irq_offset
+				+ of_read_number(imap_prop + (i * 7 + 5), 1);
+	}
 
 	snprintf(pcie->name,
 		 sizeof(pcie->name)-1, "PCIe%d", brcm_num_pci_controllers);
@@ -778,6 +791,7 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 	pcie->dn = dn;
 	pcie->base = base;
 	pcie->dev = &pdev->dev;
+	pcie->dev->of_node = dn;
 	pcie->gen = 0;
 
 	ret = of_property_read_u32(dn, "brcm,gen", &tmp);

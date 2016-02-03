@@ -1,5 +1,5 @@
 /*
- * Copyright © 2015 Broadcom Corporation
+ * Copyright © 2015-2016 Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -19,5 +19,6 @@
 #define _BRCMSTB_GPIO_API_H
 
 int brcmstb_gpio_irq(uint32_t addr, unsigned int shift);
+void brcmstb_gpio_remove(void);
 
 #endif /* _BRCMSTB_GPIO_API_H */
