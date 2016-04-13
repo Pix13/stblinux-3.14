@@ -1694,7 +1694,8 @@ static int brcmstb_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		goto out;
 
 #ifdef CONFIG_BRCMSTB_BMEM
-	if (likely(bmem_find_region(pfn << PAGE_SHIFT, PAGE_SIZE) >= 0))
+	if (likely(bmem_find_region((phys_addr_t)pfn << PAGE_SHIFT, PAGE_SIZE)
+		   >= 0))
 		goto found_page;
 #endif
 

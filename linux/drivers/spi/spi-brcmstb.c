@@ -936,35 +936,6 @@ static int bcmspi_emulate_flash_read(struct bcmspi_priv *priv,
 	return 0;
 }
 
-/*
- * m25p80_read() calls wait_till_ready() before each read to check
- * the flash status register for pending writes.
- *
- * This can be safely skipped if our last transaction was just an
- * emulated BSPI read.
- */
-static int bcmspi_emulate_flash_rdsr(struct bcmspi_priv *priv,
-	struct spi_message *msg)
-{
-	u8 *buf;
-	struct spi_transfer *trans;
-
-	if (priv->bspi_enabled == 0)
-		return 1;
-
-	trans = list_entry(msg->transfers.next->next, struct spi_transfer,
-		transfer_list);
-
-	buf = (void *)trans->rx_buf;
-	*buf = 0x00;
-
-	msg->actual_length = 2;
-	msg->complete(msg->context);
-	msg->status = 0;
-
-	return 0;
-}
-
 static int bcmspi_transfer(struct spi_device *spi, struct spi_message *msg)
 {
 	struct bcmspi_priv *priv = spi_master_get_devdata(spi->master);
@@ -991,10 +962,6 @@ static int bcmspi_transfer(struct spi_device *spi, struct spi_message *msg)
 			case OPCODE_QOR_4B:
 			case OPCODE_QOR:
 				if (bcmspi_emulate_flash_read(priv, msg) == 0)
-					return 0;
-				break;
-			case OPCODE_RDSR:
-				if (bcmspi_emulate_flash_rdsr(priv, msg) == 0)
 					return 0;
 				break;
 			case OPCODE_EN4B:

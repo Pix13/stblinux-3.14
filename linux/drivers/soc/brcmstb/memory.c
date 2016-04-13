@@ -548,7 +548,7 @@ static struct page **get_pages(struct page *page, int num_pages)
 		return NULL;
 	}
 
-	pages = kmalloc(sizeof(struct page *) * num_pages, GFP_KERNEL);
+	pages = vmalloc(sizeof(struct page *) * num_pages);
 	if (pages == NULL)
 		return NULL;
 
@@ -618,7 +618,7 @@ void *brcmstb_memory_kva_map(struct page *page, int num_pages, pgprot_t pgprot)
 
 		va = brcmstb_memory_vmap(pages, num_pages, 0, pgprot);
 
-		kfree(pages);
+		vfree(pages);
 
 		if (va == NULL) {
 			pr_err("vmap failed (num_pgs=%d)\n", num_pages);

@@ -1,7 +1,7 @@
 /*
  * Nexus interrupt(s) resolution API
  *
- * Copyright (C) 2015, Broadcom Corporation
+ * Copyright (C) 2015-2016, Broadcom
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -34,12 +34,14 @@ static const char *brcmstb_l2_irq_to_name(brcmstb_l2_irq irq)
 	BUILD_IRQ_NAME(gio);
 	BUILD_IRQ_NAME(gio_aon);
 	BUILD_IRQ_NAME(iica);
-	BUILD_IRQ_NAME(iicd);
-	BUILD_IRQ_NAME(iice);
-	BUILD_IRQ_NAME(irb);
-	BUILD_IRQ_NAME(icap);
 	BUILD_IRQ_NAME(iicb);
 	BUILD_IRQ_NAME(iicc);
+	BUILD_IRQ_NAME(iicd);
+	BUILD_IRQ_NAME(iice);
+	BUILD_IRQ_NAME(iicf);
+	BUILD_IRQ_NAME(iicg);
+	BUILD_IRQ_NAME(irb);
+	BUILD_IRQ_NAME(icap);
 	BUILD_IRQ_NAME(kbd1);
 	BUILD_IRQ_NAME(kbd2);
 	BUILD_IRQ_NAME(kbd3);

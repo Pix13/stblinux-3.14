@@ -24,7 +24,9 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/clk.h>
+#include <linux/interrupt.h>
 #include <linux/list.h>
+#include <linux/msi.h>
 #include <linux/printk.h>
 #include <linux/syscore_ops.h>
 #include <linux/of_irq.h>
@@ -34,6 +36,7 @@
 #include <linux/module.h>
 #include <linux/irqdomain.h>
 #include <linux/regulator/consumer.h>
+#include <linux/string.h>
 
 /* Broadcom PCIE Offsets */
 #define PCIE_RC_CFG_PCIE_LINK_CAPABILITY		0x00b8
@@ -56,19 +59,31 @@
 #define PCIE_MISC_RC_BAR3_CONFIG_HI			0x4040
 #define PCIE_MISC_MSI_BAR_CONFIG_LO			0x4044
 #define PCIE_MISC_MSI_BAR_CONFIG_HI			0x4048
+#define PCIE_MISC_MSI_DATA_CONFIG			0x404c
 #define PCIE_MISC_PCIE_CTRL				0x4064
 #define PCIE_MISC_PCIE_STATUS				0x4068
+#define PCIE_MISC_REVISION				0x406c
 #define PCIE_MISC_CPU_2_PCIE_MEM_WIN0_BASE_LIMIT	0x4070
 #define PCIE_MISC_HARD_PCIE_HARD_DEBUG			0x4204
-#define PCIE_INTR2_CPU_CLEAR				0x4308
-#define PCIE_INTR2_CPU_MASK_SET				0x4310
-#define PCIE_INTR2_CPU_MASK_CLEAR			0x4314
+#define PCIE_INTR2_CPU_BASE				0x4300
+#define PCIE_MSI_INTR2_BASE				0x4500
 #define PCIE_EXT_CFG_PCIE_EXT_CFG_INDEX			0x9000
 #define PCIE_EXT_CFG_PCIE_EXT_CFG_DATA			0x9004
 #define PCIE_RGR1_SW_INIT_1				0x9210
-
 #define BRCM_NUM_PCI_OUT_WINS		0x4
 #define BRCM_MAX_SCB			0x4
+#define BRCM_INT_PCI_MSI_NR		32
+#define BRCM_PCIE_HW_REV_33		0x0303
+#define BRCM_MSI_TARGET_ADDR_LO		0x0
+#define BRCM_MSI_TARGET_ADDR_HI		0xffffffff
+
+/* Offsets from PCIE_INTR2_CPU_BASE and PCIE_MSI_INTR2_BASE */
+#define STATUS				0x0
+#define SET				0x4
+#define CLR				0x8
+#define MASK_STATUS			0xc
+#define MASK_SET			0x10
+#define MASK_CLR			0x14
 
 #define PCI_BUSNUM_SHIFT		20
 #define PCI_SLOT_SHIFT			15
@@ -97,6 +112,24 @@ static struct hw_pci brcm_pcie_hw __initdata = {
 	.ops		= &brcm_pci_ops,
 };
 
+struct brcm_msi {
+	struct irq_domain *domain;
+	struct irq_chip irq_chip;
+	struct msi_chip chip;
+	struct mutex lock;
+	int irq;
+	/* intr_base is the base pointer for interrupt status/set/clr regs */
+	void __iomem *intr_base;
+	/* intr_legacy_mask indicates how many bits are MSI interrupts */
+	u32 intr_legacy_mask;
+	/* intr_legacy_offset indicates bit position of MSI_01 */
+	u32 intr_legacy_offset;
+	/* used indicates which MSI interrupts have been alloc'd */
+	unsigned long used;
+	/* working indicates that on boot we have brought up MSI */
+	bool working;
+};
+
 struct brcm_window {
 	u64 pci_addr;
 	u64 size;
@@ -120,6 +153,7 @@ struct brcm_pcie {
 	struct clk		*clk;
 	struct device_node	*dn;
 	int			pcie_irq[4];
+	int			irq;
 	int			num_out_wins;
 	bool			ssc;
 	int			gen;
@@ -129,6 +163,8 @@ struct brcm_pcie {
 	struct device		*dev;
 	struct list_head	pwr_supplies;
 	bool			broken_pcie_irq_map_dt;
+	struct brcm_msi		msi;
+	unsigned		rev;
 };
 
 static struct list_head brcm_pcie;
@@ -290,6 +326,246 @@ static int is_pcie_link_up(struct brcm_pcie *pcie)
 }
 
 
+static inline struct brcm_msi *to_brcm_msi(struct msi_chip *chip)
+{
+	return container_of(chip, struct brcm_msi, chip);
+}
+
+
+static int brcm_msi_alloc(struct brcm_msi *chip)
+{
+	int msi;
+
+	mutex_lock(&chip->lock);
+	msi = ~chip->used ? ffz(chip->used) : -1;
+
+	if (msi >= 0 && msi < BRCM_INT_PCI_MSI_NR)
+		chip->used |= (1 << msi);
+	else
+		msi = -ENOSPC;
+
+	mutex_unlock(&chip->lock);
+	return msi;
+}
+
+
+static void brcm_msi_free(struct brcm_msi *chip, unsigned long irq)
+{
+	mutex_lock(&chip->lock);
+	chip->used &= ~(1 << irq);
+	mutex_unlock(&chip->lock);
+}
+
+
+static irqreturn_t brcm_pcie_msi_irq(int irq, void *data)
+{
+	struct brcm_pcie *pcie = data;
+	struct brcm_msi *msi = &pcie->msi;
+	unsigned long status;
+
+	status = __raw_readl(msi->intr_base + STATUS) & msi->intr_legacy_mask;
+
+	if (!status)
+		return IRQ_NONE;
+
+	while (status) {
+		unsigned int index = ffs(status) - 1;
+		unsigned int irq;
+
+		/* clear the interrupt */
+		__raw_writel(1 << index, msi->intr_base + CLR);
+		status &= ~(1 << index);
+
+		/* Account for legacy interrupt offset */
+		index -= msi->intr_legacy_offset;
+
+		irq = irq_find_mapping(msi->domain, index);
+		if (irq) {
+			if (msi->used & (1 << index))
+				generic_handle_irq(irq);
+			else
+				dev_info(pcie->dev, "unhandled MSI %d\n",
+					 index);
+		} else {
+			/* Unknown MSI, just clear it */
+			dev_dbg(pcie->dev, "unexpected MSI\n");
+		}
+	}
+	return IRQ_HANDLED;
+}
+
+
+static int brcm_msi_setup_irq(struct msi_chip *chip, struct pci_dev *pdev,
+			      struct msi_desc *desc)
+{
+	struct brcm_msi *msi = to_brcm_msi(chip);
+	struct brcm_pcie *pcie = container_of(chip, struct brcm_pcie, msi.chip);
+	struct msi_msg msg;
+	unsigned int irq;
+	int hwirq;
+	u32 data;
+
+	hwirq = brcm_msi_alloc(msi);
+	if (hwirq < 0)
+		return hwirq;
+
+	irq = irq_create_mapping(msi->domain, hwirq);
+	if (!irq) {
+		brcm_msi_free(msi, hwirq);
+		return -EINVAL;
+	}
+
+	irq_set_msi_desc(irq, desc);
+
+	msg.address_lo = BRCM_MSI_TARGET_ADDR_LO;
+	msg.address_hi = BRCM_MSI_TARGET_ADDR_HI;
+	data = __raw_readl(pcie->base + PCIE_MISC_MSI_DATA_CONFIG);
+	msg.data = ((data >> 16) & (data & 0xffff)) | hwirq;
+	wmb(); /* just being cautious */
+	write_msi_msg(irq, &msg);
+
+	return 0;
+}
+
+
+static void brcm_msi_teardown_irq(struct msi_chip *chip, unsigned int irq)
+{
+	struct brcm_msi *msi = to_brcm_msi(chip);
+	struct irq_data *d = irq_get_irq_data(irq);
+
+	brcm_msi_free(msi, d->hwirq);
+}
+
+
+static int brcm_msi_map(struct irq_domain *domain, unsigned int irq,
+			irq_hw_number_t hwirq)
+{
+	struct brcm_pcie *pcie = domain->host_data;
+
+	irq_set_chip_and_handler(irq, &pcie->msi.irq_chip, handle_simple_irq);
+	irq_set_chip_data(irq, domain->host_data);
+
+	return 0;
+}
+
+static const struct irq_domain_ops msi_domain_ops = {
+	.map = brcm_msi_map,
+};
+
+
+static int brcm_pcie_enable_msi(struct brcm_pcie *pcie, int nr)
+{
+	static const char brcm_msi_name[] = "brcmstb_pcieX_msi";
+	struct brcm_msi *msi = &pcie->msi;
+	u32 data_val;
+	char *name;
+	int err;
+
+	if (!pcie->suspended) {
+		/* We are only here on cold boot */
+		mutex_init(&msi->lock);
+
+		msi->chip.dev = pcie->dev;
+		msi->chip.setup_irq = brcm_msi_setup_irq;
+		msi->chip.teardown_irq = brcm_msi_teardown_irq;
+
+		/* We have multiple RC controllers.  We may have as many
+		 * MSI controllers for them.  We want each to have a
+		 * unique name, so we go to the trouble of having an
+		 * irq_chip per RC (instead of one for all of them). */
+		name = devm_kzalloc(pcie->dev, sizeof(brcm_msi_name),
+				    GFP_KERNEL);
+		if (name) {
+			char *p;
+			strcpy(name, brcm_msi_name);
+			p = strchr(name, 'X');
+			if (p)
+				*p = '0' + nr;
+			msi->irq_chip.name = name;
+		} else {
+			msi->irq_chip.name = brcm_msi_name;
+		}
+
+		msi->irq_chip.irq_enable = unmask_msi_irq;
+		msi->irq_chip.irq_disable = mask_msi_irq;
+		msi->irq_chip.irq_mask = mask_msi_irq;
+		msi->irq_chip.irq_unmask = unmask_msi_irq;
+
+		msi->domain =
+			irq_domain_add_linear(pcie->dn, BRCM_INT_PCI_MSI_NR,
+					      &msi_domain_ops, pcie);
+		if (!msi->domain) {
+			dev_err(pcie->dev,
+				"failed to create IRQ domain for MSI\n");
+			return -ENOMEM;
+		}
+
+		err = devm_request_irq(pcie->dev, msi->irq, brcm_pcie_msi_irq,
+				       IRQF_SHARED, msi->irq_chip.name,
+				       pcie);
+
+		if (err < 0) {
+			dev_err(pcie->dev,
+				"failed to request IRQ (%d) for MSI\n",	err);
+			goto msi_en_err;
+		}
+
+		if (pcie->rev >= BRCM_PCIE_HW_REV_33) {
+			msi->intr_base = pcie->base + PCIE_MSI_INTR2_BASE;
+			/* This version of PCIe hw has only 32 intr bits
+			 * starting at bit position 0. */
+			msi->intr_legacy_mask = 0xffffffff;
+			msi->intr_legacy_offset = 0x0;
+			msi->used = 0x0;
+
+		} else {
+			msi->intr_base = pcie->base + PCIE_INTR2_CPU_BASE;
+			/* This version of PCIe hw has only 8 intr bits starting
+			 * at bit position 24. */
+			msi->intr_legacy_mask = 0xff000000;
+			msi->intr_legacy_offset = 24;
+			msi->used = 0xffffff00;
+		}
+		msi->working = true;
+	}
+
+	/* If we are here, and msi->working is false, it means that we've
+	 * already tried and failed to bring up MSI.  Just return 0
+	 * since there is nothing to be done. */
+	if (!msi->working)
+		return 0;
+
+	if (pcie->rev >= BRCM_PCIE_HW_REV_33) {
+		/* ffe0 -- least sig 5 bits are 0 indicating 32 msgs
+		 * 6540 -- this is our arbitrary unique data value */
+		data_val = 0xffe06540;
+	} else {
+		/* fff8 -- least sig 3 bits are 0 indicating 8 msgs
+		 * 6540 -- this is our arbitrary unique data value */
+		data_val = 0xfff86540;
+	}
+
+	/* Make sure we are not masking MSIs.  Note that MSIs can be masked,
+	 * but that occurs on the PCIe EP device */
+	__raw_writel(0xffffffff & msi->intr_legacy_mask,
+		     msi->intr_base + MASK_CLR);
+
+	/* The 0 bit of BRCM_MSI_TARGET_ADDR_LO is repurposed to MSI enable,
+	 * which we set to 1. */
+	__raw_writel(BRCM_MSI_TARGET_ADDR_LO | 1, pcie->base
+		     + PCIE_MISC_MSI_BAR_CONFIG_LO);
+	__raw_writel(BRCM_MSI_TARGET_ADDR_HI, pcie->base
+		     + PCIE_MISC_MSI_BAR_CONFIG_HI);
+	__raw_writel(data_val, pcie->base + PCIE_MISC_MSI_DATA_CONFIG);
+
+	return 0;
+
+msi_en_err:
+	irq_domain_remove(msi->domain);
+	return err;
+}
+
+
 static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 {
 	void __iomem *base = pcie->base;
@@ -308,6 +584,9 @@ static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 	/* take the bridge out of reset */
 	/* field: PCIE_BRIDGE_SW_INIT = 0 */
 	wr_fld_rb(base + PCIE_RGR1_SW_INIT_1, 0x00000002, 1, 0);
+
+	/* Grab the PCIe hw revision number */
+	pcie->rev = __raw_readl(base + PCIE_MISC_REVISION) & 0xffff;
 
 	/* enable SCB_MAX_BURST_SIZE | CSR_READ_UR_MODE | SCB_ACCESS_EN */
 	__raw_writel(0x81e03000, base + PCIE_MISC_MISC_CTRL);
@@ -347,16 +626,15 @@ static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 	/* disable the PCIE->SCB memory window */
 	__raw_writel(0x00000000, base + PCIE_MISC_RC_BAR3_CONFIG_LO);
 
-	/* disable MSI (for now...) */
-	__raw_writel(0x00000000, base + PCIE_MISC_MSI_BAR_CONFIG_LO);
+	if (!pcie->suspended) {
+		/* clear any interrupts we find on boot */
+		__raw_writel(0xffffffff, base + PCIE_INTR2_CPU_BASE + CLR);
+		(void) __raw_readl(base + PCIE_INTR2_CPU_BASE + CLR);
+	}
 
-	/* set up L2 interrupt masks */
-	__raw_writel(0x00000000, base + PCIE_INTR2_CPU_CLEAR);
-	(void) __raw_readl(base + PCIE_INTR2_CPU_CLEAR);
-	__raw_writel(0x00000000, base + PCIE_INTR2_CPU_MASK_CLEAR);
-	(void) __raw_readl(base + PCIE_INTR2_CPU_MASK_CLEAR);
-	__raw_writel(0xffffffff, base + PCIE_INTR2_CPU_MASK_SET);
-	(void) __raw_readl(base + PCIE_INTR2_CPU_MASK_SET);
+	/* Mask all interrupts since we are not handling any yet */
+	__raw_writel(0xffffffff, base + PCIE_INTR2_CPU_BASE + MASK_SET);
+	(void) __raw_readl(base + PCIE_INTR2_CPU_BASE + MASK_SET);
 
 	if (pcie->ssc)
 		if (set_ssc(base))
@@ -378,7 +656,8 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 	struct clk *clk;
 	unsigned status;
 	static const char *link_speed[4] = { "???", "2.5", "5.0", "8.0" };
-	int i, j;
+	int i, j, ret;
+	bool ssc_good = false;
 
 	pcie->sys = sys;
 
@@ -394,6 +673,15 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 		goto FAIL;
 	}
 
+	/* Attempt to enable MSI if we have an interrupt for it. */
+	if (pcie->msi.irq > 0) {
+		ret = brcm_pcie_enable_msi(pcie, nr);
+		if (ret < 0) {
+			dev_err(pcie->dev, "failed to enable MSI support: %d\n",
+				ret);
+		}
+	}
+
 	/* For config space accesses on the RC, show the right class for
 	 * a PCI-PCI bridge */
 	wr_fld_rb(base + PCIE_RC_CFG_PRIV1_ID_VAL3, 0x00ffffff, 0, 0x060400);
@@ -405,12 +693,17 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 					sys->mem_offset);
 
 	status = __raw_readl(base + PCIE_RC_CFG_PCIE_LINK_STATUS_CONTROL);
-	dev_info(pcie->dev, "link up, %s Gbps x%u\n",
-		 link_speed[((status & 0x000f0000) >> 16) & 0x3],
-		 (status & 0x03f00000) >> 20);
 
-	if (pcie->ssc && is_ssc(base) != 0)
-		dev_err(pcie->dev, "failed to enter ssc mode\n");
+	if (pcie->ssc) {
+		if (is_ssc(base) == 0)
+			ssc_good = true;
+		else
+			dev_err(pcie->dev, "failed to enter SSC mode\n");
+	}
+
+	dev_info(pcie->dev, "link up, %s Gbps x%u %s\n",
+		 link_speed[((status & 0x000f0000) >> 16) & 0x3],
+		 (status & 0x03f00000) >> 20, ssc_good ? "(SSC)" : "(!SSC)");
 
 	/* Enable configuration request retry (see pci_scan_device()) */
 	/* field RC_CRS_EN = 1 */
@@ -685,9 +978,14 @@ brcm_pcibios_fixup(struct pci_dev *dev)
 	struct brcm_pcie *pcie = sys->private_data;
 	int slot = PCI_SLOT(dev->devfn);
 
-	/* Set the root pci_dev's device node */
-	if (dev->bus->self == NULL && !dev->dev.of_node)
-		dev->dev.of_node = pcie->dn;
+	if (pci_is_root_bus(dev->bus)) {
+		/* Set the root pci_dev's device node */
+		if (!dev->dev.of_node)
+			dev->dev.of_node = pcie->dn;
+		/* Set the root bus's msi value */
+		if (IS_ENABLED(CONFIG_PCI_MSI))
+			dev->bus->msi = &pcie->msi.chip;
+	}
 	dev_info(pcie->dev,
 		 "found device %04x:%04x on bus %d (%s), slot %d (irq %d)\n",
 		 dev->vendor, dev->device, dev->bus->number, pcie->name,
@@ -827,6 +1125,16 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 	if (dma_ranges != NULL)
 		dev_warn(pcie->dev, "no identity map; PCI drivers may fail");
 
+	if (!pcie->broken_pcie_irq_map_dt) {
+		ret = irq_of_parse_and_map(pdev->dev.of_node, 0);
+		if (ret == 0) {
+			dev_warn(pcie->dev, "cannot get pcie interrupt\n");
+			/* keep going, as we don't use this yet */
+		} else {
+			pcie->irq = ret;
+		}
+	}
+
 	ranges = of_get_property(dn, "ranges", &rlen);
 	if (ranges == NULL) {
 		dev_err(pcie->dev, "no ranges property in dev tree.\n");
@@ -837,6 +1145,14 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 	np = pna + 5;
 
 	pcie->num_out_wins = rlen / (np * 4);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		ret = irq_of_parse_and_map(pdev->dev.of_node, 1);
+		if (ret == 0)
+			dev_warn(pcie->dev, "cannot get msi intr; MSI disabled\n");
+		else
+			pcie->msi.irq = ret;
+	}
 
 	for (i = 0; i < pcie->num_out_wins; i++) {
 		struct brcm_window *w = &pcie->out_wins[i];
