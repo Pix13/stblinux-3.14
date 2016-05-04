@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Broadcom Corporation
+ * Copyright (C) 2016 Broadcom
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -31,6 +31,7 @@
 #define GIO_MASK(bank)          (((bank) * GIO_BANK_SIZE) + 0x14)
 #define GIO_LEVEL(bank)         (((bank) * GIO_BANK_SIZE) + 0x18)
 #define GIO_STAT(bank)          (((bank) * GIO_BANK_SIZE) + 0x1c)
+#define GIO_BANK_OFF(bank, off)	(((bank) * GIO_BANK_SIZE) + (off * sizeof(u32)))
 
 struct brcmstb_gpio_bank {
 	struct list_head node;
@@ -38,7 +39,9 @@ struct brcmstb_gpio_bank {
 	struct bgpio_chip bgc;
 	struct brcmstb_gpio_priv *parent_priv;
 	u32 width;
+	u32 wake_active;
 	struct irq_chip irq_chip;
+	u32 regs[GIO_BANK_SIZE / sizeof(u32)];
 };
 
 struct brcmstb_gpio_priv {
@@ -193,6 +196,16 @@ static int brcmstb_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct brcmstb_gpio_priv *priv = brcmstb_gpio_gc_to_priv(gc);
+	struct brcmstb_gpio_bank *bank = brcmstb_gpio_gc_to_bank(gc);
+	u32 mask = BIT(d->hwirq);
+
+	/* Do not do anything specific for now, suspend/resume callbacks will
+	 * configure the interrupt mask appropriately
+	 */
+	if (enable)
+		bank->wake_active |= mask;
+	else
+		bank->wake_active &= ~mask;
 
 	return __brcmstb_gpio_irq_set_wake(priv, enable);
 }
@@ -356,7 +369,7 @@ static int brcmstb_gpio_irq_setup(struct platform_device *pdev,
 {
 	struct brcmstb_gpio_priv *priv = bank->parent_priv;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = NULL;
 
 	bank->irq_chip.name = dev_name(dev);
 	bank->irq_chip.irq_disable = brcmstb_gpio_irq_mask;
@@ -364,13 +377,23 @@ static int brcmstb_gpio_irq_setup(struct platform_device *pdev,
 	bank->irq_chip.irq_unmask = brcmstb_gpio_irq_unmask;
 	bank->irq_chip.irq_set_type = brcmstb_gpio_irq_set_type;
 
-	/* Ensures that all non-wakeup IRQs are disabled at suspend */
-	/* and that interrupts are masked when changing their type  */
-	bank->irq_chip.flags = IRQCHIP_MASK_ON_SUSPEND | IRQCHIP_SET_TYPE_MASKED;
+	/* Ensures that interrupts are masked when changing their type  */
+	bank->irq_chip.flags = IRQCHIP_SET_TYPE_MASKED;
 
-	if (IS_ENABLED(CONFIG_PM_SLEEP) && !priv->can_wake &&
-			of_property_read_bool(np, "wakeup-source")) {
+	if (IS_ENABLED(CONFIG_PM_SLEEP) && !priv->can_wake
+		&& !priv->parent_wake_irq) {
 		priv->parent_wake_irq = platform_get_irq(pdev, 1);
+		while (priv->parent_wake_irq < 0) {
+			np = of_find_compatible_node(np, NULL,
+							"brcm,brcmstb-gpio");
+			if (!np)
+				break;
+			pdev = of_find_device_by_node(np);
+			of_node_put(np);
+			if (!pdev)
+				continue;
+			priv->parent_wake_irq = platform_get_irq(pdev, 1);
+		}
 		if (priv->parent_wake_irq < 0) {
 			dev_warn(dev,
 				"Couldn't get wake IRQ - GPIOs will not be able to wake from sleep");
@@ -385,7 +408,7 @@ static int brcmstb_gpio_irq_setup(struct platform_device *pdev,
 			device_set_wakeup_capable(dev, true);
 			device_wakeup_enable(dev);
 			err = devm_request_irq(dev, priv->parent_wake_irq,
-					brcmstb_gpio_wake_irq_handler, 0,
+					brcmstb_gpio_wake_irq_handler, IRQF_SHARED,
 					"brcmstb-gpio-wake", priv);
 
 			if (err < 0) {
@@ -402,6 +425,9 @@ static int brcmstb_gpio_irq_setup(struct platform_device *pdev,
 
 	if (priv->can_wake)
 		bank->irq_chip.irq_set_wake = brcmstb_gpio_irq_set_wake;
+	else
+		/* Ensures that all non-wakeup IRQs are disabled at suspend */
+		bank->irq_chip.flags |= IRQCHIP_MASK_ON_SUSPEND;
 
 	gpiochip_irqchip_add(&bank->bgc.gc, &bank->irq_chip, 0,
 			handle_simple_irq, IRQ_TYPE_NONE);
@@ -410,6 +436,93 @@ static int brcmstb_gpio_irq_setup(struct platform_device *pdev,
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static void brcmstb_gpio_bank_save(struct brcmstb_gpio_priv *priv,
+				   struct brcmstb_gpio_bank *bank)
+{
+	struct bgpio_chip *bgc = &bank->bgc;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(bank->regs); i++)
+		bank->regs[i] = bgc->read_reg(priv->reg_base +
+					      GIO_BANK_OFF(bank->id, i));
+}
+
+static void brcmstb_gpio_bank_restore(struct brcmstb_gpio_priv *priv,
+				      struct brcmstb_gpio_bank *bank)
+{
+	struct bgpio_chip *bgc = &bank->bgc;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(bank->regs); i++)
+		bgc->write_reg(priv->reg_base + GIO_BANK_OFF(bank->id, i),
+				bank->regs[i]);
+}
+
+static int brcmstb_gpio_suspend(struct device *dev)
+{
+	struct brcmstb_gpio_priv *priv = dev_get_drvdata(dev);
+	struct brcmstb_gpio_bank *bank;
+	struct bgpio_chip *bgc;
+	struct list_head *pos;
+	u32 imask;
+
+	list_for_each(pos, &priv->bank_list) {
+		bank = list_entry(pos, struct brcmstb_gpio_bank, node);
+		bgc = &bank->bgc;
+
+		brcmstb_gpio_bank_save(priv, bank);
+
+		/* Unmask GPIOs which have been flagged as wake-up sources */
+		if (priv->can_wake) {
+			imask = bgc->read_reg(priv->reg_base +
+					      GIO_MASK(bank->id));
+			imask |= bank->wake_active;
+			bgc->write_reg(priv->reg_base + GIO_MASK(bank->id),
+				       imask);
+		}
+	}
+
+	return 0;
+}
+
+static int brcmstb_gpio_resume(struct device *dev)
+{
+	struct brcmstb_gpio_priv *priv = dev_get_drvdata(dev);
+	struct brcmstb_gpio_bank *bank;
+	struct list_head *pos;
+	struct bgpio_chip *bgc;
+	u32 imask;
+
+	list_for_each(pos, &priv->bank_list) {
+		bank = list_entry(pos, struct brcmstb_gpio_bank, node);
+		bgc = &bank->bgc;
+
+		brcmstb_gpio_bank_restore(priv, bank);
+
+		/* Mask GPIOs which have been flagged as wake-up sources */
+		if (priv->can_wake) {
+			imask = bgc->read_reg(priv->reg_base +
+					      GIO_MASK(bank->id));
+			imask &= ~bank->wake_active;
+			bgc->write_reg(priv->reg_base + GIO_MASK(bank->id),
+				       imask);
+		}
+	}
+
+	return 0;
+}
+
+#else
+#define brcmstb_gpio_suspend	NULL
+#define brcmstb_gpio_resume	NULL
+#endif /* CONFIG_PM_SLEEP */
+
+static const struct dev_pm_ops brcmstb_gpio_pm_ops = {
+	.suspend_noirq	= brcmstb_gpio_suspend,
+	.resume_noirq = brcmstb_gpio_resume,
+};
 
 static int brcmstb_gpio_probe(struct platform_device *pdev)
 {
@@ -553,6 +666,7 @@ static struct platform_driver brcmstb_gpio_driver = {
 	.driver = {
 		.name = "brcmstb-gpio",
 		.of_match_table = brcmstb_gpio_of_match,
+		.pm = &brcmstb_gpio_pm_ops,
 	},
 	.probe = brcmstb_gpio_probe,
 	.remove = brcmstb_gpio_remove,
