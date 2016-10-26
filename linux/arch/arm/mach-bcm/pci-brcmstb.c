@@ -204,18 +204,23 @@ static void remove_pcie(struct brcm_pcie *pcie)
 /* negative return value indicates error */
 static int mdio_read(void __iomem *base, u8 phyad, u8 regad)
 {
+	const int TRYS = 10;
 	u32 data = ((phyad & 0xf) << 16)
 		| (regad & 0x1f)
 		| 0x100000;
+
+	int i = 0;
 
 	__raw_writel(data, base + PCIE_RC_DL_MDIO_ADDR);
 	__raw_readl(base + PCIE_RC_DL_MDIO_ADDR);
 
 	data = __raw_readl(base + PCIE_RC_DL_MDIO_RD_DATA);
-	if (!(data & 0x80000000)) {
-		mdelay(1);
+
+	while (!(data & 0x80000000) && ++i < TRYS) {
+		udelay(10);
 		data = __raw_readl(base + PCIE_RC_DL_MDIO_RD_DATA);
 	}
+
 	return (data & 0x80000000) ? (data & 0xffff) : -EIO;
 }
 
@@ -224,17 +229,21 @@ static int mdio_read(void __iomem *base, u8 phyad, u8 regad)
 static int mdio_write(void __iomem *base, u8 phyad, u8 regad, u16 wrdata)
 {
 	u32 data = ((phyad & 0xf) << 16) | (regad & 0x1f);
-
+	const int TRYS = 10;
+	int i = 0;
 	__raw_writel(data, base + PCIE_RC_DL_MDIO_ADDR);
 	__raw_readl(base + PCIE_RC_DL_MDIO_ADDR);
 
 	__raw_writel(0x80000000 | wrdata, base + PCIE_RC_DL_MDIO_WR_DATA);
+
 	data = __raw_readl(base + PCIE_RC_DL_MDIO_WR_DATA);
-	if (!(data & 0x80000000)) {
-		mdelay(1);
+
+	while ((data & 0x80000000) && ++i < TRYS) {
+		udelay(10);
 		data = __raw_readl(base + PCIE_RC_DL_MDIO_WR_DATA);
 	}
-	return (data & 0x80000000) ? 0 : -EIO;
+
+	return (data & 0x80000000) ? -EIO : 0;
 }
 
 
@@ -636,9 +645,6 @@ static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 	__raw_writel(0xffffffff, base + PCIE_INTR2_CPU_BASE + MASK_SET);
 	(void) __raw_readl(base + PCIE_INTR2_CPU_BASE + MASK_SET);
 
-	if (pcie->ssc)
-		if (set_ssc(base))
-			dev_err(pcie->dev, "error while configuring ssc mode\n");
 	if (pcie->gen)
 		set_gen(base, pcie->gen);
 
@@ -695,10 +701,18 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 	status = __raw_readl(base + PCIE_RC_CFG_PCIE_LINK_STATUS_CONTROL);
 
 	if (pcie->ssc) {
-		if (is_ssc(base) == 0)
+		if (set_ssc(base))
+			dev_err(pcie->dev,
+				"mdio rd/wt fail during ssc config\n");
+		ret = is_ssc(base);
+		if (ret == 0) {
 			ssc_good = true;
-		else
+		} else {
+			if (ret < 0)
+				dev_err(pcie->dev,
+					"mdio rd/wt fail during ssc query\n");
 			dev_err(pcie->dev, "failed to enter SSC mode\n");
+		}
 	}
 
 	dev_info(pcie->dev, "link up, %s Gbps x%u %s\n",

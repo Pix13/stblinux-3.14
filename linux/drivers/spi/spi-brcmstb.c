@@ -1253,10 +1253,13 @@ static int bcmbspi_flash_type(struct bcmspi_priv *priv)
 static int bcmspi_set_quad_mode(struct bcmspi_priv *priv, int _enable)
 {
 	char tx_buf[4];
-	unsigned char cfg_reg, sts_reg;
+	unsigned char cfg_reg, sts_reg, sr1_reg;
 
 	switch (bcmbspi_flash_type(priv)) {
 	case BSPI_FLASH_TYPE_SPANSION:
+		/* RSR1 */
+		tx_buf[0] = OPCODE_RDSR;
+		bcmspi_simple_transaction(priv, tx_buf, 1, &sr1_reg, 1);
 		/* RCR */
 		tx_buf[0] = OPCODE_RCR;
 		bcmspi_simple_transaction(priv, tx_buf, 1, &cfg_reg, 1);
@@ -1269,7 +1272,7 @@ static int bcmspi_set_quad_mode(struct bcmspi_priv *priv, int _enable)
 		bcmspi_simple_transaction(priv, tx_buf, 1, NULL, 0);
 		/* WRR */
 		tx_buf[0] = OPCODE_WRR;
-		tx_buf[1] = 0; /* status register */
+		tx_buf[1] = sr1_reg; /* status register */
 		tx_buf[2] = cfg_reg; /* configuration register */
 		bcmspi_simple_transaction(priv, tx_buf, 3, NULL, 0);
 		/* wait till ready */

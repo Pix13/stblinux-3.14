@@ -31,6 +31,13 @@ register value		actual divisor value
 1			1
 2			2
 
+index-max-at-zero - same as index_one, but zero is 2^width.  E.g. for
+a clk register field of width 2:
+0			4
+1			1
+2			2
+3			3
+
 Additionally a table of valid dividers may be supplied like so:
 
 	table = <4 0>, <8, 1>;

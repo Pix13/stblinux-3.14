@@ -63,7 +63,6 @@ my %arch_config_options = (
 	"MACHINE"         => "",
 	"ARCH"            => "",
 	"CROSS_COMPILE"   => "",
-	"LIB_SUFFIX"	  => "",
 );
 
 my @patchlist = ("lttng", "newubi");
@@ -216,17 +215,41 @@ sub def($$$)
 }
 
 # This returns a tuple containing ($tgt, $chip, $be, $suffix).
-sub get_tgt($)
+sub get_tgt($$)
 {
-	my ($tgt, $chip, $be, $suffix);
+	my ($tgt, $chip, $be, $suffix, $linux_full_version, $linux_version, $chip_regexp);
+	my %subst = (
+		"7271a0" => "arm64",
+	);
 
-	($tgt) = (@_);
+	($tgt, $linux_full_version) = (@_);
 
 	if(! defined($tgt)) {
 		die "no target specified";
 	}
 
-	unless($tgt =~ m/^(bmips|[0-9]+[a-z][0-9])(_be)?(-\S+)?$/) {
+	if ($linux_full_version =~ m/^([0-9].[0-9]+)(-\S+)?$/) {
+		$linux_version = $1;
+	}
+
+	if ($linux_version eq "3.14") {
+		$chip_regexp = '^([0-9]+[a-z][0-9])(_be)?(-\S+)?$';
+	} elsif ($linux_version ge "4.1") {
+		if ($tgt =~ m/^([0-9]+[a-z][0-9])(_be)?(-\S+)?$/) {
+			my $tmp = $1 . (defined($3) ? $3 : "");
+			print "Using deprecated build format, consider using\n".
+			      "the following replacement build targets:\n".
+			      "$tmp => " . (defined($subst{$tmp}) ? $subst{$tmp} : "arm") .
+			      "\n";
+			die("")
+		}
+
+		$chip_regexp = '^(arm64|arm|bmips)(_be)?(-\S+)?$';
+	} else {
+		die("Unsupported Linux version: $linux_version\n");
+	}
+
+	unless($tgt =~ m/$chip_regexp/) {
 		die "invalid target format: $tgt";
 	}
 
@@ -251,7 +274,21 @@ sub populate_linux_defaults($$)
 	# However, it doesn't look like that's actually happening.  Until it
 	# does, we can assume that anything that has an entry under
 	# include/linux/brcmstb is ARM.
-	if(-d "$LINUXDIR/include/linux/brcmstb/${chip}") {
+	if($chip eq "arm64") {
+		if (grep(/^hardened$/, @mods)) {
+			$linux_defaults =~ s/defconfig$/hardened_defconfig/;
+		}
+		$arch_config_options{"ARCH"} = "arm64";
+		$linux_defaults = "$LINUXDIR/arch/".$arch_config_options{"ARCH"}."/configs/brcmstb_defconfig";
+		$linux_new_defaults = "$LINUXDIR/arch/".$arch_config_options{"ARCH"}."/configs/brcmstb_new_defconfig";
+	} elsif($chip eq "arm") {
+		if (grep(/^hardened$/, @mods)) {
+			$linux_defaults =~ s/defconfig$/hardened_defconfig/;
+		}
+		$arch_config_options{"ARCH"} = "arm";
+		$linux_defaults = "$LINUXDIR/arch/".$arch_config_options{"ARCH"}."/configs/brcmstb_defconfig";
+		$linux_new_defaults = "$LINUXDIR/arch/".$arch_config_options{"ARCH"}."/configs/brcmstb_new_defconfig";
+	} elsif ($chip ne "bmips") {
 		if (grep(/^hardened$/, @mods)) {
 			$linux_defaults =~ s/defconfig$/hardened_defconfig/;
 		}
@@ -260,7 +297,6 @@ sub populate_linux_defaults($$)
 				$arch_config_options{"ARCH"} = "arm";
 			} else {
 				$arch_config_options{"ARCH"} = "arm64";
-				$arch_config_options{"LIB_SUFFIX"} = "64";
 			}
 		} else {
 			$arch_config_options{"ARCH"} = "arm";
@@ -463,11 +499,47 @@ sub test_opt($$)
 	exit $result;
 }
 
-sub gen_arch_config($)
+sub gen_arch_config($$)
 {
 	my $arch = shift;
+	my $be = shift;
 	my $out = "";
 
+	# overrides based on endian/arch setting
+	if($be == 0) {
+		if ($arch eq "arm64") {
+			$arch_config_options{"MACHINE"} = "aarch64";
+		} elsif ($arch eq "arm") {
+			$arch_config_options{"MACHINE"} = "arm";
+		} else {
+			$arch_config_options{"MACHINE"} = "mipsel";
+		}
+	} else {
+		if ($arch eq "arm64") {
+			$arch_config_options{"MACHINE"} = "aarch64_be";
+		} elsif ($arch eq "armeb") {
+			$arch_config_options{"MACHINE"} = "arm";
+		} else {
+			$arch_config_options{"MACHINE"} = "mips";
+		}
+	}
+	$arch_config_options{"CROSS_COMPILE"} = qq($arch_config_options{"MACHINE"}-linux-);
+	if($arch_config_options{"LIBCDIR"} eq "uClibc") {
+		if($arch eq "arm") {
+			$arch_config_options{"CROSS_COMPILE"} .= "uclibceabi-";
+		} else {
+			$arch_config_options{"CROSS_COMPILE"} .= "uclibc-"
+		}
+	} else {  # (e)glibc
+		if($arch eq "arm") {
+			$arch_config_options{"CROSS_COMPILE"} .= "gnueabihf-";
+		} else {
+			$arch_config_options{"CROSS_COMPILE"} .= "gnu-";
+		}
+	}
+	$arch_config_options{"ARCH"} = $arch;
+
+	# generate arch_config file
 	unlink($arch_config);
 	open(IN, "<$arch_defaults") or
 		die "can't open $arch_defaults: $!";
@@ -502,7 +574,7 @@ sub cmd_badcmd($)
 sub cmd_defaults($)
 {
 	my ($cmd) = @_;
-	($tgt, $chip, $be, $suffix) = get_tgt(shift @ARGV);
+	($tgt, $chip, $be, $suffix) = get_tgt(shift @ARGV, shift @ARGV);
 	my @mods = gen_modifiers($chip, $suffix);
 	populate_linux_defaults(\@mods, $chip);
 
@@ -551,12 +623,14 @@ sub cmd_defaults($)
 
 	# set architecture (only for uClibc)
 
-	if($arch_config_options{"ARCH"} eq "arm") {
+	if ($arch_config_options{"ARCH"} eq "arm") {
 		my %uclibc_o;
 
 		read_cfg("defaults/override.uClibc-arm", \%uclibc_o);
 		override_cfg(\%uclibc, \%uclibc_o);
-	} else {
+	}
+
+	if ($arch_config_options{"ARCH"} eq "mips") {
 		# The kernel CMA components are currently arm-only.
 		$vendor{"CONFIG_USER_CMATOOL"} = "n";
 	}
@@ -842,13 +916,6 @@ sub cmd_defaults($)
 		$uclibc{"ARCH_WANTS_LITTLE_ENDIAN"} = "y";
 		$uclibc{"ARCH_BIG_ENDIAN"} = "n";
 		$uclibc{"ARCH_WANTS_BIG_ENDIAN"} = "n";
-		if ($arch_config_options{"ARCH"} eq "arm64") {
-			$arch_config_options{"MACHINE"} = "aarch64";
-		} elsif ($arch_config_options{"ARCH"} eq "arm") {
-			$arch_config_options{"MACHINE"} = "arm";
-		} else {
-			$arch_config_options{"MACHINE"} = "mipsel";
-		}
 	} else {
 		$linux{"CONFIG_CPU_LITTLE_ENDIAN"} = "n";
 		$linux{"CONFIG_CPU_BIG_ENDIAN"} = "y";
@@ -857,34 +924,20 @@ sub cmd_defaults($)
 		$uclibc{"ARCH_WANTS_LITTLE_ENDIAN"} = "n";
 		$uclibc{"ARCH_BIG_ENDIAN"} = "y";
 		$uclibc{"ARCH_WANTS_BIG_ENDIAN"} = "y";
-		if ($arch_config_options{"ARCH"} eq "arm64") {
-			$arch_config_options{"MACHINE"} = "aarch64_be";
-		} elsif ($arch_config_options{"ARCH"} eq "armeb") {
-			$arch_config_options{"MACHINE"} = "arm";
-		} else {
-			$arch_config_options{"MACHINE"} = "mips";
-		}
 	}
 
-	$arch_config_options{"CROSS_COMPILE"} = qq($arch_config_options{"MACHINE"}-linux-);
-	if($arch_config_options{"LIBCDIR"} eq "uClibc") {
-		if($arch_config_options{"ARCH"} eq "arm") {
-			$arch_config_options{"CROSS_COMPILE"} .= "uclibceabi-";
-		} else {
-			$arch_config_options{"CROSS_COMPILE"} .= "uclibc-"
-		}
-	} else {  # (e)glibc
-		if($arch_config_options{"ARCH"} eq "arm") {
-			$arch_config_options{"CROSS_COMPILE"} .= "gnueabihf-";
-		} else {
-			$arch_config_options{"CROSS_COMPILE"} .= "gnu-";
-		}
+	if ($arch_config_options{"ARCH"} eq "arm64") {
+		my $orig_arch_config = $arch_config;
+		$arch_config = $orig_arch_config.".32";
+		gen_arch_config("arm", $be);
+		$arch_config_options{"ARCH"} = "arm64";
+		$arch_config = $orig_arch_config;
 	}
+	gen_arch_config($arch_config_options{"ARCH"}, $be);
+
 	$uclibc{"CROSS_COMPILER_PREFIX"} = '"'.$arch_config_options{"CROSS_COMPILE"}.'"';
 	$busybox{"CONFIG_CROSS_COMPILER_PREFIX"} = '"'.$arch_config_options{"CROSS_COMPILE"}.'"';
 	$linux{"CONFIG_CROSS_COMPILE"} = '"'.$arch_config_options{"CROSS_COMPILE"}.'"';
-
-	gen_arch_config($arch_config_options{"ARCH"});
 
 	# misc
 
@@ -959,7 +1012,7 @@ sub cmd_defaults($)
 
 sub cmd_save_defaults()
 {
-	($tgt, $chip, $be, $suffix) = get_tgt(shift @ARGV);
+	($tgt, $chip, $be, $suffix) = get_tgt(shift @ARGV, shift @ARGV);
 	my @mods = gen_modifiers($chip, $suffix);
 	populate_linux_defaults(\@mods, $chip);
 

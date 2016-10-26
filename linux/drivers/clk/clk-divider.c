@@ -73,6 +73,8 @@ static unsigned int _get_div(struct clk_divider *divider, unsigned int val)
 		return val;
 	if (divider->flags & CLK_DIVIDER_POWER_OF_TWO)
 		return 1 << val;
+	if (divider->flags & CLK_DIVIDER_MAX_AT_ZERO)
+		return val ? val : div_mask(divider) + 1;
 	if (divider->table)
 		return _get_table_div(divider->table, val);
 	return val + 1;
@@ -95,6 +97,9 @@ static unsigned int _get_val(struct clk_divider *divider, unsigned int div)
 		return div;
 	if (divider->flags & CLK_DIVIDER_POWER_OF_TWO)
 		return __ffs(div);
+	if (divider->flags & CLK_DIVIDER_MAX_AT_ZERO)
+		return (div == div_mask(divider) + 1)
+			? 0 : div;
 	if (divider->table)
 		return  _get_table_val(divider->table, div);
 	return div - 1;
@@ -429,6 +434,9 @@ void of_divider_clk_setup(struct device_node *node)
 
 	if (of_property_read_bool(node, "index-allow-zero"))
 		clk_divider_flags |= CLK_DIVIDER_ALLOW_ZERO;
+
+	if (of_property_read_bool(node, "index-max-at-zero"))
+		clk_divider_flags |= CLK_DIVIDER_MAX_AT_ZERO;
 
 	if (of_property_read_bool(node, "hiword-mask"))
 		clk_divider_flags |= CLK_DIVIDER_HIWORD_MASK;

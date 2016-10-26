@@ -26,6 +26,7 @@
 #include <linux/ethtool.h>
 #include <linux/if_bridge.h>
 #include <linux/brcmphy.h>
+#include <linux/kexec.h>
 
 #include "bcm_sf2.h"
 #include "bcm_sf2_regs.h"
@@ -367,6 +368,15 @@ static int bcm_sf2_port_setup(struct dsa_switch *ds, int port,
 	if (priv->port_sts[port].eee.eee_enabled)
 		bcm_sf2_eee_enable_set(ds, port, true);
 
+	/* Set per-queue pause threshold to 32 */
+	core_writel(priv, 32, CORE_TXQ_THD_PAUSE_QN_PORT(port));
+
+	/* Set ACB threshold to 24 */
+	reg = acb_readl(priv, ACB_QUEUE_CFG(port * 8));
+	reg &= ~XOFF_THRESHOLD_MASK;
+	reg |= 24;
+	acb_writel(priv, reg, ACB_QUEUE_CFG(port * 8));
+
 	return 0;
 }
 
@@ -654,6 +664,13 @@ static int bcm_sf2_sw_rst(struct bcm_sf2_priv *priv)
 	return 0;
 }
 
+static void bcm_sf2_intr_disable(struct bcm_sf2_priv *priv)
+{
+	intrl2_0_mask_set(priv, 0xffffffff);
+	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
+	intrl2_1_mask_set(priv, 0xffffffff);
+	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
+}
 
 static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 {
@@ -709,12 +726,7 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 	}
 
 	/* Disable all interrupts and request them */
-	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
-	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
-	intrl2_0_writel(priv, 0, INTRL2_CPU_MASK_CLEAR);
-	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
-	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
-	intrl2_1_writel(priv, 0, INTRL2_CPU_MASK_CLEAR);
+	bcm_sf2_intr_disable(priv);
 
 	ret = request_irq(priv->irq0, bcm_sf2_switch_0_isr, 0,
 				"switch_0", priv);
@@ -757,6 +769,11 @@ static int bcm_sf2_sw_setup(struct dsa_switch *ds)
 		else
 			bcm_sf2_port_disable(ds, port);
 	}
+
+	/* Enable ACB globally */
+	reg = acb_readl(priv, ACB_CONTROL);
+	reg |= ACB_EN | ACB_ALGORITHM;
+	acb_writel(priv, reg, ACB_CONTROL);
 
 	/* Include the pseudo-PHY address and the broadcast PHY address to
 	 * divert reads towards our workaround. This is only required for
@@ -1032,12 +1049,7 @@ static int bcm_sf2_sw_suspend(struct dsa_switch *ds)
 	struct bcm_sf2_priv *priv = ds_to_priv(ds);
 	unsigned int port;
 
-	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
-	intrl2_0_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
-	intrl2_0_writel(priv, 0, INTRL2_CPU_MASK_CLEAR);
-	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_MASK_SET);
-	intrl2_1_writel(priv, 0xffffffff, INTRL2_CPU_CLEAR);
-	intrl2_1_writel(priv, 0, INTRL2_CPU_MASK_CLEAR);
+	bcm_sf2_intr_disable(priv);
 
 	/* Disable all ports physically present including the IMP
 	 * port, the other ones have already been disabled during
@@ -1081,6 +1093,18 @@ static int bcm_sf2_sw_resume(struct dsa_switch *ds)
 	}
 
 	return 0;
+}
+
+static void bcm_sf2_sw_shutdown(struct dsa_switch *ds)
+{
+	struct bcm_sf2_priv *priv = ds_to_priv(ds);
+
+	/* For a kernel about to be kexec'd we want to keep the GPHY on
+	 * for a successful MDIO bus scan to occur. If we did turn off
+	 * the GPHY before, this will also power it back on.
+	 */
+	if (priv->hw_params.num_gphy == 1)
+		bcm_sf2_gphy_enable_set(ds, kexec_in_progress);
 }
 
 static void bcm_sf2_sw_get_wol(struct dsa_switch *ds, int port,
@@ -1151,6 +1175,7 @@ static struct dsa_switch_driver bcm_sf2_switch_driver = {
 	.fixed_link_update	= bcm_sf2_sw_fixed_link_update,
 	.suspend		= bcm_sf2_sw_suspend,
 	.resume			= bcm_sf2_sw_resume,
+	.shutdown		= bcm_sf2_sw_shutdown,
 	.get_wol		= bcm_sf2_sw_get_wol,
 	.set_wol		= bcm_sf2_sw_set_wol,
 	.port_enable		= bcm_sf2_port_setup,

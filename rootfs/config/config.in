@@ -366,6 +366,7 @@ if [ "$CONFIG_USER_IPROUTE2" = "y" ]; then
 	bool '  ifstat'		CONFIG_USER_IPROUTE2_MISC_IFSTAT
 	bool '  lnstat'		CONFIG_USER_IPROUTE2_MISC_LNSTAT
 	bool '  genl'		CONFIG_USER_IPROUTE2_GENL
+	bool '  bridge'		CONFIG_USER_IPROUTE2_BRIDGE
 fi
 
 bool 'iptables'			CONFIG_USER_IPTABLES_IPTABLES
@@ -537,6 +538,7 @@ bool 'cksum'			CONFIG_USER_CKSUM_CKSUM
 bool 'clock'			CONFIG_USER_CLOCK_CLOCK
 bool 'cmatool'			CONFIG_USER_CMATOOL
 bool 'cpu'			CONFIG_USER_CPU_CPU
+bool 'cpufrequtils'		CONFIG_USER_CPUFREQUTILS
 bool 'date'			CONFIG_USER_CAL_DATE
 
 if [ "$CONFIG_USER_DESTEST_DESTEST" = "y" ]; then

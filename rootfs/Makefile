@@ -99,6 +99,7 @@ rootfs: .target chkpath
 		cp -a skel romfs || exit 1 ; \
 		chmod -R a+x romfs/{bin,sbin} ; \
 		mkdir -p romfs/{bin,sbin,etc,dev,proc,sys,lib,root,tmp} ; \
+		mkdir -p romfs/lib/$(OSLIB); \
 		mkdir -p romfs/lib/modules ; \
 		mkdir -p romfs/mnt/{hd,usb,flash,nfs} ; \
 		mkdir -p romfs/var/{log,run,tmp} romfs/{opt,data} ; \
@@ -281,7 +282,7 @@ oldconfig: .target chkpath
 defaults-%: chkpath
 	@touch .dirty
 	@chmod -R 0755 config/scripts/{Configure,Menuconfig} bin
-	+$(CFG) defaults $*
+	+$(CFG) defaults $* $(DOTVERSION)
 	$(MAKE) -j1 silentoldconfig
 	@echo "***************************************************************"
 	@echo "* Build configuration"
@@ -296,7 +297,7 @@ defaults-%: chkpath
 
 .PHONY: save_defaults
 save_defaults: .target
-	+$(CFG) save_defaults $(PLAT)
+	+$(CFG) save_defaults $(PLAT) $(DOTVERSION)
 
 .PHONY: menuconfig-linux menuconfig-vendor menuconfig-uclibc \
 	menuconfig-busybox xconfig-linux
@@ -356,7 +357,7 @@ distclean:
 		$(MAKE) -C config clean ; \
 	fi
 	rm -rf romfs tmp
-	rm -f $(CONFIG_CONFIG) $(ARCH_CONFIG) .target .arch
+	rm -f $(CONFIG_CONFIG) $(ARCH_CONFIG) $(ARCH_CONFIG).32 .target .arch
 
 #############################################################################
 # INFORMATIONAL TARGETS

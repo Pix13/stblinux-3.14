@@ -185,7 +185,7 @@ int brcmstb_gpio_update32(uint32_t addr, uint32_t mask, uint32_t value)
 
 	/* We got full access to the entire mask, do the write */
 
-	pr_info("%s: offset=0x%08x mask=0x%08x, value=0x%08x\n",
+	pr_debug("%s: offset=0x%08x mask=0x%08x, value=0x%08x\n",
 		__func__, addr, mask, value);
 
 	gc = gpiod_to_chip(gpio_to_desc(gpio_base));

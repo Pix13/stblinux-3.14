@@ -212,6 +212,12 @@ static void dsa_switch_destroy(struct dsa_switch *ds)
 {
 }
 
+static void dsa_switch_shutdown(struct dsa_switch *ds)
+{
+	if (ds->drv->shutdown)
+		ds->drv->shutdown(ds);
+}
+
 #ifdef CONFIG_PM_SLEEP
 static int dsa_switch_suspend(struct dsa_switch *ds)
 {
@@ -453,8 +459,9 @@ static int dsa_of_probe(struct platform_device *pdev)
 		goto out_free;
 	}
 
-	chip_index = 0;
+	chip_index = -1;
 	for_each_available_child_of_node(np, child) {
+		chip_index++;
 		cd = &pd->chip[chip_index];
 
 		cd->of_node = child;
@@ -656,6 +663,15 @@ static int dsa_remove(struct platform_device *pdev)
 
 static void dsa_shutdown(struct platform_device *pdev)
 {
+	struct dsa_switch_tree *dst = platform_get_drvdata(pdev);
+	int i;
+
+	for (i = 0; i < dst->pd->nr_chips; i++) {
+		struct dsa_switch *ds = dst->ds[i];
+
+		if (ds != NULL)
+			dsa_switch_shutdown(ds);
+	}
 }
 
 #ifdef CONFIG_PM_SLEEP

@@ -13,11 +13,13 @@ endif
 
 export CC CFLAGS
 
+INSTALL_TMP_DIR = $(shell pwd)/install-tmp
+
 .PHONY: all
 all:
 	if [ ! -e Makefile ]; then \
 		./configure --host=$(MACHINE)-linux \
-		--prefix=$(shell pwd)/install-tmp \
+		--prefix=$(INSTALL_TMP_DIR) \
 		--exec-prefix=$(shell pwd)/install-tmp \
 		--disable-nls --disable-werror; \
 	fi
@@ -26,16 +28,17 @@ all:
 .PHONY: clean distclean
 clean distclean::
 	[ ! -f Makefile ] || $(MAKE) -f Makefile $@
+	rm -fr $(INSTALL_TMP_DIR)
 
 .PHONY: romfs
 romfs:
 	-$(RM) -f $(ROMFSDIR)/lib/libelf.so*
 	cp -af libelf/libelf.so libelf/libelf.so*[0-9] \
-		$(ROMFSDIR)/lib/
-	$(STRIP) $(ROMFSDIR)/lib/libelf.so
+		$(ROMFSDIR)/lib/$(OSLIB)/
+	$(STRIP) $(ROMFSDIR)/lib/$(OSLIB)/libelf.so
 	cp -af libdw/libdw.so libdw/libdw.so*[0-9] \
-		$(ROMFSDIR)/lib/
-	$(STRIP) $(ROMFSDIR)/lib/libdw.so
+		$(ROMFSDIR)/lib/$(OSLIB)/
+	$(STRIP) $(ROMFSDIR)/lib/$(OSLIB)/libdw.so
 
 # These targets must not be passed through to the original Makefile
 .PHONY: $(BOGUS_TARGETS)

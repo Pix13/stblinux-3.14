@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2002-2005 Broadcom Corporation
+ * Copyright (c) 2002-2016 Broadcom
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -92,6 +92,30 @@ static int bcmgenet_mii_write(struct mii_bus *bus, int phy_id,
 	return 0;
 }
 
+static u32 _flow_control_autoneg(struct phy_device *phydev)
+{
+	u32 cmd_bits;
+
+	if (phydev->pause && (phydev->advertising & ADVERTISED_Pause)) {
+		/* Symmetric Flow Control */
+		cmd_bits = 0;
+	} else {
+		/* Not Symmetric so default to no flow control */
+		cmd_bits = CMD_RX_PAUSE_IGNORE | CMD_TX_PAUSE_IGNORE;
+
+		/* Check for Asymmetric */
+		if (phydev->asym_pause &&
+			phydev->advertising & ADVERTISED_Asym_Pause) {
+			if (phydev->advertising & ADVERTISED_Pause)
+				cmd_bits &= ~CMD_RX_PAUSE_IGNORE;
+			else if (phydev->pause)
+				cmd_bits &= ~CMD_TX_PAUSE_IGNORE;
+		}
+	}
+
+	return cmd_bits;
+}
+
 /* setup netdev link state when PHY link status change and
  * update UMAC and RGMII block when link up
  */
@@ -149,17 +173,20 @@ void bcmgenet_mii_setup(struct net_device *dev)
 		cmd_bits <<= CMD_SPEED_SHIFT;
 
 		/* duplex */
-		if (phydev->duplex != DUPLEX_FULL)
-			cmd_bits |= CMD_HD_EN;
+		if (phydev->duplex != DUPLEX_FULL) {
+			cmd_bits |= CMD_HD_EN |
+				CMD_RX_PAUSE_IGNORE | CMD_TX_PAUSE_IGNORE;
+		} else {
+			/* pause capability defaults to Symmetric */
+			if (priv->pause_flags & BCM_PAUSE_FLAG_AUTO)
+				cmd_bits |= _flow_control_autoneg(phydev);
 
-		if (priv->old_pause != phydev->pause) {
-			status_changed = 1;
-			priv->old_pause = phydev->pause;
+			/* Manual override */
+			if (!(priv->pause_flags & BCM_PAUSE_FLAG_RX))
+				cmd_bits |= CMD_RX_PAUSE_IGNORE;
+			if (!(priv->pause_flags & BCM_PAUSE_FLAG_TX))
+				cmd_bits |= CMD_TX_PAUSE_IGNORE;
 		}
-
-		/* pause capability */
-		if (!phydev->pause)
-			cmd_bits |= CMD_RX_PAUSE_IGNORE | CMD_TX_PAUSE_IGNORE;
 
 		reg = bcmgenet_umac_readl(priv, UMAC_CMD);
 		reg &= ~((CMD_SPEED_MASK << CMD_SPEED_SHIFT) |
@@ -177,6 +204,46 @@ void bcmgenet_mii_setup(struct net_device *dev)
 	}
 
 	phy_print_status(phydev);
+}
+
+/* This functionality really belongs in genphy_config_advert(), but is here
+ * because there is no mechanism for saving the ethtool pause settings in a
+ * generic PHY device yet
+ */
+static void _phy_pause_set(struct phy_device *phydev, unsigned int flags)
+{
+	unsigned int advertise;
+
+	advertise = phydev->advertising &
+		~(ADVERTISED_Pause | ADVERTISED_Asym_Pause);
+
+	if (flags & BCM_PAUSE_FLAG_AUTO) {
+		if (flags & BCM_PAUSE_FLAG_RX)
+			advertise |= ADVERTISED_Pause | ADVERTISED_Asym_Pause;
+		else if (flags & BCM_PAUSE_FLAG_TX)
+			advertise |= ADVERTISED_Asym_Pause;
+	}
+
+	advertise &= phydev->supported;
+	phydev->advertising = advertise;
+}
+
+/* This function is trapped here because no generic implementation exists */
+int bcmgenet_phy_ethtool_set_pauseparam(struct phy_device *phydev,
+				struct ethtool_pauseparam *epause)
+{
+	unsigned int pause_flags = 0;
+
+	if (epause->rx_pause)
+		pause_flags |= BCM_PAUSE_FLAG_RX;
+	if (epause->tx_pause)
+		pause_flags |= BCM_PAUSE_FLAG_TX;
+	if (epause->autoneg)
+		pause_flags |= BCM_PAUSE_FLAG_AUTO;
+
+	_phy_pause_set(phydev, pause_flags);
+
+	return 0;
 }
 
 /* 7366a0 EXT GPHY block comes with the CFG_IDDQ_BIAS and CFG_EXT_PWR_DOWN
@@ -273,12 +340,26 @@ int bcmgenet_mii_probe(struct net_device *dev)
 		return ret;
 	}
 
+	/*
+	 * The device-tree processing of the child nodes of the mdio bus by
+	 * of_mdiobus_register resets the supported pause features in an effort
+	 * to choose "sane defaults".
+	 *
+	 * Since bcmgenet can support pause without requiring phydev support,
+	 * but pause support cannot be advertised unless the phydev indicates
+	 * support for it, reenable the pause flags here.
+	 *
+	 * However, allow bcmgenet_mii_config() to override them.
+	 */
+	phydev->supported |= SUPPORTED_Pause | SUPPORTED_Asym_Pause;
 	phydev->supported &= priv->phy_supported;
+
 	/* Adjust advertised speeds based on configured speed */
 	if (priv->phy_speed == SPEED_1000)
 		phydev->advertising = PHY_GBIT_FEATURES;
 	else
 		phydev->advertising = PHY_BASIC_FEATURES;
+	_phy_pause_set(phydev, priv->pause_flags);
 
 	return 0;
 }
@@ -453,7 +534,8 @@ int bcmgenet_mii_config(struct net_device *dev)
 		bcmgenet_sys_writel(priv, port_ctrl, SYS_PORT_CTRL);
 
 		if (priv->phy_type == BRCM_PHY_TYPE_INT) {
-			phy_name = "internal PHY";
+			priv->phy_supported |=
+				SUPPORTED_Pause | SUPPORTED_Asym_Pause;
 			bcmgenet_internal_phy_setup(dev);
 		} else if (priv->phy_type == BRCM_PHY_TYPE_MOCA) {
 			phy_name = "MoCA";

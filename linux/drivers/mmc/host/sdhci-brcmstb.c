@@ -303,6 +303,11 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 		res = PTR_ERR(host);
 		goto undo_clk_prep;
 	}
+
+
+	/* Enable MMC_CAP2_HC_ERASE_SZ for better max discard calculations */
+	host->mmc->caps2 |= MMC_CAP2_HC_ERASE_SZ;
+
 	sdhci_get_of_property(pdev);
 	mmc_of_parse(host->mmc);
 	pltfm_host = sdhci_priv(host);

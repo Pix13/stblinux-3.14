@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2002-2008 Broadcom Corporation
+ * Copyright (c) 2002-2016 Broadcom
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -547,8 +547,15 @@ struct bcmgenet_hw_params {
 	u32		flags;
 };
 
+struct bcmgenet_skb_cb {
+	unsigned int bytes_sent;	/* bytes on the wire (no TSB) */
+};
+
+#define GENET_CB(skb)	((struct bcmgenet_skb_cb *)((skb)->cb))
+
 struct bcmgenet_tx_ring {
 	spinlock_t	lock;		/* ring lock */
+	struct napi_struct napi;	/* NAPI per tx queue */
 	unsigned int	index;		/* ring index */
 	unsigned int	queue;		/* queue index */
 	struct enet_cb	*cbs;		/* tx ring buffer control block*/
@@ -563,7 +570,13 @@ struct bcmgenet_tx_ring {
 				struct bcmgenet_tx_ring *);
 	void (*int_disable)(struct bcmgenet_priv *priv,
 				struct bcmgenet_tx_ring *);
+	struct bcmgenet_priv *priv;
 };
+
+/* context pause flags */
+#define BCM_PAUSE_FLAG_AUTO	(1 << 2)
+#define BCM_PAUSE_FLAG_RX	(1 << 1)
+#define BCM_PAUSE_FLAG_TX	(1 << 0)
 
 /* device context */
 struct bcmgenet_priv {
@@ -623,6 +636,7 @@ struct bcmgenet_priv {
 	unsigned int desc_rxchk_en;
 	unsigned int dma_rx_chk_bit;
 	unsigned int crc_fwd_en;
+	unsigned int pause_flags;
 	u32 msg_enable;
 
 	struct work_struct bcmgenet_irq_work;	/* bottom half work */
@@ -635,10 +649,6 @@ struct bcmgenet_priv {
 	u32	wolopts;
 	int	wol_irq;
 	unsigned int wol_irq_disabled;
-
-	/* S3 warm boot */
-	u32 int0_mask;
-	u32 int1_mask;
 
 	struct bcmgenet_mib_counters mib;
 
@@ -688,5 +698,7 @@ int bcmgenet_mii_probe(struct net_device *dev);
 void bcmgenet_mii_exit(struct net_device *dev);
 void bcmgenet_phy_power_set(struct net_device *dev, bool enable);
 void bcmgenet_mii_setup(struct net_device *dev);
+int bcmgenet_phy_ethtool_set_pauseparam(struct phy_device *phydev,
+				struct ethtool_pauseparam *epause);
 
 #endif /* __BCMGENET_H__ */
