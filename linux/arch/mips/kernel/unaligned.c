@@ -91,6 +91,10 @@
 #include <asm/fpu.h>
 #include <asm/fpu_emulator.h>
 
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/brcmapi.h>
+#endif
+
 #define STR(x)	__STR(x)
 #define __STR(x)  #x
 
@@ -429,7 +433,7 @@ static void emulate_load_store_insn(struct pt_regs *regs,
 	unsigned int res;
 	unsigned long origpc;
 	unsigned long orig31;
-	void __user *fault_addr = NULL;
+	void __user __maybe_unused *fault_addr = NULL;
 
 	origpc = (unsigned long)pc;
 	orig31 = regs->regs[31];
@@ -603,6 +607,16 @@ static void emulate_load_store_insn(struct pt_regs *regs,
 	case ldc1_op:
 	case swc1_op:
 	case sdc1_op:
+#ifdef CONFIG_BRCMSTB
+		switch (brcm_unaligned_fp(addr, &insn, regs)) {
+		case -EINVAL:
+			goto sigbus;
+		case -EFAULT:
+			goto fault;
+		}
+		compute_return_epc(regs);
+		break;
+#else
 		die_if_kernel("Unaligned FP access in kernel code", regs);
 		BUG_ON(!used_math());
 
@@ -617,6 +631,7 @@ static void emulate_load_store_insn(struct pt_regs *regs,
 		if (res == 0)
 			break;
 		return;
+#endif
 
 	/*
 	 * COP2 is available to implementor for application specific use.

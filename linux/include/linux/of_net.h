@@ -30,8 +30,8 @@ static inline const void *of_get_mac_address(struct device_node *np)
 #ifdef CONFIG_BRCMSTB
 static inline struct net_device *of_find_net_device_by_node(struct device_node *np)
 {
-	return NULL
-};
+	return NULL;
+}
 #endif /* CONFIG_BRCMSTB */
 #endif
 

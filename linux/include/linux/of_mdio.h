@@ -32,7 +32,12 @@ extern int of_mdio_parse_addr(struct device *dev, const struct device_node *np);
 #else /* CONFIG_OF */
 static inline int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
 {
-	return -ENOSYS;
+	/*
+	 * Fall back to the non-DT function to register a bus.
+	 * This way, we don't have to keep compat bits around in drivers.
+	 */
+
+	return mdiobus_register(mdio);
 }
 
 static inline struct phy_device *of_phy_find_device(struct device_node *phy_np)

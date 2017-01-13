@@ -429,6 +429,8 @@ int mmc_of_parse(struct mmc_host *host)
 		host->pm_caps |= MMC_PM_KEEP_POWER;
 	if (of_find_property(np, "enable-sdio-wakeup", &len))
 		host->pm_caps |= MMC_PM_WAKE_SDIO_IRQ;
+	if (of_find_property(np, "mmc-hs200-1_8v", &len))
+		host->caps2 |= MMC_CAP2_HS200_1_8V_SDR;
 
 	return 0;
 

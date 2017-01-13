@@ -562,7 +562,7 @@ static void bcmspi_hw_set_parms(struct bcmspi_priv *priv,
 		priv->mspi_hw->spcr0_lsb = SPBR_MIN;
 	}
 	priv->mspi_hw->spcr0_msb =
-#ifdef CONFIG_MSPI_LEGACY
+#ifdef CONFIG_BRCM_MSPI_LEGACY
 		0x80 |	/* MSTR bit */
 #endif
 		((xp->bits_per_word ? xp->bits_per_word : 8) << 2) |
@@ -1374,6 +1374,9 @@ static int bcmspi_bspi_config_cs(struct bcmspi_priv *priv)
 	struct device *dev = &pdev->dev;
 	struct device_node *dn = dev->of_node, *childnode;
 	struct spi_master *master = priv->master;
+	struct brcmspi_platform_data *pdata;
+
+	pdata = (struct brcmspi_platform_data *)pdev->dev.platform_data;
 
 	if (!priv->bspi_hw) {
 		priv->bspi_chip_select = 0;
@@ -1394,6 +1397,10 @@ static int bcmspi_bspi_config_cs(struct bcmspi_priv *priv)
 				priv->bspi_chip_select |= (1 << regp[0]);
 		}
 	}
+
+	if (pdata)
+		priv->bspi_chip_select = (priv->bspi_hw && pdata) ? pdata->flash_cs : 0;
+
 	return 0;
 }
 
@@ -1407,9 +1414,6 @@ static int bcmspi_probe(struct platform_device *pdev)
 	u32 temp;
 
 	DBG("bcmspi_probe\n");
-
-	if (!dev->of_node)
-		return -ENODEV;
 
 	BDEV_WR_RB(BCHP_BSPI_MAST_N_BOOT_CTRL, 1);
 	bcmspi_disable_interrupt(0xffffffff);
@@ -1543,8 +1547,9 @@ static int bcmspi_probe(struct platform_device *pdev)
 	priv->flex_mode.hp = -1;
 
 	if (priv->bspi_chip_select) {
-		if ((BDEV_RD(BCHP_BSPI_STRAP_OVERRIDE_CTRL) &
-		     BCHP_BSPI_STRAP_OVERRIDE_CTRL_data_quad_MASK)) {
+		if (bspi_width == BSPI_WIDTH_4BIT ||
+		   ((BDEV_RD(BCHP_BSPI_STRAP_OVERRIDE_CTRL) &
+		     BCHP_BSPI_STRAP_OVERRIDE_CTRL_data_quad_MASK))) {
 			if (bcmspi_set_quad_mode(priv, BSPI_WIDTH_4BIT))
 				bspi_width = BSPI_WIDTH_1BIT;
 			else

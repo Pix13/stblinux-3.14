@@ -20,6 +20,10 @@
 #include <asm/cpu.h>
 #include <asm/cpu-features.h>
 
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/brcmapi.h>
+#endif
+
 /* Cache operations. */
 void (*flush_cache_all)(void);
 void (*__flush_cache_all)(void);
@@ -72,7 +76,11 @@ SYSCALL_DEFINE3(cacheflush, unsigned long, addr, unsigned long, bytes,
 	if (!access_ok(VERIFY_WRITE, (void __user *) addr, bytes))
 		return -EFAULT;
 
+#ifdef CONFIG_BRCMSTB
+	return brcm_cacheflush(addr, bytes, cache);
+#else
 	flush_icache_range(addr, addr + bytes);
+#endif
 
 	return 0;
 }

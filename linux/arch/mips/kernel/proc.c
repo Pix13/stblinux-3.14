@@ -15,6 +15,10 @@
 #include <asm/processor.h>
 #include <asm/prom.h>
 
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/brcmapi.h>
+#endif
+
 unsigned int vced_count, vcei_count;
 
 static int show_cpuinfo(struct seq_file *m, void *v)
@@ -49,6 +53,11 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 	seq_printf(m, "BogoMIPS\t\t: %u.%02u\n",
 		      cpu_data[n].udelay_val / (500000/HZ),
 		      (cpu_data[n].udelay_val / (5000/HZ)) % 100);
+#ifdef CONFIG_BRCMSTB
+	/* for Oprofile opreport */
+	seq_printf(m, "cpu MHz\t\t\t: %lu.%03lu\n", brcm_adj_cpu_khz / 1000,
+		brcm_adj_cpu_khz % 1000);
+#endif
 	seq_printf(m, "wait instruction\t: %s\n", cpu_wait ? "yes" : "no");
 	seq_printf(m, "microsecond timers\t: %s\n",
 		      cpu_has_counter ? "yes" : "no");

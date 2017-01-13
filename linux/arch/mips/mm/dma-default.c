@@ -23,6 +23,10 @@
 
 #include <dma-coherence.h>
 
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/brcmapi.h>
+#endif
+
 #ifdef CONFIG_DMA_MAYBE_COHERENT
 int coherentio = 0;	/* User defined DMA coherency from command line. */
 EXPORT_SYMBOL_GPL(coherentio);
@@ -142,8 +146,16 @@ static void *mips_dma_alloc_coherent(struct device *dev, size_t size,
 
 		if (!plat_device_is_coherent(dev)) {
 			dma_cache_wback_inv((unsigned long) ret, size);
+#ifdef CONFIG_BRCM_UPPER_768MB
+			if (brcm_map_coherent(*dma_handle, ret, PFN_ALIGN(size),
+					&ret, gfp)) {
+				free_pages((unsigned long)ret, size);
+				ret = NULL;
+			}
+#else
 			if (!hw_coherentio)
 				ret = UNCAC_ADDR(ret);
+#endif
 		}
 	}
 
@@ -170,8 +182,12 @@ static void mips_dma_free_coherent(struct device *dev, size_t size, void *vaddr,
 
 	plat_unmap_dma_mem(dev, dma_handle, size, DMA_BIDIRECTIONAL);
 
+#ifdef CONFIG_BRCM_UPPER_768MB
+	addr = (unsigned long)brcm_unmap_coherent(vaddr);
+#else
 	if (!plat_device_is_coherent(dev) && !hw_coherentio)
 		addr = CAC_ADDR(addr);
+#endif
 
 	free_pages(addr, get_order(size));
 }

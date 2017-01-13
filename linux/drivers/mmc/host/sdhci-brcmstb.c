@@ -25,6 +25,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/brcmstb/brcmstb.h>
+#include "sdhci-brcmstb.h"
 
 #include "sdhci-pltfm.h"
 
@@ -70,6 +71,7 @@ static void set_host_driver_strength_overrides(
 
 #else /* CONFIG_BCM74371A0 */
 
+#ifndef CONFIG_MIPS
 static void set_host_driver_strength_overrides(
 	struct sdhci_host *host,
 	struct sdhci_brcmstb_priv *priv)
@@ -128,6 +130,14 @@ static void set_host_driver_strength_overrides(
 		DEV_WR(SDIO_CFG_REG(cfg_base, PRESET2), val);
 	}
 }
+#else
+static void set_host_driver_strength_overrides(
+		struct sdhci_host *host,
+		struct sdhci_brcmstb_priv *priv)
+{
+}
+#endif /* CONFIG_MIPS */
+
 #endif /* CONFIG_BCM74371A0 */
 
 static int select_one_drive_strength(struct sdhci_host *host, int supported,
@@ -162,11 +172,69 @@ static int sdhci_brcmstb_select_drive_strength(struct sdhci_host *host,
 					priv->card_driver_type,	"Card");
 }
 
+#ifdef CONFIG_MIPS
+static int sdhci_brcmstb_supported(void)
+{
+	/* Chips with broken SDIO - 7429A0, 7435A0, 7425B0 and 7425B1 */
+	if ((BRCM_CHIP_ID() == 0x7425) &&
+	    ((BRCM_CHIP_REV() == 0x10) || (BRCM_CHIP_REV() == 0x11)))
+		return 0;
+	if ((BRCM_CHIP_ID() == 0x7429) && (BRCM_CHIP_REV() == 0x00))
+		return 0;
+	if ((BRCM_CHIP_ID() == 0x7435) && (BRCM_CHIP_REV() == 0x00))
+		return 0;
+	return 1;
+}
+
+
+static u32 sdhci_brcmstb_readl(struct sdhci_host *host, int reg)
+{
+	return __raw_readl(host->ioaddr + reg);
+}
+
+static void sdhci_brcmstb_writel(struct sdhci_host *host, u32 val, int reg)
+{
+	__raw_writel(val, host->ioaddr + reg);
+}
+
+static u16 sdhci_brcmstb_readw(struct sdhci_host *host, int reg)
+{
+	return __raw_readw(host->ioaddr + reg);
+}
+
+static void sdhci_brcmstb_writew(struct sdhci_host *host, u16 val, int reg)
+{
+#if defined(CONFIG_BCM7425B0)
+	if (reg == SDHCI_HOST_CONTROL2 && BRCM_CHIP_REV() == 0x12) {
+		/* HW7425-1414: I/O voltage uses Power Control Register (29h) */
+		int pow_reg = __raw_readb(host->ioaddr + SDHCI_POWER_CONTROL);
+
+		pow_reg &= ~SDHCI_POWER_330;
+		if (val & SDHCI_CTRL_VDD_180)
+			pow_reg |= SDHCI_POWER_180;
+		else
+			pow_reg |= SDHCI_POWER_330;
+		__raw_writeb(pow_reg, host->ioaddr + SDHCI_POWER_CONTROL);
+	}
+#endif
+	__raw_writew(val, host->ioaddr + reg);
+}
+#endif
+
 static struct sdhci_ops sdhci_brcmstb_ops = {
 	.select_drive_strength	= sdhci_brcmstb_select_drive_strength,
+#ifdef CONFIG_MIPS
+	.read_w		= sdhci_brcmstb_readw,
+	.write_w	= sdhci_brcmstb_writew,
+	.read_l		= sdhci_brcmstb_readl,
+	.write_l	= sdhci_brcmstb_writel,
+#endif
 };
 
 static struct sdhci_pltfm_data sdhci_brcmstb_pdata = {
+#ifdef CONFIG_MIPS
+	.quirks2 = SDHCI_QUIRK2_NO_1_8_V
+#endif
 };
 
 #if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM7250B0) ||	\
@@ -198,7 +266,18 @@ static void sdhci_override_caps(struct sdhci_host *host,
 	DEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG_OVERRIDE),
 		BCHP_SDIO_0_CFG_CAP_REG_OVERRIDE_CAP_REG_OVERRIDE_MASK);
 }
+#elif !defined(CONFIG_MIPS)
+static inline void sdhci_override_caps(struct sdhci_host *host,
+				       struct sdhci_brcmstb_priv *priv,
+				       uint32_t cap0_setbits,
+				       uint32_t cap0_clearbits,
+				       uint32_t cap1_setbits,
+				       uint32_t cap1_clearbits)
+{
+}
+#endif
 
+#if !defined(CONFIG_MIPS)
 static void sdhci_fix_caps(struct sdhci_host *host,
 			struct sdhci_brcmstb_priv *priv)
 {
@@ -210,12 +289,144 @@ static void sdhci_fix_caps(struct sdhci_host *host,
 	/* Disable SDR50 support because tuning is broken. */
 	sdhci_override_caps(host, priv, 0, 0, 0, SDHCI_SUPPORT_SDR50);
 }
+
 #else
+
+#define SDIO_CFG_SET(base, reg, mask) do {				\
+		BDEV_SET(SDIO_CFG_REG(base, reg),			\
+			 BCHP_SDIO_0_CFG_##reg##_##mask##_MASK);	\
+	} while (0)
+#define SDIO_CFG_UNSET(base, reg, mask) do {				\
+		BDEV_UNSET(SDIO_CFG_REG(base, reg),			\
+			   BCHP_SDIO_0_CFG_##reg##_##mask##_MASK);	\
+	} while (0)
+#define SDIO_CFG_FIELD(base, reg, field, val) do {			\
+		BDEV_UNSET(SDIO_CFG_REG(base, reg),			\
+			   BCHP_SDIO_0_CFG_##reg##_##field##_MASK);	\
+		BDEV_SET(SDIO_CFG_REG(base, reg),			\
+		 val << BCHP_SDIO_0_CFG_##reg##_##field##_SHIFT);	\
+	} while (0)
+
+#define SDHCI_OVERRIDE_OPTIONS_NONE		0x00000000
+#define SDHCI_OVERRIDE_OPTIONS_UHS_SDR50	0x00000001
+#define SDHCI_OVERRIDE_OPTIONS_TUNING		0x00000002
+
+#define CAP0_SHIFT(field) BCHP_SDIO_0_CFG_CAP_REG0_##field##_SHIFT
+#define CAP1_SHIFT(field) BCHP_SDIO_0_CFG_CAP_REG1_##field##_SHIFT
+
+static inline void sdhci_override_caps(void __iomem *cfg_base, int base_clock,
+				       int timeout_clock, int options)
+{
+	uint32_t val;
+
+	/* Set default for every field with all options off */
+	val = (0 << CAP0_SHIFT(DDR50_SUPPORT) |			\
+	       0 << CAP0_SHIFT(SD104_SUPPORT) |			\
+	       0 << CAP0_SHIFT(SDR50) |				\
+	       0 << CAP0_SHIFT(SLOT_TYPE) |			\
+	       0 << CAP0_SHIFT(ASYNCH_INT_SUPPORT) |		\
+	       0 << CAP0_SHIFT(64B_SYS_BUS_SUPPORT) |		\
+	       0 << CAP0_SHIFT(1_8V_SUPPORT) |			\
+	       0 << CAP0_SHIFT(3_0V_SUPPORT) |			\
+	       1 << CAP0_SHIFT(3_3V_SUPPORT) |			\
+	       1 << CAP0_SHIFT(SUSP_RES_SUPPORT) |		\
+	       1 << CAP0_SHIFT(SDMA_SUPPORT) |			\
+	       1 << CAP0_SHIFT(HIGH_SPEED_SUPPORT) |		\
+	       1 << CAP0_SHIFT(ADMA2_SUPPORT) |			\
+	       1 << CAP0_SHIFT(EXTENDED_MEDIA_SUPPORT) |	\
+	       1 << CAP0_SHIFT(MAX_BL) |			\
+	       0 << CAP0_SHIFT(BASE_FREQ) |			\
+	       1 << CAP0_SHIFT(TIMEOUT_CLK_UNIT) |		\
+	       0 << CAP0_SHIFT(TIMEOUT_FREQ));
+
+	val |= (base_clock << CAP0_SHIFT(BASE_FREQ));
+	val |= (timeout_clock << CAP0_SHIFT(TIMEOUT_FREQ));
+	if (options & SDHCI_OVERRIDE_OPTIONS_UHS_SDR50)
+		val |= (1 << CAP0_SHIFT(SDR50)) |
+			(1 << CAP0_SHIFT(1_8V_SUPPORT));
+	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG0), val);
+
+	val = (1 << CAP1_SHIFT(CAP_REG_OVERRIDE) |	\
+	       0 << CAP1_SHIFT(SPI_BLK_MODE) |		\
+	       0 << CAP1_SHIFT(SPI_MODE) |		\
+	       0 << CAP1_SHIFT(CLK_MULT) |		\
+	       0 << CAP1_SHIFT(RETUNING_MODES) |	\
+	       0 << CAP1_SHIFT(USE_TUNING) |		\
+	       0 << CAP1_SHIFT(RETUNING_TIMER) |	\
+	       0 << CAP1_SHIFT(Driver_D_SUPPORT) |	\
+	       0 << CAP1_SHIFT(Driver_C_SUPPORT) |	\
+	       0 << CAP1_SHIFT(Driver_A_SUPPORT));
+	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG1), val);
+}
 static void sdhci_fix_caps(struct sdhci_host *host,
 			struct sdhci_brcmstb_priv *priv)
 {
-}
+	void __iomem *cfg_base = priv->cfg_regs;
+
+	if (BDEV_RD(SDIO_CFG_REG(cfg_base, SCRATCH)) & 0x01) {
+		dev_info(mmc_dev(host->mmc), "Disabled by bootloader\n");
+		return;
+	}
+
+	dev_info(mmc_dev(host->mmc), "Enabling controller\n");
+	BDEV_UNSET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0xf000);
+	BDEV_UNSET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL2), 0x00ff);
+
+	/*
+	 * This is broken on all chips and defaults to enabled on
+	 * some chips so disable it.
+	 */
+	SDIO_CFG_UNSET(cfg_base, SDIO_EMMC_CTRL1, SCB_SEQ_EN);
+
+#ifdef CONFIG_CPU_LITTLE_ENDIAN
+	/* FRAME_NHW | BUFFER_ABO */
+	BDEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0x3000);
+#else
+	/* WORD_ABO | FRAME_NBO | FRAME_NHW */
+	BDEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0xe000);
+	/* address swap only */
+	BDEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL2), 0x0050);
 #endif
+
+#if defined(CONFIG_BCM7231B0) || defined(CONFIG_BCM7346B0)
+	SDIO_CFG_SET(cfg_base, CAP_REG1, CAP_REG_OVERRIDE);
+#elif defined(CONFIG_BCM7344B0)
+	SDIO_CFG_SET(cfg_base, CAP_REG0, HIGH_SPEED_SUPPORT);
+	SDIO_CFG_SET(cfg_base, CAP_REG1, CAP_REG_OVERRIDE);
+#elif defined(CONFIG_BCM7425)
+	/*
+	 * HW7425-1352: Disable TUNING because it's broken.
+	 * Use manual input and output clock delays to work around
+	 * 7425B2 timing issues.
+	 */
+	if (BRCM_CHIP_REV() == 0x12) {
+		/* disable tuning */
+		sdhci_override_caps(cfg_base, 100, 50,
+				    SDHCI_OVERRIDE_OPTIONS_UHS_SDR50);
+
+		/* enable input delay, resolution = 1, value = 8 */
+		SDIO_CFG_FIELD(cfg_base, IP_DLY, IP_TAP_DELAY, 8);
+		SDIO_CFG_FIELD(cfg_base, IP_DLY, IP_DELAY_CTRL, 1);
+		SDIO_CFG_SET(cfg_base, IP_DLY, IP_TAP_EN);
+
+		/* enable output delay */
+		SDIO_CFG_FIELD(cfg_base, OP_DLY, OP_TAP_DELAY, 4);
+		SDIO_CFG_FIELD(cfg_base, OP_DLY, OP_DELAY_CTRL, 3);
+		SDIO_CFG_SET(cfg_base, OP_DLY, OP_TAP_EN);
+
+		/* Use the manual clock delay */
+		SDIO_CFG_FIELD(cfg_base, SD_CLOCK_DELAY, INPUT_CLOCK_DELAY, 8);
+	}
+#elif defined(CONFIG_BCM7563A0)
+	sdhci_override_caps(cfg_base, 50, 50, SDHCI_OVERRIDE_OPTIONS_NONE);
+#elif defined(CONFIG_BCM7584A0)
+	/* enable output delay */
+	SDIO_CFG_FIELD(cfg_base, OP_DLY, OP_TAP_DELAY, 4);
+	SDIO_CFG_FIELD(cfg_base, OP_DLY, OP_DELAY_CTRL, 3);
+	SDIO_CFG_SET(cfg_base, OP_DLY, OP_TAP_EN);
+#endif
+}
+#endif /* CONFIG_MIPS */
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -274,6 +485,7 @@ static void sdhci_brcmstb_of_get_driver_type(struct device_node *dn,
 
 static int sdhci_brcmstb_probe(struct platform_device *pdev)
 {
+	struct sdhci_brcmstb_pdata *pdata = pdev->dev.platform_data;
 	struct device_node *dn = pdev->dev.of_node;
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
@@ -281,6 +493,13 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 	struct clk *clk;
 	struct resource *resource;
 	int res;
+
+#ifdef CONFIG_MIPS
+	if (!sdhci_brcmstb_supported()) {
+		dev_info(&pdev->dev, "Disabled, unsupported chip revision\n");
+		return -ENODEV;
+	}
+#endif
 
 	clk = of_clk_get_by_name(dn, "sw_sdio");
 	if (IS_ERR(clk)) {
@@ -307,6 +526,10 @@ static int sdhci_brcmstb_probe(struct platform_device *pdev)
 
 	/* Enable MMC_CAP2_HC_ERASE_SZ for better max discard calculations */
 	host->mmc->caps2 |= MMC_CAP2_HC_ERASE_SZ;
+	if (pdata) {
+		host->mmc->caps |= pdata->caps;
+		host->mmc->caps2 |= pdata->caps2;
+	}
 
 	sdhci_get_of_property(pdev);
 	mmc_of_parse(host->mmc);

@@ -144,6 +144,11 @@ config BCM63XX
 	help
 	 Support for BCM63XX based boards
 
+config BRCMSTB
+	bool "Broadcom BCM7XXX based boards"
+	help
+	  Support for BCM7XXX based boards
+
 config MIPS_COBALT
 	bool "Cobalt Server"
 	select CEVT_R4K
@@ -315,6 +320,7 @@ config MIPS_MALTA
 	select I8259
 	select MIPS_BONITO64
 	select MIPS_CPU_SCACHE
+	select MIPS_L1_CACHE_SHIFT_6
 	select PCI_GT64XXX_PCI0
 	select MIPS_MSC
 	select SWAP_IO_SPACE
@@ -816,6 +822,8 @@ source "arch/mips/netlogic/Kconfig"
 
 endmenu
 
+source "drivers/brcmstb/Kconfig"
+
 config RWSEM_GENERIC_SPINLOCK
 	bool
 	default y
@@ -1113,10 +1121,10 @@ config MIPS_L1_CACHE_SHIFT_7
 
 config MIPS_L1_CACHE_SHIFT
 	int
-	default "4" if MIPS_L1_CACHE_SHIFT_4
-	default "5" if MIPS_L1_CACHE_SHIFT_5
-	default "6" if MIPS_L1_CACHE_SHIFT_6
 	default "7" if MIPS_L1_CACHE_SHIFT_7
+	default "6" if MIPS_L1_CACHE_SHIFT_6
+	default "5" if MIPS_L1_CACHE_SHIFT_5
+	default "4" if MIPS_L1_CACHE_SHIFT_4
 	default "5"
 
 config HAVE_STD_PC_SERIAL_PORT
@@ -1514,12 +1522,14 @@ config CPU_BMIPS4350
 
 config CPU_BMIPS4380
 	bool
+	select MIPS_L1_CACHE_SHIFT_6
 	select SYS_SUPPORTS_SMP
 	select SYS_SUPPORTS_HOTPLUG_CPU
 
 config CPU_BMIPS5000
 	bool
 	select MIPS_CPU_SCACHE
+	select MIPS_L1_CACHE_SHIFT_7
 	select SYS_SUPPORTS_SMP
 	select SYS_SUPPORTS_HOTPLUG_CPU
 
@@ -1820,7 +1830,6 @@ config IP22_CPU_SCACHE
 config MIPS_CPU_SCACHE
 	bool
 	select BOARD_SCACHE
-	select MIPS_L1_CACHE_SHIFT_6
 
 config R5000_CPU_SCACHE
 	bool

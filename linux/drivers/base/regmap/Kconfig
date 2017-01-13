@@ -23,3 +23,7 @@ config REGMAP_MMIO
 
 config REGMAP_IRQ
 	bool
+
+config REGMAP_DFS
+	bool
+	depends on REGMAP && DEBUG_FS

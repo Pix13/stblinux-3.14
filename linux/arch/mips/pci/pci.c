@@ -86,8 +86,13 @@ static void pcibios_scanbus(struct pci_controller *hose)
 	if (!hose->iommu)
 		PCI_DMA_BUS_IS_PHYS = 1;
 
+#ifdef CONFIG_BRCMSTB
+	/* BSP code needs to assign bus numbers */
+	if (hose->get_busno)
+#else
 	if (hose->get_busno && pci_has_flag(PCI_PROBE_ONLY))
 		next_busno = (*hose->get_busno)();
+#endif
 
 	pci_add_resource_offset(&resources,
 				hose->mem_resource, hose->mem_offset);

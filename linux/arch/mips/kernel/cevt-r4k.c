@@ -17,6 +17,10 @@
 #include <asm/cevt-r4k.h>
 #include <asm/gic.h>
 
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/brcmapi.h>
+#endif
+
 /*
  * The SMTC Kernel for the 34K, 1004K, et. al. replaces several
  * of these routines with SMTC-specific variants.
@@ -30,7 +34,11 @@ static int mips_next_event(unsigned long delta,
 	int res;
 
 	cnt = read_c0_count();
+#ifdef CONFIG_BRCMSTB
+	cnt += brcm_fixup_ticks(delta);
+#else
 	cnt += delta;
+#endif
 	write_c0_compare(cnt);
 	res = ((int)(read_c0_count() - cnt) >= 0) ? -ETIME : 0;
 	return res;

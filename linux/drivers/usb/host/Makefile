@@ -21,7 +21,13 @@ ifneq ($(CONFIG_USB_XHCI_PLATFORM), )
 	xhci-hcd-y		+= xhci-plat.o
 endif
 
+ifndef CONFIG_MIPS
 usb-brcm-glue-y := usb-brcm.o usb-brcm-common-init.o
+else
+obj-y				+= ehci-brcm-mips.o
+obj-y				+= ohci-brcm-mips.o
+usb-brcm-glue-y := usb-brcm-mips.o
+endif
 
 obj-$(CONFIG_USB_WHCI_HCD)	+= whci/
 
@@ -31,9 +37,11 @@ obj-$(CONFIG_BRCM_USB)		+= usb-brcm-glue.o
 # The order is important here because it controls the order that
 # the drivers will be initialized and we always need to init
 # the drivers in the order XHCI, EHCI and OHCI.
+ifndef CONFIG_MIPS
 obj-$(CONFIG_BRCM_USB_XHCI)	+= xhci-brcm.o
 obj-$(CONFIG_BRCM_USB_EHCI)	+= ehci-brcm.o
 obj-$(CONFIG_BRCM_USB_OHCI)	+= ohci-brcm.o
+endif
 
 obj-$(CONFIG_USB_EHCI_HCD)	+= ehci-hcd.o
 obj-$(CONFIG_USB_EHCI_PCI)	+= ehci-pci.o

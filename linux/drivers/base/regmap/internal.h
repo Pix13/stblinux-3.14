@@ -185,7 +185,7 @@ struct regmap_field {
 	unsigned int id_offset;
 };
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_REGMAP_DFS
 extern void regmap_debugfs_initcall(void);
 extern void regmap_debugfs_init(struct regmap *map, const char *name);
 extern void regmap_debugfs_exit(struct regmap *map);

@@ -56,6 +56,7 @@
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 #include <linux/phy.h>
+#include <linux/platform_data/bcmgenet.h>
 
 #include <asm/unaligned.h>
 
@@ -1178,6 +1179,9 @@ static int bcmgenet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
 
+	if (!netif_running(dev))
+		return -EINVAL;
+
 	return phy_mii_ioctl(priv->phydev, rq, cmd);
 }
 
@@ -1238,6 +1242,7 @@ static unsigned int __bcmgenet_tx_reclaim(struct net_device *dev,
 					struct bcmgenet_tx_ring *ring)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct device *kdev = &priv->pdev->dev;
 	int last_c_index, num_tx_bds;
 	struct enet_cb *tx_cb_ptr;
 	struct netdev_queue *txq;
@@ -1280,13 +1285,13 @@ static unsigned int __bcmgenet_tx_reclaim(struct net_device *dev,
 		if (tx_cb_ptr->skb) {
 			pkts_compl++;
 			bytes_compl += GENET_CB(tx_cb_ptr->skb)->bytes_sent;
-			dma_unmap_single(&dev->dev,
+			dma_unmap_single(kdev,
 					dma_unmap_addr(tx_cb_ptr, dma_addr),
 					dma_unmap_len(tx_cb_ptr, dma_len),
 					DMA_TO_DEVICE);
 			bcmgenet_free_cb(tx_cb_ptr);
 		} else if (dma_unmap_addr(tx_cb_ptr, dma_addr)) {
-			dma_unmap_page(&dev->dev,
+			dma_unmap_page(kdev,
 					dma_unmap_addr(tx_cb_ptr, dma_addr),
 					dma_unmap_len(tx_cb_ptr, dma_len),
 					DMA_TO_DEVICE);
@@ -1683,6 +1688,7 @@ static int bcmgenet_rx_refill(struct bcmgenet_priv *priv,
 static unsigned int bcmgenet_desc_rx(struct bcmgenet_priv *priv,
 				     unsigned int budget)
 {
+	struct device *kdev = &priv->pdev->dev;
 	struct net_device *dev = priv->dev;
 	struct enet_cb *cb;
 	struct sk_buff *skb;
@@ -1731,7 +1737,7 @@ static unsigned int bcmgenet_desc_rx(struct bcmgenet_priv *priv,
 			goto refill;
 		}
 
-		dma_unmap_single(&dev->dev, dma_unmap_addr(cb, dma_addr),
+		dma_unmap_single(kdev, dma_unmap_addr(cb, dma_addr),
 				priv->rx_buf_len, DMA_FROM_DEVICE);
 
 		if (!priv->desc_64b_en) {
@@ -1894,6 +1900,7 @@ static int bcmgenet_alloc_rx_buffers(struct bcmgenet_priv *priv)
 
 static void bcmgenet_free_rx_buffers(struct bcmgenet_priv *priv)
 {
+	struct device *kdev = &priv->pdev->dev;
 	struct enet_cb *cb;
 	int i;
 
@@ -1901,7 +1908,7 @@ static void bcmgenet_free_rx_buffers(struct bcmgenet_priv *priv)
 		cb = &priv->rx_cbs[i];
 
 		if (dma_unmap_addr(cb, dma_addr)) {
-			dma_unmap_single(&priv->dev->dev,
+			dma_unmap_single(kdev,
 					dma_unmap_addr(cb, dma_addr),
 					priv->rx_buf_len, DMA_FROM_DEVICE);
 			dma_unmap_addr_set(cb, dma_addr, 0);
@@ -3048,6 +3055,7 @@ static void bcmgenet_set_hw_params(struct bcmgenet_priv *priv)
 		params->words_per_bd);
 }
 
+#ifdef CONFIG_OF
 static void bcmgenet_of_parse(struct device_node *dn,
 				struct bcmgenet_priv *priv)
 {
@@ -3056,7 +3064,6 @@ static void bcmgenet_of_parse(struct device_node *dn,
 	priv->phy_type = BRCM_PHY_TYPE_INT;
 	priv->phy_addr = 10;
 	priv->phy_speed = SPEED_1000;
-
 	if (!of_property_read_u32(dn, "phy-type", &propval))
 		priv->phy_type = propval;
 	if (!of_property_read_u32(dn, "phy-id", &propval))
@@ -3075,6 +3082,37 @@ static void bcmgenet_of_parse(struct device_node *dn,
 			priv->phy_addr = 0;
 	}
 }
+#else
+static void bcmgenet_pd_parse(struct bcmgenet_priv *priv)
+{
+	struct device *kdev = &priv->pdev->dev;
+	struct bcmgenet_platform_data *pd = kdev->platform_data;
+
+	switch (pd->phy_interface) {
+	case PHY_INTERFACE_MODE_NA:
+		priv->phy_type = BRCM_PHY_TYPE_INT;
+		break;
+	case PHY_INTERFACE_MODE_MOCA:
+		priv->phy_type = BRCM_PHY_TYPE_MOCA;
+		break;
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+		priv->phy_type = BRCM_PHY_TYPE_EXT_RGMII;
+		break;
+	case PHY_INTERFACE_MODE_MII:
+		priv->phy_type = BRCM_PHY_TYPE_EXT_MII;
+		break;
+	case PHY_INTERFACE_MODE_REVMII:
+		priv->phy_type = BRCM_PHY_TYPE_EXT_RVMII;
+		break;
+	case PHY_INTERFACE_MODE_RGMII:
+		priv->phy_type = BRCM_PHY_TYPE_EXT_RGMII_NO_ID;
+		break;
+	default:
+		dev_err(kdev, "unsupported PHY interface\n");
+		return;
+	}
+}
+#endif
 
 static const struct of_device_id bcmgenet_match[] = {
 	{ .compatible = "brcm,genet-v1", .data = (void *)GENET_V1 },
@@ -3084,10 +3122,20 @@ static const struct of_device_id bcmgenet_match[] = {
 	{ },
 };
 
+
+static const char *bcmgenet_clock_names[] = {
+#ifdef CONFIG_OF
+	"sw_genet", "sw_genetwol", "sw_geneteee",
+#else
+	"enet", "enet-wol", "enet-eee",
+#endif
+};
+
 static int bcmgenet_drv_probe(struct platform_device *pdev)
 {
+	struct bcmgenet_platform_data *pd = pdev->dev.platform_data;
 	struct device_node *dn = pdev->dev.of_node;
-	const struct of_device_id *of_id;
+	const struct of_device_id *of_id = NULL;
 	struct bcmgenet_priv *priv;
 	struct net_device *dev;
 	const void *macaddr;
@@ -3101,9 +3149,11 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	of_id = of_match_node(bcmgenet_match, dn);
-	if (!of_id)
-		return -EINVAL;
+	if (dn) {
+		of_id = of_match_node(bcmgenet_match, dn);
+		if (!of_id)
+			return -EINVAL;
+	}
 
 	priv = netdev_priv(dev);
 	priv->irq0 = platform_get_irq(pdev, 0);
@@ -3115,11 +3165,15 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	macaddr = of_get_mac_address(dn);
-	if (!macaddr) {
-		dev_err(&pdev->dev, "can't find MAC address\n");
-		err = -EINVAL;
-		goto err;
+	if (dn) {
+		macaddr = of_get_mac_address(dn);
+		if (!macaddr) {
+			dev_err(&pdev->dev, "can't find MAC address\n");
+			err = -EINVAL;
+			goto err;
+		}
+	} else {
+		macaddr = pd->mac_address;
 	}
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -3159,17 +3213,22 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 
 	priv->dev = dev;
 	priv->pdev = pdev;
-	priv->version = (enum bcmgenet_version)of_id->data;
+	if (of_id)
+		priv->version = (enum bcmgenet_version)of_id->data;
+	else
+		priv->version = pd->genet_version;
 
-	priv->clk = devm_clk_get(&priv->pdev->dev, "sw_genet");
+	priv->clk = devm_clk_get(&priv->pdev->dev, bcmgenet_clock_names[0]);
 	if (IS_ERR(priv->clk)) {
 		dev_warn(&priv->pdev->dev, "failed to get enet clock\n");
 		priv->clk = NULL;
 	}
 
 	err = clk_prepare_enable(priv->clk);
-	if (err)
+	if (err) {
+		dev_err(&priv->pdev->dev, "failed to prepare enet clock\n");
 		goto err;
+	}
 
 	bcmgenet_set_hw_params(priv);
 
@@ -3179,15 +3238,19 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 	priv->rx_buf_len = RX_BUF_LENGTH;
 	INIT_WORK(&priv->bcmgenet_irq_work, bcmgenet_irq_task);
 
+#ifdef CONFIG_OF
 	bcmgenet_of_parse(dn, priv);
+#else
+	bcmgenet_pd_parse(priv);
+#endif
 
-	priv->clk_wol = devm_clk_get(&priv->pdev->dev, "sw_genetwol");
+	priv->clk_wol = devm_clk_get(&priv->pdev->dev, bcmgenet_clock_names[1]);
 	if (IS_ERR(priv->clk_wol)) {
 		dev_warn(&priv->pdev->dev, "failed to get enet-wol clock\n");
 		priv->clk_wol = NULL;
 	}
 
-	priv->clk_eee = devm_clk_get(&priv->pdev->dev, "sw_geneteee");
+	priv->clk_eee = devm_clk_get(&priv->pdev->dev, bcmgenet_clock_names[2]);
 	if (IS_ERR(priv->clk_eee)) {
 		dev_warn(&priv->pdev->dev, "failed to get enet-eee clock\n");
 		priv->clk_eee = NULL;
@@ -3204,8 +3267,10 @@ static int bcmgenet_drv_probe(struct platform_device *pdev)
 		goto err_clk_disable;
 
 	err = bcmgenet_mii_init(dev);
-	if (err)
+	if (err) {
+		dev_err(&priv->pdev->dev, "MII initialization failed!\n");
 		goto err_clk_disable;
+	}
 
 	/* setup number of real queues  + 1 (GENET_V1 has 0 hardware queues
 	 * just the ring 16 descriptor based TX

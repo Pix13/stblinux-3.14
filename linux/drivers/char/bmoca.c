@@ -2347,6 +2347,18 @@ static const struct of_device_id bmoca_instance_match[] = {
 };
 
 MODULE_DEVICE_TABLE(bmoca, bmoca_instance_match);
+#else
+static int moca_parse_pdata(struct moca_priv_data *priv)
+{
+
+	struct platform_device *pdev = priv->pdev;
+
+	priv->clk = clk_get(&pdev->dev, "moca");
+	priv->cpu_clk = clk_get(&pdev->dev, "moca-cpu");
+	priv->phy_clk = clk_get(&pdev->dev, "moca-phy");
+
+	return 0;
+}
 #endif
 
 #ifdef CONFIG_PM
@@ -2626,6 +2638,8 @@ static int moca_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_OF)
 	err = moca_parse_dt_node(priv);
+#else
+	err = moca_parse_pdata(priv);
 	if (err)
 		return err;
 #endif

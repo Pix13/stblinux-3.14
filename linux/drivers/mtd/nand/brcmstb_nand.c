@@ -216,6 +216,10 @@ struct brcm_nand_dma_desc {
 #define HIF_ENABLED_IRQ(bit) \
 	(!BDEV_RD_F(HIF_INTR2_CPU_MASK_STATUS, bit##_INTR))
 
+#define FLASH_RDY	(NAND_STATUS_READY)
+#define NAND_CTRL_RDY	(BCHP_NAND_INTFC_STATUS_CTLR_READY_MASK \
+			 | BCHP_NAND_INTFC_STATUS_FLASH_READY_MASK)
+
 struct brcmstb_nand_controller {
 	struct nand_hw_control	controller;
 	volatile void __iomem	*flash_dma_base;
@@ -513,7 +517,7 @@ static struct nand_ecclayout *brcmstb_choose_ecc_layout(
 	return layout;
 }
 
-static void brcmstb_nand_wp(struct mtd_info *mtd, int wp)
+static void brcmstb_nand_wp_set(struct mtd_info *mtd, int wp)
 {
 #ifdef BCHP_NAND_CS_NAND_SELECT_NAND_WP_MASK
 	if (wp_on == 1) {
@@ -525,6 +529,56 @@ static void brcmstb_nand_wp(struct mtd_info *mtd, int wp)
 		BDEV_WR_F_RB(NAND_CS_NAND_SELECT, NAND_WP, wp);
 	}
 #endif
+
+}
+
+static int brcmstb_nand_ctrl_busy_poll(struct mtd_info *mtd, u32 mask)
+{
+	struct nand_chip *chip = mtd->priv;
+	struct brcmstb_nand_host *host = chip->priv;
+	unsigned long timeout = jiffies + msecs_to_jiffies(100);
+
+	if (!mask)
+		mask = BCHP_NAND_INTFC_STATUS_FLASH_READY_MASK;
+
+	while ((BDEV_RD(BCHP_NAND_INTFC_STATUS) & mask) != mask) {
+		if (time_after(jiffies, timeout)) {
+			dev_warn(&host->pdev->dev, "timeout on ctrl_ready\n");
+			return -ETIMEDOUT;
+		}
+		cpu_relax();
+	}
+	return 0;
+}
+
+static void brcmstb_nand_wp(struct mtd_info *mtd, int wp_en)
+{
+	struct nand_chip *chip = mtd->priv;
+	struct brcmstb_nand_host *host = chip->priv;
+	uint8_t is_wp, sts_reg;
+
+	brcmstb_nand_ctrl_busy_poll(mtd, NAND_CTRL_RDY | FLASH_RDY);
+	if (wp_on == 1)
+		brcmstb_nand_wp_set(mtd, wp_en);
+	chip->cmdfunc(mtd, NAND_CMD_STATUS, -1, -1);
+	/* again make sure the flash is also ready */
+	brcmstb_nand_ctrl_busy_poll(mtd, NAND_CTRL_RDY | FLASH_RDY);
+
+	/*
+	 * we always return "not write protected" status due
+	 * to SWLINUX-1818 lets read the true status before
+	 * proceeding
+	 */
+	sts_reg =  BDEV_RD(BCHP_NAND_INTFC_STATUS) & 0xff;
+	/* NAND_STATUS_WP 0x80 = not protected, 0x00 = protected*/
+	is_wp = (sts_reg & NAND_STATUS_WP) ? 0 : 1;
+
+	if ((wp_on == 1) && (is_wp != wp_en)) {
+		dev_err_ratelimited(&host->pdev->dev,
+				    "#WP %s sts:0x%x expected %s\n",
+				    is_wp ? "On" : "Off", sts_reg & 0xff,
+				    wp_en ? "On" : "Off");
+	}
 }
 
 /* Helper functions for reading and writing OOB registers */
@@ -1607,6 +1661,7 @@ static int brcmstb_nand_setup_dev(struct brcmstb_nand_host *host)
 static int brcmstb_nand_init_cs(struct brcmstb_nand_host *host)
 {
 	struct brcmstb_nand_controller *ctrl = host->ctrl;
+	struct brcmnand_platform_data *pd = host->pdev->dev.platform_data;
 	struct device_node *dn = host->of_node;
 	struct platform_device *pdev = host->pdev;
 	struct mtd_info *mtd;
@@ -1615,12 +1670,18 @@ static int brcmstb_nand_init_cs(struct brcmstb_nand_host *host)
 
 	const char *part_probe_types[] = { "cmdlinepart", "ofpart", "RedBoot",
 		NULL };
+#ifdef CONFIG_OF
 	struct mtd_part_parser_data ppdata = { .of_node = dn };
+#endif
 
-	ret = of_property_read_u32(dn, "reg", &host->cs);
-	if (ret) {
-		dev_err(&pdev->dev, "can't get chip-select\n");
-		return -ENXIO;
+	if (dn) {
+		ret = of_property_read_u32(dn, "reg", &host->cs);
+		if (ret) {
+			dev_err(&pdev->dev, "can't get chip-select\n");
+			return -ENXIO;
+		}
+	} else {
+		host->cs = pd->chip_select;
 	}
 
 	DBG("%s: cs %d\n", __func__, host->cs);
@@ -1696,7 +1757,12 @@ static int brcmstb_nand_init_cs(struct brcmstb_nand_host *host)
 	mtd->oobavail = chip->ecc.layout->oobavail;
 	mtd->ecclayout = chip->ecc.layout;
 
+#ifdef CONFIG_OF
 	return mtd_device_parse_register(mtd, part_probe_types, &ppdata, NULL, 0);
+#else
+	return mtd_device_parse_register(mtd, part_probe_types, NULL, pd->parts,
+					 pd->nr_parts);
+#endif
 }
 
 static int brcmstb_nand_suspend(struct device *dev)
@@ -1815,10 +1881,6 @@ static int brcmstb_nand_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret;
 
-	/* We only support device-tree instantiation */
-	if (!dn)
-		return -ENODEV;
-
 	ctrl = devm_kzalloc(dev, sizeof(*ctrl), GFP_KERNEL);
 	if (!ctrl)
 		return -ENOMEM;
@@ -1928,7 +1990,6 @@ static int brcmstb_nand_probe(struct platform_device *pdev)
 			ctrl->irq, ret);
 		goto out;
 	}
-
 	for_each_available_child_of_node(dn, child) {
 		if (of_device_is_compatible(child, "brcm,nandcs")) {
 			struct brcmstb_nand_host *host;
@@ -1948,6 +2009,24 @@ static int brcmstb_nand_probe(struct platform_device *pdev)
 
 			list_add_tail(&host->node, &ctrl->host_list);
 		}
+	}
+
+	if (!dn) {
+		struct brcmstb_nand_host *host;
+
+		host = devm_kzalloc(dev, sizeof(*host), GFP_KERNEL);
+		if (!host) {
+			ret = -ENOMEM;
+			goto out;
+		}
+		host->pdev = pdev;
+		host->ctrl = ctrl;
+
+		ret = brcmstb_nand_init_cs(host);
+		if (ret)
+			return ret;
+
+		list_add_tail(&host->node, &ctrl->host_list);
 	}
 
 	/* No chip-selects could initialize properly */

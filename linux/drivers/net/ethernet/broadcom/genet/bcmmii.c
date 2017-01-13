@@ -38,6 +38,7 @@
 #include <linux/of.h>
 #include <linux/of_net.h>
 #include <linux/of_mdio.h>
+#include <linux/platform_data/bcmgenet.h>
 
 /* read a value from the MII */
 static int bcmgenet_mii_read(struct mii_bus *bus, int phy_id, int location)
@@ -286,6 +287,7 @@ void bcmgenet_phy_power_set(struct net_device *dev, bool enable)
 int bcmgenet_mii_probe(struct net_device *dev)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct device_node *dn = priv->pdev->dev.of_node;
 	struct phy_device *phydev;
 	char phy_id[MII_BUS_ID_SIZE + 3];
 	const char *fixed_bus = NULL;
@@ -318,13 +320,23 @@ int bcmgenet_mii_probe(struct net_device *dev)
 	priv->old_duplex = -1;
 	priv->old_pause = -1;
 
-	if (priv->old_dt_binding) {
+	if (dn && priv->old_dt_binding) {
 		phydev = phy_connect(dev, phy_id, bcmgenet_mii_setup,
 				priv->phy_interface);
-	} else {
+	} else if (dn) {
 		phydev = of_phy_connect(dev, priv->phy_dn,
 					bcmgenet_mii_setup, phy_flags,
 					priv->phy_interface);
+	} else {
+		phydev = priv->phydev;
+		phydev->dev_flags = phy_flags;
+
+		ret = phy_connect_direct(dev, phydev, bcmgenet_mii_setup,
+					 priv->phy_interface);
+		if (ret) {
+			pr_err("could not attach to PHY\n");
+			return -ENODEV;
+		}
 	}
 
 	if (!phydev) {
@@ -540,6 +552,7 @@ int bcmgenet_mii_config(struct net_device *dev)
 		} else if (priv->phy_type == BRCM_PHY_TYPE_MOCA) {
 			phy_name = "MoCA";
 			bcmgenet_moca_phy_setup(priv);
+			priv->phy_supported = PHY_GBIT_FEATURES;
 		}
 		break;
 
@@ -720,22 +733,94 @@ static int bcmgenet_mii_old_dt_init(struct bcmgenet_priv *priv)
 	return 0;
 }
 
+static int bcmgenet_mii_pd_init(struct bcmgenet_priv *priv)
+{
+	struct device *kdev = &priv->pdev->dev;
+	struct bcmgenet_platform_data *pd = kdev->platform_data;
+	struct mii_bus *mdio = priv->mii_bus;
+	struct phy_device *phydev;
+	int ret;
+
+	if (pd->phy_interface != PHY_INTERFACE_MODE_MOCA && pd->mdio_enabled) {
+		/*
+		 * Internal or external PHY with MDIO access
+		 */
+		if (pd->phy_address >= 0 && pd->phy_address < PHY_MAX_ADDR)
+			mdio->phy_mask = ~(1 << pd->phy_address);
+		else
+			mdio->phy_mask = 0;
+
+		ret = mdiobus_register(mdio);
+		if (ret) {
+			dev_err(kdev, "failed to register MDIO bus\n");
+			return ret;
+		}
+
+		if (pd->phy_address >= 0 && pd->phy_address < PHY_MAX_ADDR)
+			phydev = mdio->phy_map[pd->phy_address];
+		else
+			phydev = phy_find_first(mdio);
+
+		if (!phydev) {
+			dev_err(kdev, "failed to register PHY device\n");
+			mdiobus_unregister(mdio);
+			return -ENODEV;
+		}
+	} else {
+		/*
+		 * MoCA port or no MDIO access.
+		 * Use fixed PHY to represent the link layer.
+		 */
+		struct fixed_phy_status fphy_status = {
+			.link = 1,
+			.speed = pd->phy_speed,
+			.duplex = pd->phy_duplex,
+			.pause = 0,
+			.asym_pause = 0,
+		};
+
+		priv->phy_speed = pd->phy_speed;
+
+		phydev = fixed_phy_register(PHY_POLL, &fphy_status, NULL);
+		if (!phydev || IS_ERR(phydev)) {
+			dev_err(kdev, "failed to register fixed PHY device\n");
+			return -ENODEV;
+		}
+	}
+
+	priv->phydev = phydev;
+	priv->phy_interface = pd->phy_interface;
+
+	return 0;
+}
+
+static int bcmgenet_mii_bus_init(struct bcmgenet_priv *priv)
+{
+	struct device_node *dn = priv->pdev->dev.of_node;
+	int ret = 0;
+
+	if (dn) {
+		if (priv->old_dt_binding)
+			ret = bcmgenet_mii_old_dt_init(priv);
+		else
+			ret = bcmgenet_mii_new_dt_init(priv);
+	} else {
+		ret = bcmgenet_mii_pd_init(priv);
+	}
+
+	return ret;
+}
+
 int bcmgenet_mii_init(struct net_device *dev)
 {
 	struct bcmgenet_priv *priv = netdev_priv(dev);
-	struct device *kdev = &priv->pdev->dev;
 	int ret;
 
 	ret = bcmgenet_mii_alloc(priv);
 	if (ret)
 		return ret;
 
-	if (priv->old_dt_binding) {
-		dev_warn(kdev, "using old DT binding, update BOLT!\n");
-		ret = bcmgenet_mii_old_dt_init(priv);
-	} else
-		ret = bcmgenet_mii_new_dt_init(priv);
-
+	ret = bcmgenet_mii_bus_init(priv);
 	if (ret)
 		goto out;
 

@@ -1672,7 +1672,8 @@ static inline int stack_guard_page(struct vm_area_struct *vma, unsigned long add
 static int brcmstb_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
 			unsigned long start, struct page **page)
 {
-#if defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_BRCMSTB_CMA)
+#if defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_BRCMSTB_CMA) || \
+	defined(CONFIG_MIPS)
 	const unsigned long pg = start & PAGE_MASK;
 	int ret = -EFAULT;
 	pgd_t *pgd;
@@ -1703,7 +1704,7 @@ static int brcmstb_get_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	if (!tmp_page)
 		goto out;
 
-#ifdef CONFIG_BRCMSTB_BMEM
+#if defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_MIPS)
 	if (likely(bmem_find_region((phys_addr_t)pfn << PAGE_SHIFT, PAGE_SIZE)
 		   >= 0))
 		goto found_page;
@@ -1732,7 +1733,8 @@ out:
 	return ret;
 #else
 	return -ENOSYS;
-#endif /* defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_BRCMSTB_CMA) */
+#endif /* defined(CONFIG_BRCMSTB_BMEM) || defined(CONFIG_BRCMSTB_CMA) ||
+	  defined(CONFIG_MIPS) */
 }
 #endif /* defined(CONFIG_BRCMSTB) */
 

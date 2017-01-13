@@ -59,6 +59,10 @@
 #include <asm/stacktrace.h>
 #include <asm/uasm.h>
 
+#ifdef CONFIG_BRCMSTB
+#include <linux/brcmstb/brcmapi.h>
+#endif
+
 extern void check_wait(void);
 extern asmlinkage void rollback_handle_int(void);
 extern asmlinkage void handle_int(void);
@@ -616,6 +620,10 @@ static int simulate_rdhwr(struct pt_regs *regs, int rd, int rt)
 {
 	struct thread_info *ti = task_thread_info(current);
 
+#ifdef CONFIG_BRCMSTB
+	if (brcm_simulate_opcode(regs, rd, rt) == 0)
+		return 0;
+#endif
 	perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS,
 			1, regs, 0);
 	switch (rd) {
@@ -1851,7 +1859,11 @@ void per_cpu_trap_init(bool is_boot_cpu)
 		/* Boot CPU's cache setup in setup_arch(). */
 		if (!is_boot_cpu)
 			cpu_cache_init();
+#ifdef CONFIG_BRCMSTB
+		brcm_tlb_init();
+#else
 		tlb_init();
+#endif
 #ifdef CONFIG_MIPS_MT_SMTC
 	} else if (!secondaryTC) {
 		/*

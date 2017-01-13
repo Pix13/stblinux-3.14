@@ -18,6 +18,9 @@
 
 extern struct op_mips_model op_model_mipsxx_ops __weak;
 extern struct op_mips_model op_model_loongson2_ops __weak;
+#ifdef CONFIG_BRCMSTB
+extern struct op_mips_model op_model_bmips_ops __attribute__((weak));
+#endif
 
 static struct op_mips_model *model;
 
