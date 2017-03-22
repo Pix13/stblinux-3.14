@@ -487,19 +487,6 @@ static int bcmgenet_fixed_phy_link_update(struct net_device *dev,
 	return 0;
 }
 
-static void bcmgenet_internal_phy_setup(struct net_device *dev)
-{
-	struct bcmgenet_priv *priv = netdev_priv(dev);
-	u32 reg;
-
-	/* Power up PHY */
-	bcmgenet_phy_power_set(dev, true);
-	/* enable APD */
-	reg = bcmgenet_ext_readl(priv, EXT_EXT_PWR_MGMT);
-	reg |= EXT_PWR_DN_EN_LD;
-	bcmgenet_ext_writel(priv, reg, EXT_EXT_PWR_MGMT);
-}
-
 static void bcmgenet_moca_phy_setup(struct bcmgenet_priv *priv)
 {
 	u32 reg;
@@ -548,7 +535,6 @@ int bcmgenet_mii_config(struct net_device *dev)
 		if (priv->phy_type == BRCM_PHY_TYPE_INT) {
 			priv->phy_supported |=
 				SUPPORTED_Pause | SUPPORTED_Asym_Pause;
-			bcmgenet_internal_phy_setup(dev);
 		} else if (priv->phy_type == BRCM_PHY_TYPE_MOCA) {
 			phy_name = "MoCA";
 			bcmgenet_moca_phy_setup(priv);

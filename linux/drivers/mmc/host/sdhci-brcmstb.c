@@ -293,17 +293,17 @@ static void sdhci_fix_caps(struct sdhci_host *host,
 #else
 
 #define SDIO_CFG_SET(base, reg, mask) do {				\
-		BDEV_SET(SDIO_CFG_REG(base, reg),			\
+		DEV_SET(SDIO_CFG_REG(base, reg),			\
 			 BCHP_SDIO_0_CFG_##reg##_##mask##_MASK);	\
 	} while (0)
 #define SDIO_CFG_UNSET(base, reg, mask) do {				\
-		BDEV_UNSET(SDIO_CFG_REG(base, reg),			\
+		DEV_UNSET(SDIO_CFG_REG(base, reg),			\
 			   BCHP_SDIO_0_CFG_##reg##_##mask##_MASK);	\
 	} while (0)
 #define SDIO_CFG_FIELD(base, reg, field, val) do {			\
-		BDEV_UNSET(SDIO_CFG_REG(base, reg),			\
+		DEV_UNSET(SDIO_CFG_REG(base, reg),			\
 			   BCHP_SDIO_0_CFG_##reg##_##field##_MASK);	\
-		BDEV_SET(SDIO_CFG_REG(base, reg),			\
+		DEV_SET(SDIO_CFG_REG(base, reg),			\
 		 val << BCHP_SDIO_0_CFG_##reg##_##field##_SHIFT);	\
 	} while (0)
 
@@ -344,7 +344,7 @@ static inline void sdhci_override_caps(void __iomem *cfg_base, int base_clock,
 	if (options & SDHCI_OVERRIDE_OPTIONS_UHS_SDR50)
 		val |= (1 << CAP0_SHIFT(SDR50)) |
 			(1 << CAP0_SHIFT(1_8V_SUPPORT));
-	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG0), val);
+	DEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG0), val);
 
 	val = (1 << CAP1_SHIFT(CAP_REG_OVERRIDE) |	\
 	       0 << CAP1_SHIFT(SPI_BLK_MODE) |		\
@@ -356,21 +356,20 @@ static inline void sdhci_override_caps(void __iomem *cfg_base, int base_clock,
 	       0 << CAP1_SHIFT(Driver_D_SUPPORT) |	\
 	       0 << CAP1_SHIFT(Driver_C_SUPPORT) |	\
 	       0 << CAP1_SHIFT(Driver_A_SUPPORT));
-	BDEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG1), val);
+	DEV_WR(SDIO_CFG_REG(cfg_base, CAP_REG1), val);
 }
 static void sdhci_fix_caps(struct sdhci_host *host,
 			struct sdhci_brcmstb_priv *priv)
 {
 	void __iomem *cfg_base = priv->cfg_regs;
 
-	if (BDEV_RD(SDIO_CFG_REG(cfg_base, SCRATCH)) & 0x01) {
+	if (DEV_RD(SDIO_CFG_REG(cfg_base, SCRATCH)) & 0x01) {
 		dev_info(mmc_dev(host->mmc), "Disabled by bootloader\n");
 		return;
 	}
-
 	dev_info(mmc_dev(host->mmc), "Enabling controller\n");
-	BDEV_UNSET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0xf000);
-	BDEV_UNSET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL2), 0x00ff);
+	DEV_UNSET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0xf000);
+	DEV_UNSET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL2), 0x00ff);
 
 	/*
 	 * This is broken on all chips and defaults to enabled on
@@ -380,12 +379,12 @@ static void sdhci_fix_caps(struct sdhci_host *host,
 
 #ifdef CONFIG_CPU_LITTLE_ENDIAN
 	/* FRAME_NHW | BUFFER_ABO */
-	BDEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0x3000);
+	DEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0x3000);
 #else
 	/* WORD_ABO | FRAME_NBO | FRAME_NHW */
-	BDEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0xe000);
+	DEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL1), 0xe000);
 	/* address swap only */
-	BDEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL2), 0x0050);
+	DEV_SET(SDIO_CFG_REG(cfg_base, SDIO_EMMC_CTRL2), 0x0050);
 #endif
 
 #if defined(CONFIG_BCM7231B0) || defined(CONFIG_BCM7346B0)

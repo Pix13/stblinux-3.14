@@ -79,7 +79,7 @@ static inline void __b15_rac_flush(void)
 		 */
 		dmb();
 		reg = __raw_readl(b15_rac_base + RAC_FLUSH_REG);
-	} while (reg & RAC_FLUSH_REG);
+	} while (reg & FLUSH_RAC);
 }
 
 static inline u32 b15_rac_disable_and_flush(void)

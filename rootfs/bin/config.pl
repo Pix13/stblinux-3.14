@@ -245,6 +245,8 @@ sub get_tgt($$)
 		}
 
 		$chip_regexp = '^(arm64|arm|bmips)(_be)?(-\S+)?$';
+	} elsif ($linux_version eq "3.6") {  #EJTAG probes
+		$chip_regexp = '^(probe)(_be)?(-\S+)?$';
 	} else {
 		die("Unsupported Linux version: $linux_version\n");
 	}
@@ -288,6 +290,9 @@ sub populate_linux_defaults($$)
 		$arch_config_options{"ARCH"} = "arm";
 		$linux_defaults = "$LINUXDIR/arch/".$arch_config_options{"ARCH"}."/configs/brcmstb_defconfig";
 		$linux_new_defaults = "$LINUXDIR/arch/".$arch_config_options{"ARCH"}."/configs/brcmstb_new_defconfig";
+	} elsif($chip eq "probe") {
+		$linux_defaults= "$LINUXDIR/arch/mips/configs/bcmejtag_defconfig";
+		$arch_config_options{"ARCH"} = "mips";
 	} elsif ($chip ne "bmips") {
 		if (grep(/^hardened$/, @mods)) {
 			$linux_defaults =~ s/defconfig$/hardened_defconfig/;
@@ -432,6 +437,7 @@ sub gen_modifiers($$)
 		(my $mod, $suffix) = ($1, $2);
 		push(@mods, $mod);
 	}
+
 	return @mods;
 }
 
@@ -642,16 +648,29 @@ sub cmd_defaults($)
 		$vendor{"CONFIG_USER_CMATOOL"} = "n";
 	}
 
+	#EJTAG overrides
+	if ($chip eq "probe") {
+		my %busybox_o;
+		my %vendor_o;
+
+		read_cfg("defaults/override.busybox-probe", \%busybox_o);
+		override_cfg(\%busybox, \%busybox_o);
+		read_cfg("defaults/override.vendor-probe", \%vendor_o);
+		override_cfg(\%vendor, \%vendor_o);
+	}
+
 	# basic hardware support
 
 	# MOCA
 	if (defined($linux{"CONFIG_BRCM_MOCA"})) {
+ 
 		$vendor{"CONFIG_USER_MOCA_MOCA1"} = "n";
 		$vendor{"CONFIG_USER_MOCA_NONE"} = "n";
 		$vendor{"CONFIG_USER_MOCA_MOCA2"} = "y";
 		$vendor{"CONFIG_USER_MOCA_GEN1"} = "y";
 		$vendor{"CONFIG_USER_MOCA_GEN2"} = "y";
 		$vendor{"CONFIG_USER_MOCA_GEN3"} = "y";
+		$vendor{"CONFIG_USER_MOCA_GEN4"} = "y";
 	}
 
 	if (defined($linux{"CONFIG_PM"})) {
@@ -660,6 +679,14 @@ sub cmd_defaults($)
 
 	if (defined($linux{"CONFIG_I2C"})) {
 		$vendor{"CONFIG_USER_I2C_TOOLS"} = "y";
+	}
+
+	# Enable netfilter by default for ARM/ARM64 based chips (e.g:
+	# connection offload)
+	if ($chip eq "arm" or $chip eq "arm64") {
+		$linux{"CONFIG_NETFILTER"} = "y";
+		$linux{"CONFIG_BRIDGE_NETFILTER"} = "n";
+
 	}
 
 	my (%vendor_w, %busybox_w, %linux_o, %vendor_o, %busybox_o);
@@ -821,6 +848,9 @@ sub cmd_defaults($)
 			$vendor{"CONFIG_USER_MOCA_NONE"} = "y";
 			$vendor{"CONFIG_USER_MOCA_MOCA1"} = "n";
 			$vendor{"CONFIG_USER_MOCA_MOCA2"} = "n";
+		} elsif($mod eq "nonetfilter") {
+			$linux{"CONFIG_NETFILTER"} = "n";
+			$vendor{"CONFIG_USER_IPTABLES_IPTABLES"} = "n";
 		} elsif($mod eq "lttng") {
 
 			# Enable LTTng

@@ -24,8 +24,8 @@ endif
 ifndef CONFIG_MIPS
 usb-brcm-glue-y := usb-brcm.o usb-brcm-common-init.o
 else
-obj-y				+= ehci-brcm-mips.o
-obj-y				+= ohci-brcm-mips.o
+obj-y				+= ehci-brcm.o
+obj-y				+= ohci-brcm.o
 usb-brcm-glue-y := usb-brcm-mips.o
 endif
 

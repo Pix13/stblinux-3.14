@@ -45,6 +45,7 @@ config ARCH_BRCMSTB
 	select ARCH_HAS_CPUFREQ
 	select PM_OPP if PM
 	select ARM_ERRATA_798181 if SMP
+	select ARCH_HAS_HOLES_MEMORYMODEL
 	select ARCH_DMA_ADDR_T_64BIT if ARM_LPAE
 	select GENERIC_IRQ_CHIP
 	select BRCMSTB_GISB_ARB
@@ -82,7 +83,7 @@ config BCM3390B0
 	select BRCM_HAS_NAND_MAJOR_7
 	select BRCM_HAS_NAND_MINOR_1
 	select BRCM_HAS_BSPI_V4
-	select BRCM_HAS_MOCA_20_GEN23
+	select BRCM_HAS_MOCA_20_GEN24
 	select BRCM_MSPI_64B_WORDS
 
 config BCM7250B0
@@ -178,7 +179,8 @@ config BCMGENET
 config BRCM_MOCA
 	tristate "Broadcom MoCA character driver"
 	depends on BRCMSTB && (BRCM_HAS_GENET || BRCM_HAS_MOCA_20_GEN21 || \
-		BRCM_HAS_MOCA_20_GEN22 || BRCM_HAS_MOCA_20_GEN23) && !BRCM_IKOS
+		BRCM_HAS_MOCA_20_GEN22 || BRCM_HAS_MOCA_20_GEN23 ||   \
+		BRCM_HAS_MOCA_20_GEN24) && !BRCM_IKOS
 	default y
 	help
 	  Say Y to build the MoCA control path driver.  This is a simple
@@ -301,6 +303,7 @@ config BRCM_MOCA_VERS
 	default 0x2001 if BRCM_HAS_MOCA_20_GEN21
 	default 0x2002 if BRCM_HAS_MOCA_20_GEN22
 	default 0x2003 if BRCM_HAS_MOCA_20_GEN23
+	default 0x2004 if BRCM_HAS_MOCA_20_GEN24
 
 # select for MoCA on GENET_0
 config BRCM_MOCA_ON_GENET_0
