@@ -20,9 +20,6 @@
 #ifndef __BCMGENET_H__
 #define __BCMGENET_H__
 
-#define VERSION     "2.0"
-#define VER_STR     "v" VERSION " " __DATE__ " " __TIME__
-
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/spinlock.h>

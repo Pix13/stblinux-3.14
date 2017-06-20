@@ -884,7 +884,7 @@ static void bcmgenet_get_drvinfo(struct net_device *dev,
 		struct ethtool_drvinfo *info)
 {
 	strlcpy(info->driver, "bcmgenet", sizeof(info->driver));
-	strlcpy(info->version, VER_STR, sizeof(info->version));
+	strlcpy(info->version, "v2.0", sizeof(info->version));
 	info->n_stats = BCMGENET_STATS_LEN;
 
 }

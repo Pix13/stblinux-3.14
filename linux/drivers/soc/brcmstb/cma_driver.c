@@ -277,12 +277,19 @@ static struct cma_root_dev *cma_root_dev;
 
 static int cma_dev_open(struct inode *inode, struct file *filp)
 {
+	struct cdev *cdev = inode->i_cdev;
+	struct cma_root_dev *cma_root_dev;
+
+	cma_root_dev = container_of(cdev, struct cma_root_dev, cdev);
+	filp->private_data = cma_root_dev;
+
 	dev_dbg(cma_root_dev->dev, "opened cma root device\n");
 	return 0;
 }
 
 static int cma_dev_release(struct inode *inode, struct file *filp)
 {
+	filp->private_data = NULL;
 	return 0;
 }
 
@@ -303,8 +310,51 @@ static struct vm_operations_struct cma_dev_vm_ops = {
 	.close = cma_dev_vma_close,
 };
 
+static inline int cma_dev_pfn_range_ok(struct cma_dev *cma_dev,
+				       unsigned long pfn, size_t size)
+{
+	u64 from = ((u64)pfn) << PAGE_SHIFT;
+	u64 to = from + size;
+
+	if (from >= cma_dev->range.base &&
+	    to <= (cma_dev->range.base + cma_dev->range.size))
+		return 1;
+
+	return 0;
+}
+
+static int cma_dev_range_allowed(struct cma_root_dev *cma_root_dev,
+				 unsigned long pfn, size_t size)
+{
+	struct list_head *pos;
+	unsigned long flags;
+	int ret = 0;
+
+	if (!cma_root_dev)
+		return 0;
+
+	spin_lock_irqsave(&cma_dev_lock, flags);
+	list_for_each(pos, &cma_root_dev->cma_devs.list) {
+		struct cma_dev *curr_cma_dev;
+		curr_cma_dev = list_entry(pos, struct cma_dev, list);
+		BUG_ON(curr_cma_dev == NULL);
+		ret = cma_dev_pfn_range_ok(curr_cma_dev, pfn, size);
+		if (ret)
+			break;
+	}
+
+	spin_unlock_irqrestore(&cma_dev_lock, flags);
+	return ret;
+}
+
 static int cma_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 {
+	size_t size = vma->vm_end - vma->vm_start;
+	struct cma_root_dev *cma_root_dev = filp->private_data;
+
+	if (!cma_dev_range_allowed(cma_root_dev, vma->vm_pgoff, size))
+		return -EINVAL;
+
 	switch (cma_root_dev->mmap_type) {
 	case MMAP_TYPE_NORMAL:
 		break;
@@ -891,11 +941,6 @@ free_cma_dev:
 
 done:
 	return ret;
-}
-
-int cma_drvr_is_ready(void)
-{
-	return cma_root_dev != NULL;
 }
 
 static struct platform_driver cma_driver = {

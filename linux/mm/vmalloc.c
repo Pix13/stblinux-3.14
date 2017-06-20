@@ -460,7 +460,7 @@ overflow:
 		purged = 1;
 		goto retry;
 	}
-	if (printk_ratelimit())
+	if (!(gfp_mask & __GFP_NOWARN) && printk_ratelimit())
 		printk(KERN_WARNING
 			"vmap allocation for size %lu failed: "
 			"use vmalloc=<size> to increase size.\n", size);
