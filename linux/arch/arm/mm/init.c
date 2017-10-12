@@ -35,6 +35,10 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 
+#ifdef CONFIG_BRCMSTB_MEMORY_API
+#include <linux/brcmstb/memory_api.h>
+#endif
+
 #include "mm.h"
 
 static phys_addr_t phys_initrd_start __initdata = 0;
@@ -243,7 +247,7 @@ static void __init zone_sizes_init(unsigned long min, unsigned long max_low,
 #ifdef CONFIG_HAVE_ARCH_PFN_VALID
 int pfn_valid(unsigned long pfn)
 {
-	return memblock_is_memory(__pfn_to_phys(pfn));
+	return memblock_is_map_memory(__pfn_to_phys(pfn));
 }
 EXPORT_SYMBOL(pfn_valid);
 #endif
@@ -323,23 +327,14 @@ void __init arm_memblock_init(struct meminfo *mi,
 	arm_mm_memblock_reserve();
 	arm_dt_memblock_reserve();
 
-#ifdef CONFIG_BRCMSTB
-	/*
-	 * Moved before platform reserve so that we can find all the
-	 * non-cma, non-bmem reserved areas without implementing interval
-	 * subtraction
-	 */
-	early_init_fdt_scan_reserved_mem();
-
-	/* reserve any platform specific memblock areas */
-	if (mdesc->reserve)
-		mdesc->reserve();
-#else
 	/* reserve any platform specific memblock areas */
 	if (mdesc->reserve)
 		mdesc->reserve();
 
 	early_init_fdt_scan_reserved_mem();
+
+#ifdef CONFIG_BRCMSTB_MEMORY_API
+	brcmstb_memory_init();
 #endif
 
 	/*
@@ -502,6 +497,9 @@ static void __init free_highpages(void)
 
 		/* Ignore complete lowmem entries */
 		if (end <= max_low)
+			continue;
+
+		if (memblock_is_nomap(mem))
 			continue;
 
 		/* Truncate partial highmem entries */

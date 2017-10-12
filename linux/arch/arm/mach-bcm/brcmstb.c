@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Broadcom Corporation
+ * Copyright (C) 2013-2016 Broadcom
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,7 +28,6 @@
 #include <linux/platform_device.h>
 #include <linux/printk.h>
 #if defined(CONFIG_BRCMSTB)
-#include <linux/brcmstb/bmem.h>
 #include <linux/brcmstb/brcmstb.h>
 #include <linux/brcmstb/cma_driver.h>
 #endif
@@ -81,13 +80,6 @@ static void __init brcmstb_map_io(void)
 	iotable_init(brcmstb_io_map, ARRAY_SIZE(brcmstb_io_map));
 }
 
-static void __init brcmstb_reserve(void)
-{
-	brcmstb_memory_reserve();
-	cma_reserve();
-	bmem_reserve();
-}
-
 static void __init brcmstb_init_irq(void)
 {
 	/* Force lazily-disabled IRQs to be masked before suspend */
@@ -101,7 +93,6 @@ static void __init brcmstb_init_machine(void)
 	struct platform_device_info devinfo = { .name = "cpufreq-cpu0", };
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
-	cma_register();
 	platform_device_register_full(&devinfo);
 }
 
@@ -122,7 +113,6 @@ DT_MACHINE_START(BRCMSTB, "Broadcom STB (Flattened Device Tree)")
 	.dt_compat	= brcmstb_match,
 #if defined(CONFIG_BRCMSTB)
 	.map_io		= brcmstb_map_io,
-	.reserve	= brcmstb_reserve,
 	.init_machine	= brcmstb_init_machine,
 	.init_early	= brcmstb_init_early,
 	.init_irq	= brcmstb_init_irq,

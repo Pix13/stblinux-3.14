@@ -365,6 +365,9 @@ static inline void mem_init_free_highmem(void)
 	for (tmp = highstart_pfn; tmp < highend_pfn; tmp++) {
 		struct page *page = pfn_to_page(tmp);
 
+		if (!pfn_valid(tmp))
+			continue;
+
 		if (!page_is_ram(tmp))
 			SetPageReserved(page);
 		else

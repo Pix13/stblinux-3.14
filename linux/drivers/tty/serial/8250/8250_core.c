@@ -1482,9 +1482,9 @@ unsigned int serial8250_modem_status(struct uart_8250_port *up)
 			port->icount.dsr++;
 		if (status & UART_MSR_DDCD)
 			uart_handle_dcd_change(port, status & UART_MSR_DCD);
-		if (status & UART_MSR_DCTS)
-			uart_handle_cts_change(port, status & UART_MSR_CTS);
-
+		if ((status & UART_MSR_DCTS) && ((up->mcr & UART_MCR_AFE) == 0))
+			uart_handle_cts_change(port,
+					status & UART_MSR_CTS);
 		wake_up_interruptible(&port->state->port.delta_msr_wait);
 	}
 
@@ -1810,7 +1810,11 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
 		ret |= TIOCM_RNG;
 	if (status & UART_MSR_DSR)
 		ret |= TIOCM_DSR;
-	if (status & UART_MSR_CTS)
+	/*
+	 * if AFE, the hardware is handling start/stop of xmit data
+	 * so always return CTS.
+	 */
+	if ((up->mcr & UART_MCR_AFE) || (status & UART_MSR_CTS))
 		ret |= TIOCM_CTS;
 	return ret;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2015 Broadcom Corporation
+ * Copyright © 2015-2017 Broadcom
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -17,7 +17,6 @@
 
 #define pr_fmt(fmt) "bmem: " fmt
 
-#include <asm/setup.h>
 #include <linux/ctype.h>
 #include <linux/device.h>
 #include <linux/ioport.h>
@@ -139,27 +138,7 @@ int bmem_region_info(int idx, phys_addr_t *addr, phys_addr_t *size)
 	}
 	return -ENOENT;
 }
-
-static void __init bmem_setup_defaults(void)
-{
-	int iter;
-
-	for_each_bank(iter, &meminfo) {
-		phys_addr_t start, size;
-
-		if (n_bmem_regions == MAX_BMEM_REGIONS) {
-			pr_warn_once("%s: too many regions, ignoring extras\n",
-					__func__);
-			return;
-		}
-
-		/* fill in start and size */
-		if (brcmstb_memory_get_default_reserve(iter, &start, &size))
-			continue;
-
-		__bmem_setup(start, size);
-	}
-}
+EXPORT_SYMBOL(bmem_region_info);
 
 void __init bmem_reserve(void)
 {
@@ -174,7 +153,7 @@ void __init bmem_reserve(void)
 	if (brcmstb_default_reserve == BRCMSTB_RESERVE_BMEM &&
 			!n_bmem_regions &&
 			!brcmstb_memory_override_defaults)
-		bmem_setup_defaults();
+		brcmstb_memory_default_reserve(__bmem_setup);
 
 	for (i = 0; i < n_bmem_regions; ++i) {
 		ret = memblock_reserve(bmem_regions[i].addr,

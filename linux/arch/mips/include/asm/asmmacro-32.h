@@ -13,6 +13,8 @@
 #include <asm/mipsregs.h>
 
 	.macro	fpu_save_single thread tmp=t0
+	.set push
+	SET_HARDFLOAT
 	cfc1	\tmp,  fcr31
 	swc1	$f0,  THREAD_FPR0(\thread)
 	swc1	$f1,  THREAD_FPR1(\thread)
@@ -47,9 +49,12 @@
 	swc1	$f30, THREAD_FPR30(\thread)
 	swc1	$f31, THREAD_FPR31(\thread)
 	sw	\tmp, THREAD_FCR31(\thread)
+	.set pop
 	.endm
 
 	.macro	fpu_restore_single thread tmp=t0
+	.set push
+	SET_HARDFLOAT
 	lw	\tmp, THREAD_FCR31(\thread)
 	lwc1	$f0,  THREAD_FPR0(\thread)
 	lwc1	$f1,  THREAD_FPR1(\thread)
@@ -84,6 +89,7 @@
 	lwc1	$f30, THREAD_FPR30(\thread)
 	lwc1	$f31, THREAD_FPR31(\thread)
 	ctc1	\tmp, fcr31
+	.set pop
 	.endm
 
 	.macro	cpu_save_nonscratch thread

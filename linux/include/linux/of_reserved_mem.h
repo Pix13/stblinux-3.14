@@ -7,6 +7,7 @@ struct reserved_mem_ops;
 
 struct reserved_mem {
 	const char			*name;
+	const char			*reserved_name;
 	unsigned long			fdt_node;
 	const struct reserved_mem_ops	*ops;
 	phys_addr_t			base;
@@ -28,6 +29,8 @@ typedef int (*reservedmem_of_init_fn)(struct reserved_mem *rmem);
 void fdt_init_reserved_mem(void);
 void fdt_reserved_mem_save_node(unsigned long node, const char *uname,
 			       phys_addr_t base, phys_addr_t size);
+int __reserved_mem_get_count(void);
+struct reserved_mem *__reserved_mem_get_entry(int pos);
 
 #define RESERVEDMEM_OF_DECLARE(name, compat, init)			\
 	static const struct of_device_id __reservedmem_of_table_##name	\
@@ -48,6 +51,14 @@ static inline void fdt_reserved_mem_save_node(unsigned long node,
 		     .data = (init == (reservedmem_of_init_fn)NULL) ?	\
 				init : init }
 
+static inline int __reserved_mem_get_count(void)
+{
+	return -ENOSYS;
+}
+static inline struct reserved_mem *__reserved_mem_get_entry(int pos)
+{
+	return NULL;
+}
 #endif
 
 #endif /* __OF_RESERVED_MEM_H */

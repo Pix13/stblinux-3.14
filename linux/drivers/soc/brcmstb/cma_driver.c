@@ -1,7 +1,7 @@
 /*
  *  cma_driver.c - Broadcom STB platform CMA driver
  *
- *  Copyright © 2009 - 2015 Broadcom Corporation
+ *  Copyright © 2009 - 2017 Broadcom
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ struct cma_pdev_data {
 
 struct cma_region_rsv_data {
 	int nr_regions_valid;
-	struct cma_pdev_data regions[NR_BANKS];
+	struct cma_pdev_data regions[MAX_CMA_AREAS];
 	long long unsigned prm_low_lim_mb;
 	int prm_low_kern_rsv_pct;
 };
@@ -154,62 +154,41 @@ static int __init cma_rsv_setup(char *str)
 }
 early_param("brcm_cma", cma_rsv_setup);
 
-static void __init cma_reserve_one(struct membank *bank, int region_idx)
+static void __init cma_reserve_one(int region_idx)
 {
 	struct cma_rsv_region *region = &cma_rsv_setup_data[region_idx];
 	struct cma *tmp_cma_area;
-	phys_addr_t base;
-	phys_addr_t size;
+	phys_addr_t base = region->addr;
+	phys_addr_t size = region->size;
 	int rc;
 
-	if ((bank->start <= region->addr) &&
-			((bank->start + bank->size) >=
-			 (region->addr + region->size))) {
-		base = region->addr;
-		size = region->size;
-		pr_debug("reserve: %pa, %pa\n", &base, &size);
-		rc = dma_contiguous_reserve_area(size, base, 0,
-				&tmp_cma_area, 1);
-		if (rc) {
-			pr_err("reservation failed (base=%pa,size=%pa,rc=%d)\n",
-					&base, &size, rc);
-			/*
-			 * This will help us see if a stray memory reservation
-			 * is fragmenting the memblock when 'debug' is passed
-			 * to the kernel at boot.
-			 */
-			memblock_dump_all();
-		} else {
-			struct cma_pdev_data *pd =
-				&cma_data.regions[cma_data.nr_regions_valid];
-			pd->start = PFN_PHYS(tmp_cma_area->base_pfn);
-			pd->size = size;
-			/* Pre-allocate all regions */
-			pd->do_prealloc = 1;
-			pd->cma_area = tmp_cma_area;
-			cma_data.nr_regions_valid++;
-		}
-	}
-}
-
-void __init cma_setup_defaults(void)
-{
-	int iter;
-
-	for_each_bank(iter, &meminfo) {
-		phys_addr_t start, size;
-
-		/* fill in start and size */
-		if (brcmstb_memory_get_default_reserve(iter, &start, &size))
-			continue;
-
-		(void) __cma_rsv_setup(start, size);
+	pr_debug("reserve: %pa, %pa\n", &base, &size);
+	rc = dma_contiguous_reserve_area(size, base, 0,
+			&tmp_cma_area, 1);
+	if (rc) {
+		pr_err("reservation failed (base=%pa,size=%pa,rc=%d)\n",
+				&base, &size, rc);
+		/*
+		 * This will help us see if a stray memory reservation
+		 * is fragmenting the memblock when 'debug' is passed
+		 * to the kernel at boot.
+		 */
+		memblock_dump_all();
+	} else {
+		struct cma_pdev_data *pd =
+			&cma_data.regions[cma_data.nr_regions_valid];
+		pd->start = PFN_PHYS(tmp_cma_area->base_pfn);
+		pd->size = size;
+		/* Do not pre-allocate all regions */
+		pd->do_prealloc = 0;
+		pd->cma_area = tmp_cma_area;
+		cma_data.nr_regions_valid++;
 	}
 }
 
 void __init cma_reserve(void)
 {
-	int iter;
+	int i;
 
 	if (cma_disabled) {
 		n_cma_regions = 0;
@@ -219,14 +198,10 @@ void __init cma_reserve(void)
 	if (brcmstb_default_reserve == BRCMSTB_RESERVE_CMA &&
 			!n_cma_regions &&
 			!brcmstb_memory_override_defaults)
-		cma_setup_defaults();
+		brcmstb_memory_default_reserve(__cma_rsv_setup);
 
-	for_each_bank(iter, &meminfo) {
-		int i;
-
-		for (i = 0; i < n_cma_regions; ++i)
-			cma_reserve_one(&meminfo.bank[iter], i);
-	}
+	for (i = 0; i < n_cma_regions; ++i)
+		cma_reserve_one(i);
 }
 
 static struct platform_device * __init cma_register_dev_one(int id,
@@ -952,6 +927,7 @@ static struct platform_driver cma_driver = {
 
 static int __init cma_drvr_init(void)
 {
+	cma_register();
 	return platform_driver_probe(&cma_driver, cma_drvr_probe);
 }
 module_init(cma_drvr_init);

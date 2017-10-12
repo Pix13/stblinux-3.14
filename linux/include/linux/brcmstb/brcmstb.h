@@ -31,7 +31,7 @@
 /* We do not want to advertise support for newer APIs on MIPS yet, so make it
  * look like a 3.3 kernel
  */
-#define BRCMSTB_H_VERSION  7
+#define BRCMSTB_H_VERSION  10
 #endif
 
 #if !defined(__ASSEMBLY__)
