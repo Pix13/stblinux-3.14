@@ -1027,6 +1027,10 @@ static int brcmstb_nand_dma_trans(struct brcmstb_nand_host *host, u64 addr,
 	int dir = dma_cmd == CMD_PAGE_READ ? DMA_FROM_DEVICE : DMA_TO_DEVICE;
 
 	buf_pa = dma_map_single(&host->pdev->dev, buf, len, dir);
+	if (dma_mapping_error(&host->pdev->dev, buf_pa)) {
+		dev_err(&host->pdev->dev, "unable to map buffer for DMA\n");
+		return -ENOMEM;
+	}
 
 	brcmstb_nand_fill_dma_desc(host, ctrl->dma_desc, addr, buf_pa, len,
 				   dma_cmd, true, true, 0);

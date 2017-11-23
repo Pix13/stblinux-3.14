@@ -44,6 +44,7 @@
 #include <asm/setup.h>
 
 #include <linux/brcmstb/brcmstb.h>
+#include <linux/brcmstb/memory_api.h>
 #include <soc/brcmstb/common.h>
 
 #include "pm.h"
@@ -108,6 +109,7 @@ static int num_exclusions;
 static int num_regions;
 static struct dma_region exclusions[MAX_EXCLUDE];
 static struct dma_region regions[MAX_REGION];
+static struct brcmstb_memory bm;
 
 extern const unsigned long brcmstb_pm_do_s2_sz;
 extern asmlinkage int brcmstb_pm_do_s2(void __iomem *aon_ctrl_base,
@@ -556,7 +558,8 @@ static int dma_region_compare(const void *a, const void *b)
 static int configure_main_hash(struct dma_region *regions, int max,
 			       struct dma_region *exclude, int num_exclude)
 {
-	int idx = 0, bank_nr;
+	struct brcmstb_range *range;
+	int idx = 0, memc;
 	size_t total = 0;
 
 	/*
@@ -567,19 +570,26 @@ static int configure_main_hash(struct dma_region *regions, int max,
 	sort(exclude, num_exclude, sizeof(exclude[0]), &dma_region_compare,
 			NULL);
 
+	/* Make sure that phys_addr_t is large enough compared to the
+	 * range address encoding
+	 */
+	BUILD_BUG_ON(sizeof(phys_addr_t) < sizeof(range->addr));
+
 	/*
 	 * Hash up to MAX_HASH_SIZE_BANK from each memory bank, with a
 	 * total limit of MAX_HASH_SIZE. Account for collisions with the
 	 * 'exclude' regions.
 	 */
-	for_each_bank(bank_nr, &meminfo) {
-		const struct membank *bank = &meminfo.bank[bank_nr];
+	for_each_range_of_memc(bm, memc, range) {
+		phys_addr_t block_start = range->addr;
+		phys_addr_t size_limit = range->size;
+
 		struct dma_region *reg = &regions[idx];
 		int i, count;
 		size_t bank_total = 0;
 
-		reg->addr = bank->start;
-		reg->len = bank->size;
+		reg->addr = block_start;
+		reg->len = size_limit;
 
 		/*
 		 * Check for collisions with the excluded regions.  'reg' may be
@@ -1106,6 +1116,10 @@ static int brcmstb_pm_init(void)
 	ret = brcmstb_regsave_init();
 	if (ret)
 		goto out2;
+
+	ret = brcmstb_memory_get(&bm);
+	if (ret)
+		pr_err("error getting brcmstb memory\n");
 
 	atomic_notifier_chain_register(&panic_notifier_list,
 				       &brcmstb_pm_panic_nb);

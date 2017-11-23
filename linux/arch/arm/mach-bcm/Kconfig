@@ -52,6 +52,7 @@ config ARCH_BRCMSTB
 	select SOC_BRCMSTB
 	select ARCH_WANT_OPTIONAL_GPIOLIB
 	select SOC_BUS
+	select PCI_DOMAINS if PCI
 	select BCM7120_L2_IRQ
 	help
 	  Say Y if you intend to run the kernel on a Broadcom ARM-based STB

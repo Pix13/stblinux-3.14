@@ -798,7 +798,7 @@ static void moca_m2m_xfer(struct moca_priv_data *priv,
 			 status, &src, &dst, ctl);
 }
 
-static void moca_write_mem(struct moca_priv_data *priv,
+static int moca_write_mem(struct moca_priv_data *priv,
 	dma_addr_t dst_offset, void *src, unsigned int len)
 {
 	dma_addr_t pa;
@@ -806,13 +806,20 @@ static void moca_write_mem(struct moca_priv_data *priv,
 	if (moca_range_ok(priv, dst_offset, len) < 0) {
 		dev_warn(priv->dev, "copy past end of cntl memory: %pad\n",
 			 &dst_offset);
-		return;
+		return -EFAULT;
 	}
 
 	pa = dma_map_single(&priv->pdev->dev, src, len, DMA_TO_DEVICE);
+	if (dma_mapping_error(&priv->pdev->dev, pa)) {
+		dev_err(&priv->pdev->dev, "unable to map buffer for DMA\n");
+		return -ENOMEM;
+	}
+
 	moca_m2m_xfer(priv, dst_offset + priv->regs->data_mem_offset, pa,
 		len | M2M_WRITE);
 	dma_unmap_single(&priv->pdev->dev, pa, len, DMA_TO_DEVICE);
+
+	return 0;
 }
 
 static void moca_read_mem(struct moca_priv_data *priv,
@@ -1255,8 +1262,13 @@ static int moca_recvmsg(struct moca_priv_data *priv, uintptr_t offset,
 			msg = "core_req overwritten by assertion";
 			goto bad;
 		}
-		moca_write_mem(priv, reply_offset + priv->mbx_offset[cpuid],
-			reply, rw << 2);
+
+		err = moca_write_mem(priv,
+				     reply_offset + priv->mbx_offset[cpuid],
+				     reply, rw << 2);
+		if (err)
+			goto bad;
+
 		moca_ringbell(priv, priv->regs->h2m_resp_bit[cpuid]);
 	}
 
@@ -1315,6 +1327,7 @@ static int moca_sendmsg(struct moca_priv_data *priv, u32 cpuid)
 {
 	struct list_head *ml = NULL;
 	struct moca_host_msg *m;
+	int err = 0;
 
 	if (priv->host_mbx_busy == 1)
 		return -1;
@@ -1324,14 +1337,19 @@ static int moca_sendmsg(struct moca_priv_data *priv, u32 cpuid)
 		return -EAGAIN;
 	m = list_entry(ml, struct moca_host_msg, chain);
 
-	moca_write_mem(priv, priv->mbx_offset[cpuid] + priv->host_req_offset,
-		m->data, m->len);
+	err = moca_write_mem(priv,
+			     priv->mbx_offset[cpuid] + priv->host_req_offset,
+			     m->data, m->len);
+	if (err)
+		goto wake_msgq;
 
 	moca_ringbell(priv, priv->regs->h2m_req_bit[cpuid]);
+
+wake_msgq:
 	moca_attach_tail(priv, ml, &priv->host_msg_free_list);
 	wake_up(&priv->host_msg_wq);
 
-	return 0;
+	return err;
 }
 
 /* Must have dev_mutex when calling this function */

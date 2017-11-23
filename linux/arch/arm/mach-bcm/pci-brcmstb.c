@@ -102,15 +102,7 @@ static struct pci_ops brcm_pci_ops = {
 	.write = brcm_pci_write_config,
 };
 
-static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys);
-static int __init brcm_map_irq(const struct pci_dev *dev, u8 slot, u8 pin);
-
-static struct hw_pci brcm_pcie_hw __initdata = {
-	.nr_controllers	= 0,
-	.setup		= brcm_setup_pcie_bridge,
-	.map_irq	= brcm_map_irq,
-	.ops		= &brcm_pci_ops,
-};
+static int brcm_map_irq(const struct pci_dev *dev, u8 slot, u8 pin);
 
 struct brcm_msi {
 	struct irq_domain *domain;
@@ -135,7 +127,7 @@ struct brcm_window {
 	u64 size;
 	u64 cpu_addr;
 	u32 info;
-	struct resource pcie_iomem_res;
+	struct resource *res;
 };
 
 struct brcm_dev_pwr_supply {
@@ -159,20 +151,24 @@ struct brcm_pcie {
 	int			gen;
 	int			scb_size_vals[BRCM_MAX_SCB];
 	struct brcm_window	out_wins[BRCM_NUM_PCI_OUT_WINS];
-	struct pci_sys_data	*sys;
+	struct pci_sys_data	sys;
 	struct device		*dev;
 	struct list_head	pwr_supplies;
 	bool			broken_pcie_irq_map_dt;
 	struct brcm_msi		msi;
 	unsigned		rev;
+	bool			bridge_setup_done;
+	struct pci_bus		*bus;
+	int			id;
 };
 
-static struct list_head brcm_pcie;
-static int brcm_num_pci_controllers;
+static struct list_head brcm_pcie = LIST_HEAD_INIT(brcm_pcie);
+static DEFINE_MUTEX(brcm_pcie_lock);
+static unsigned int brcm_pcie_used;
 static int num_memc;
 static void turn_off(void __iomem *base);
 static void enter_l23(struct brcm_pcie *pcie);
-
+static struct syscore_ops pcie_pm_ops;
 
 /***********************************************************************
  * PCIe Bridge setup
@@ -186,18 +182,53 @@ static void enter_l23(struct brcm_pcie *pcie);
 #endif
 
 
+static int add_pcie(struct brcm_pcie *pcie)
+{
+	const int MAX_PCIE = 16;
+	int i;
+
+	pcie->id = -1;
+	mutex_lock(&brcm_pcie_lock);
+	for (i = 0; i < MAX_PCIE; i++)
+		if (!(brcm_pcie_used & (1 << i)))
+			break;
+	if (i >= MAX_PCIE) {
+		mutex_unlock(&brcm_pcie_lock);
+		return -ENODEV;
+	}
+	pcie->id = i;
+	snprintf(pcie->name, sizeof(pcie->name)-1, "PCIe%d", pcie->id);
+	brcm_pcie_used |= (1 << i);
+	if (IS_ENABLED(CONFIG_PM) && list_empty(&brcm_pcie))
+		register_syscore_ops(&pcie_pm_ops);
+	list_add_tail(&pcie->list, &brcm_pcie);
+	mutex_unlock(&brcm_pcie_lock);
+	return 0;
+}
+
+
+
 static void remove_pcie(struct brcm_pcie *pcie)
 {
 	struct list_head *pos, *q;
 	struct brcm_pcie *tmp;
 
+	if (pcie->id < 0)
+		return;
+
+	mutex_lock(&brcm_pcie_lock);
 	list_for_each_safe(pos, q, &brcm_pcie) {
 		tmp = list_entry(pos, struct brcm_pcie, list);
 		if (tmp == pcie) {
+			brcm_pcie_used &= ~(1 << pcie->id);
+			pcie->id = -1;
 			list_del(pos);
+			if (IS_ENABLED(CONFIG_PM) && list_empty(&brcm_pcie))
+				unregister_syscore_ops(&pcie_pm_ops);
 			break;
 		}
 	}
+	mutex_unlock(&brcm_pcie_lock);
 }
 
 
@@ -365,8 +396,7 @@ static void brcm_msi_free(struct brcm_msi *chip, unsigned long irq)
 	mutex_unlock(&chip->lock);
 }
 
-
-static irqreturn_t brcm_pcie_msi_irq(int irq, void *data)
+static irqreturn_t brcm_pcie_msi_isr(int irq, void *data)
 {
 	struct brcm_pcie *pcie = data;
 	struct brcm_msi *msi = &pcie->msi;
@@ -442,6 +472,7 @@ static void brcm_msi_teardown_irq(struct msi_chip *chip, unsigned int irq)
 	struct brcm_msi *msi = to_brcm_msi(chip);
 	struct irq_data *d = irq_get_irq_data(irq);
 
+	irq_dispose_mapping(irq);
 	brcm_msi_free(msi, d->hwirq);
 }
 
@@ -462,9 +493,9 @@ static const struct irq_domain_ops msi_domain_ops = {
 };
 
 
-static int brcm_pcie_enable_msi(struct brcm_pcie *pcie, int nr)
+static int brcm_pcie_enable_msi(struct brcm_pcie *pcie)
 {
-	static const char brcm_msi_name[] = "brcmstb_pcieX_msi";
+	static const char brcm_msi_name[] = "PCIeX_msi";
 	struct brcm_msi *msi = &pcie->msi;
 	u32 data_val;
 	char *name;
@@ -489,7 +520,7 @@ static int brcm_pcie_enable_msi(struct brcm_pcie *pcie, int nr)
 			strcpy(name, brcm_msi_name);
 			p = strchr(name, 'X');
 			if (p)
-				*p = '0' + nr;
+				*p = '0' + pcie->id;
 			msi->irq_chip.name = name;
 		} else {
 			msi->irq_chip.name = brcm_msi_name;
@@ -509,7 +540,7 @@ static int brcm_pcie_enable_msi(struct brcm_pcie *pcie, int nr)
 			return -ENOMEM;
 		}
 
-		err = devm_request_irq(pcie->dev, msi->irq, brcm_pcie_msi_irq,
+		err = devm_request_irq(pcie->dev, msi->irq, brcm_pcie_msi_isr,
 				       IRQF_SHARED, msi->irq_chip.name,
 				       pcie);
 
@@ -571,7 +602,19 @@ static int brcm_pcie_enable_msi(struct brcm_pcie *pcie, int nr)
 
 msi_en_err:
 	irq_domain_remove(msi->domain);
+	msi->domain = NULL;
 	return err;
+}
+
+
+static void brcm_pcie_disable_msi(struct brcm_pcie *pcie)
+{
+	struct brcm_msi *msi = &pcie->msi;
+
+	if (msi->domain) {
+		irq_domain_remove(msi->domain);
+		msi->domain = NULL;
+	}
 }
 
 
@@ -593,6 +636,11 @@ static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 	/* take the bridge out of reset */
 	/* field: PCIE_BRIDGE_SW_INIT = 0 */
 	wr_fld_rb(base + PCIE_RGR1_SW_INIT_1, 0x00000002, 1, 0);
+
+	/* serdes */
+	wr_fld_rb(base + PCIE_MISC_HARD_PCIE_HARD_DEBUG, 0x08000000, 27, 0);
+	/* wait for serdes to be stable */
+	udelay(100);
 
 	/* Grab the PCIe hw revision number */
 	pcie->rev = __raw_readl(base + PCIE_MISC_REVISION) & 0xffff;
@@ -654,18 +702,14 @@ static void brcm_pcie_setup_early(struct brcm_pcie *pcie)
 }
 
 
-static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
+static int brcm_setup_pcie_bridge(struct brcm_pcie *pcie)
 {
-	struct brcm_pcie *pcie = sys->private_data;
 	void __iomem *base = pcie->base;
 	const int limit = pcie->suspended ? 1000 : 100;
-	struct clk *clk;
 	unsigned status;
 	static const char *link_speed[4] = { "???", "2.5", "5.0", "8.0" };
 	int i, j, ret;
 	bool ssc_good = false;
-
-	pcie->sys = sys;
 
 	/* Give the RC/EP time to wake up, before trying to configure RC.
 	 * Intermittently check status for link-up, up to a total of 100ms
@@ -676,12 +720,12 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 
 	if (!is_pcie_link_up(pcie)) {
 		dev_info(pcie->dev, "link down\n");
-		goto FAIL;
+		return -ENODEV;
 	}
 
 	/* Attempt to enable MSI if we have an interrupt for it. */
 	if (pcie->msi.irq > 0) {
-		ret = brcm_pcie_enable_msi(pcie, nr);
+		ret = brcm_pcie_enable_msi(pcie);
 		if (ret < 0) {
 			dev_err(pcie->dev, "failed to enable MSI support: %d\n",
 				ret);
@@ -691,12 +735,6 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 	/* For config space accesses on the RC, show the right class for
 	 * a PCI-PCI bridge */
 	wr_fld_rb(base + PCIE_RC_CFG_PRIV1_ID_VAL3, 0x00ffffff, 0, 0x060400);
-
-	if (!pcie->suspended)
-		for (i = 0; i < pcie->num_out_wins; i++)
-			pci_add_resource_offset(&sys->resources,
-					&pcie->out_wins[i].pcie_iomem_res,
-					sys->mem_offset);
 
 	status = __raw_readl(base + PCIE_RC_CFG_PCIE_LINK_STATUS_CONTROL);
 
@@ -732,28 +770,15 @@ static int brcm_setup_pcie_bridge(int nr, struct pci_sys_data *sys)
 	 * is enabled =>  setting the CLKREQ_DEBUG_ENABLE field to 1. */
 	wr_fld_rb(base + PCIE_MISC_HARD_PCIE_HARD_DEBUG, 0x00000002, 1, 1);
 
-	return 1;
-FAIL:
-	if (IS_ENABLED(CONFIG_PM))
-		turn_off(base);
+	pcie->bridge_setup_done = true;
 
-	clk = pcie->clk;
-	if (pcie->suspended)
-		clk_disable(clk);
-	else {
-		clk_disable_unprepare(clk);
-		clk_put(clk);
-		remove_pcie(pcie);
-	}
 	return 0;
-
 }
 
 
 /*
  * syscore device to handle PCIe bus suspend and resume
  */
-
 static void turn_off(void __iomem *base)
 {
 	/* Reset endpoint device */
@@ -785,69 +810,85 @@ static void enter_l23(struct brcm_pcie *pcie)
 		dev_err(pcie->dev, "failed to enter L23\n");
 }
 
+static void pcie_regulator_disable(struct brcm_pcie *pcie)
+{
+	struct list_head *pos;
+	struct brcm_dev_pwr_supply *supply;
+
+	list_for_each(pos, &pcie->pwr_supplies) {
+		supply = list_entry(pos, struct brcm_dev_pwr_supply,
+				    node);
+		if (regulator_disable(supply->regulator))
+			pr_debug("Unable to turn off %s supply.\n",
+				 supply->name);
+	}
+}
+
+
+static void pcie_suspend_one(struct brcm_pcie *pcie)
+{
+	enter_l23(pcie);
+	turn_off(pcie->base);
+	clk_disable_unprepare(pcie->clk);
+	pcie_regulator_disable(pcie);
+	pcie->suspended = true;
+	pcie->bridge_setup_done = false;
+}
 
 static int pcie_suspend(void)
 {
 	struct brcm_pcie *pcie;
-	struct list_head *pos;
-	struct brcm_dev_pwr_supply *supply;
 
+	list_for_each_entry(pcie, &brcm_pcie, list)
+		pcie_suspend_one(pcie);
 
-	list_for_each_entry(pcie, &brcm_pcie, list) {
-		enter_l23(pcie);
-		turn_off(pcie->base);
-		clk_disable(pcie->clk);
-		list_for_each(pos, &pcie->pwr_supplies) {
-			supply = list_entry(pos, struct brcm_dev_pwr_supply,
-					    node);
-			if (regulator_disable(supply->regulator))
-				pr_debug("Unable to turn off %s supply.\n",
-					 supply->name);
-
-		}
-		pcie->suspended = true;
-	}
 	return 0;
 }
 
-
-static void pcie_resume(void)
+static void pcie_regulator_enable(struct brcm_pcie *pcie)
 {
-	int i = 0;
-	struct brcm_pcie *pcie;
 	struct list_head *pos;
 	struct brcm_dev_pwr_supply *supply;
 
-	list_for_each_entry(pcie, &brcm_pcie, list) {
-		void __iomem *base;
-
-		base = pcie->base;
-		list_for_each(pos, &pcie->pwr_supplies) {
-			supply = list_entry(pos, struct brcm_dev_pwr_supply,
-					    node);
-			if (regulator_enable(supply->regulator))
-				pr_debug("Unable to turn on %s supply.\n",
-					 supply->name);
-		}
-		clk_enable(pcie->clk);
-
-		/* Take bridge out of reset so we can access the SERDES reg */
-		wr_fld_rb(base + PCIE_RGR1_SW_INIT_1, 0x00000002, 1, 0);
-
-		/* SERDES_IDDQ = 0 */
-		wr_fld_rb(base + PCIE_MISC_HARD_PCIE_HARD_DEBUG, 0x08000000,
-			  27, 0);
-		/* wait for serdes to be stable */
-		udelay(100);
-
-		brcm_pcie_setup_early(pcie);
-	}
-
-	list_for_each_entry(pcie, &brcm_pcie, list) {
-		brcm_setup_pcie_bridge(i++, pcie->sys);
-		pcie->suspended = false;
+	list_for_each(pos, &pcie->pwr_supplies) {
+		supply = list_entry(pos, struct brcm_dev_pwr_supply,
+				    node);
+		if (regulator_enable(supply->regulator))
+			pr_debug("Unable to turn on %s supply.\n",
+				 supply->name);
 	}
 }
+
+static void pcie_resume_one(struct brcm_pcie *pcie)
+{
+	void __iomem *base;
+
+	base = pcie->base;
+	pcie_regulator_enable(pcie);
+	clk_prepare_enable(pcie->clk);
+
+	/* Take bridge out of reset so we can access the SERDES reg */
+	wr_fld_rb(base + PCIE_RGR1_SW_INIT_1, 0x00000002, 1, 0);
+
+	/* SERDES_IDDQ = 0 */
+	wr_fld_rb(base + PCIE_MISC_HARD_PCIE_HARD_DEBUG, 0x08000000,
+		  27, 0);
+	/* wait for serdes to be stable */
+	udelay(100);
+
+	brcm_pcie_setup_early(pcie);
+
+	brcm_setup_pcie_bridge(pcie);
+}
+
+static void pcie_resume(void)
+{
+	struct brcm_pcie *pcie;
+
+	list_for_each_entry(pcie, &brcm_pcie, list)
+		pcie_resume_one(pcie);
+}
+
 
 static struct syscore_ops pcie_pm_ops = {
 	.suspend        = pcie_suspend,
@@ -966,7 +1007,7 @@ static int brcm_pci_read_config(struct pci_bus *bus, unsigned int devfn,
 /***********************************************************************
  * PCI slot to IRQ mappings (aka "fixup")
  ***********************************************************************/
-static int __init brcm_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
+static int brcm_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
 	struct pci_sys_data *sys = dev->bus->sysdata;
 	struct brcm_pcie *pcie = sys->private_data;
@@ -990,7 +1031,16 @@ brcm_pcibios_fixup(struct pci_dev *dev)
 {
 	struct pci_sys_data *sys = dev->bus->sysdata;
 	struct brcm_pcie *pcie = sys->private_data;
-	int slot = PCI_SLOT(dev->devfn);
+	u8 pin = 1, slot = PCI_SLOT(dev->devfn);
+
+	/* Since we no longer invoke pci_fixup_irqs(), we
+	 * fix them up here instead.
+	 */
+	pci_read_config_byte(dev, PCI_INTERRUPT_PIN, &pin);
+	if (pin > 4)
+		pin = 1;
+	dev->irq = brcm_map_irq(dev, slot, pin);
+	pcibios_update_irq(dev, dev->irq);
 
 	if (pci_is_root_bus(dev->bus)) {
 		/* Set the root pci_dev's device node */
@@ -1007,23 +1057,24 @@ brcm_pcibios_fixup(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_EARLY(PCI_ANY_ID, PCI_ANY_ID, brcm_pcibios_fixup);
 
-
 /***********************************************************************
  * PCI Platform Driver
  ***********************************************************************/
-static int __init brcm_pci_probe(struct platform_device *pdev)
+static int brcm_pci_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = pdev->dev.of_node, *mdn;
 	const u32 *imap_prop;
 	int len, i, irq_offset, rlen, pna, np, ret;
 	struct brcm_pcie *pcie;
-	struct resource *r;
+	struct resource *res, *bus_range;
 	const u32 *ranges, *log2_scb_sizes, *dma_ranges;
 	void __iomem *base;
 	u32 tmp;
 	int supplies;
 	const char *name;
 	struct brcm_dev_pwr_supply *supply;
+	LIST_HEAD(resources);
+	struct pci_bus *child;
 
 	pcie = devm_kzalloc(&pdev->dev, sizeof(struct brcm_pcie), GFP_KERNEL);
 	if (!pcie)
@@ -1062,11 +1113,11 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 			if (of_device_is_available(mdn))
 				num_memc++;
 
-	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!r)
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res)
 		return -EINVAL;
 
-	base = devm_request_and_ioremap(&pdev->dev, r);
+	base = devm_request_and_ioremap(&pdev->dev, res);
 	if (!base)
 		return -ENOMEM;
 
@@ -1087,8 +1138,6 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 				+ of_read_number(imap_prop + (i * 7 + 5), 1);
 	}
 
-	snprintf(pcie->name,
-		 sizeof(pcie->name)-1, "PCIe%d", brcm_num_pci_controllers);
 	pcie->suspended = false;
 	pcie->clk = of_clk_get_by_name(dn, "sw_pcie");
 	if (IS_ERR(pcie->clk)) {
@@ -1175,18 +1224,6 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 		w->cpu_addr = of_translate_address(dn, ranges + 3);
 		w->size = of_read_number(ranges + pna + 3, 2);
 		ranges += np;
-
-		w->pcie_iomem_res.name	= "External PCIe MEM";
-		w->pcie_iomem_res.flags	= IORESOURCE_MEM;
-		w->pcie_iomem_res.start	= w->cpu_addr;
-		w->pcie_iomem_res.end	= w->cpu_addr + w->size - 1;
-
-		/* Request memory region resources. */
-		if (request_resource(&iomem_resource, &w->pcie_iomem_res)) {
-			dev_err(&pdev->dev,
-				"request PCIe memory resource failed\n");
-			return -EIO;
-		}
 	}
 
 	/*
@@ -1196,10 +1233,86 @@ static int __init brcm_pci_probe(struct platform_device *pdev)
 	 * negotiation happen in the background instead of busy-waiting.
 	 */
 	brcm_pcie_setup_early(pcie);
-	list_add_tail(&pcie->list, &brcm_pcie);
-	brcm_num_pci_controllers++;
+	pcie->sys.private_data = pcie;
+
+	ret = add_pcie(pcie);
+	if (ret)
+		return ret;
+
+	ret = brcm_setup_pcie_bridge(pcie);
+	if (ret)
+		goto fail;
+
+	bus_range = devm_kzalloc(pcie->dev, sizeof(*bus_range), GFP_KERNEL);
+
+	if (!bus_range) {
+		ret = -ENOMEM;
+		goto fail;
+	}
+	bus_range->start = 0;
+	bus_range->end = 0xff;
+	bus_range->flags = IORESOURCE_BUS;
+	pci_add_resource(&resources, bus_range);
+
+	for (i = 0; i < pcie->num_out_wins; i++) {
+		struct brcm_window *w = &pcie->out_wins[i];
+		res = devm_kzalloc(pcie->dev, sizeof(*res), GFP_KERNEL);
+		if (!res) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		w->res = res;
+		res->flags = IORESOURCE_MEM;
+		res->start = w->cpu_addr;
+		res->end = w->cpu_addr + w->size - 1;
+		res->parent = res->child = res->sibling = NULL;
+		res->name = "PCIe outbound mem";
+		pci_add_resource_offset(&resources, res,
+					res->start - w->pci_addr);
+		ret = request_resource(&iomem_resource, res);
+		if (ret) {
+			int j;
+
+			for (j = i - 1; j >= 0; j--)
+				release_resource(pcie->out_wins[j].res);
+			dev_err(pcie->dev, "could not get bus resources\n");
+			goto fail;
+		}
+	}
+
+	ret = of_property_read_u32(dn, "linux,pci-domain", &tmp);
+	if (!ret) {
+		pcie->sys.domain = tmp;
+	} else {
+		pcie->sys.domain = pcie->id;
+		dev_warn(pcie->dev, "missing linux,pci-domain prop\n");
+	}
+
+	pcie->bus = pci_create_root_bus(pcie->dev, 0, &brcm_pci_ops, &pcie->sys,
+					&resources);
+	if (!pcie->bus) {
+		dev_err(pcie->dev, "unable to create PCI root bus\n");
+		ret = -ENOMEM;
+		goto fail;
+	}
+	pci_scan_child_bus(pcie->bus);
+	pci_assign_unassigned_bus_resources(pcie->bus);
+	list_for_each_entry(child, &pcie->bus->children, node)
+		pcie_bus_configure_settings(child);
+	pci_bus_add_devices(pcie->bus);
+	platform_set_drvdata(pdev, pcie);
 
 	return 0;
+fail:
+	for (i = 0; i < pcie->num_out_wins; i++)
+		if (pcie->out_wins[i].res)
+			release_resource(pcie->out_wins[i].res);
+	brcm_pcie_disable_msi(pcie);
+	turn_off(pcie->base);
+	clk_disable_unprepare(pcie->clk);
+	clk_put(pcie->clk);
+	remove_pcie(pcie);
+	return ret;
 }
 
 
@@ -1209,9 +1322,29 @@ static const struct of_device_id brcm_pci_match[] = {
 };
 MODULE_DEVICE_TABLE(of, brcm_pci_match);
 
+static int brcm_pci_remove(struct platform_device *pdev)
+{
+	struct brcm_pcie *pcie = platform_get_drvdata(pdev);
+	int i;
+
+	pci_stop_root_bus(pcie->bus);
+	pci_remove_root_bus(pcie->bus);
+	brcm_pcie_disable_msi(pcie);
+	enter_l23(pcie);
+	turn_off(pcie);
+	clk_disable_unprepare(pcie->clk);
+	pcie_regulator_disable(pcie);
+	clk_put(pcie->clk);
+	for (i = 0; i < pcie->num_out_wins; i++)
+		release_resource(pcie->out_wins[i].res);
+	remove_pcie(pcie);
+
+	return 0;
+}
 
 static struct platform_driver __refdata brcm_pci_driver = {
 	.probe = brcm_pci_probe,
+	.remove = brcm_pci_remove,
 	.driver = {
 		.name = "brcm-pci",
 		.owner = THIS_MODULE,
@@ -1219,36 +1352,5 @@ static struct platform_driver __refdata brcm_pci_driver = {
 	},
 };
 
+module_platform_driver(brcm_pci_driver);
 
-int __init brcm_pcibios_init(void)
-{
-	int ret;
-
-	INIT_LIST_HEAD(&brcm_pcie);
-	ret = platform_driver_probe(&brcm_pci_driver, brcm_pci_probe);
-	if (!ret && brcm_num_pci_controllers > 0) {
-		void **private_data;
-		struct brcm_pcie *pcie;
-		int i = 0;
-
-		brcm_pcie_hw.nr_controllers = brcm_num_pci_controllers;
-		if (IS_ENABLED(CONFIG_PM))
-			register_syscore_ops(&pcie_pm_ops);
-
-		private_data = kzalloc(brcm_num_pci_controllers
-				       * sizeof(void *), GFP_KERNEL);
-		if (!private_data)
-			return -ENOMEM;
-		list_for_each_entry(pcie, &brcm_pcie, list)
-			private_data[i++] = pcie;
-		BUG_ON(i != brcm_num_pci_controllers);
-		brcm_pcie_hw.private_data = private_data;
-		pci_common_init(&brcm_pcie_hw);
-		kfree(brcm_pcie_hw.private_data);
-		brcm_pcie_hw.private_data = NULL;
-	}
-	return ret;
-}
-
-
-fs_initcall(brcm_pcibios_init);
