@@ -26,6 +26,7 @@
 #include "ahci.h"
 
 static void ahci_host_stop(struct ata_host *host);
+static void ahci_port_recovery(struct ata_port *ap);
 
 enum ahci_type {
 	AHCI,		/* standard platform ahci */
@@ -56,12 +57,14 @@ MODULE_DEVICE_TABLE(platform, ahci_devtype);
 struct ata_port_operations ahci_platform_ops = {
 	.inherits	= &ahci_ops,
 	.host_stop	= ahci_host_stop,
+	.port_recovery	= ahci_port_recovery,
 };
 EXPORT_SYMBOL_GPL(ahci_platform_ops);
 
 static struct ata_port_operations ahci_platform_retry_srst_ops = {
 	.inherits	= &ahci_pmp_retry_srst_ops,
 	.host_stop	= ahci_host_stop,
+	.port_recovery	= ahci_port_recovery,
 };
 
 static const struct ata_port_info ahci_port_info[] = {
@@ -256,6 +259,15 @@ static void ahci_host_stop(struct ata_host *host)
 		clk_disable_unprepare(hpriv->clk);
 		clk_put(hpriv->clk);
 	}
+}
+
+static void ahci_port_recovery(struct ata_port *ap)
+{
+	struct device *dev = ap->host->dev;
+	struct ahci_platform_data *pdata = dev_get_platdata(dev);
+
+	if (pdata->error_recovery)
+		pdata->error_recovery(dev, ap);
 }
 
 #ifdef CONFIG_PM_SLEEP

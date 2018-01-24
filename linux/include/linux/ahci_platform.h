@@ -19,12 +19,14 @@
 
 struct device;
 struct ata_port_info;
+struct ata_port;
 
 struct ahci_platform_data {
 	int (*init)(struct device *dev, void __iomem *addr);
 	void (*exit)(struct device *dev);
 	int (*suspend)(struct device *dev);
 	int (*resume)(struct device *dev);
+	void (*error_recovery)(struct device *dev, struct ata_port *port);
 	const struct ata_port_info *ata_port_info;
 	unsigned int force_port_map;
 	unsigned int mask_port_map;

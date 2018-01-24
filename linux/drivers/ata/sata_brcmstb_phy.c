@@ -95,6 +95,19 @@ static void cfg_ssc_28nm(void __iomem *base, int port, int ssc_en)
 		~TXPMD_TX_FREQ_CTRL_CONTROL3_FMAX_MASK, tmp);
 }
 
+static void cfg_cdr_clamp_28nm(void __iomem *base, int port, int clamp)
+{
+	u32 tmp = 0;
+
+	if (clamp)
+		tmp |= BIT(8);
+	else
+		tmp &= ~BIT(8);
+
+	sata_mdio_wr_28nm(base, port, RXPMD_REG_BANK,
+			  RXPMD_RX_FREQ_MON_CONTROL1, ~BIT(8), tmp);
+}
+
 static void cfg_ssc_legacy(void __iomem *base, int port, int ssc_en)
 {
 	u32 tmp;
@@ -128,6 +141,7 @@ static struct sata_phy_cfg_ops cfg_op_tbl[SATA_PHY_MDIO_END] = {
 	},
 	[SATA_PHY_MDIO_28NM] = {
 		.cfg_ssc = cfg_ssc_28nm,
+		.cfg_clamp = cfg_cdr_clamp_28nm,
 	},
 };
 
@@ -206,7 +220,7 @@ static void _brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 }
 
 void brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
-			int enable)
+			int enable, int clamp)
 {
 	const u32 phy_base = pdata->phy_base_addr;
 	const int ssc_enable = pdata->phy_enable_ssc_mask & (1 << port);
@@ -227,6 +241,8 @@ void brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
 		_brcm_sata3_phy_cfg(pdata, port, 1);
 		if (cfg_op->cfg_ssc)
 			cfg_op->cfg_ssc(base, port, ssc_enable);
+		if (cfg_op->cfg_clamp)
+			cfg_op->cfg_clamp(base, port, clamp);
 	} else
 		_brcm_sata3_phy_cfg(pdata, port, 0);
 

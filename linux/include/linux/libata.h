@@ -933,6 +933,7 @@ struct ata_port_operations {
 	int  (*port_start)(struct ata_port *ap);
 	void (*port_stop)(struct ata_port *ap);
 	void (*host_stop)(struct ata_host *host);
+	void (*port_recovery)(struct ata_port *ap);
 
 #ifdef CONFIG_ATA_SFF
 	/*

@@ -2050,6 +2050,8 @@ retry:
 	if (ata_msg_warn(ap))
 		ata_dev_warn(dev, "failed to IDENTIFY (%s, err_mask=0x%x)\n",
 			     reason, err_mask);
+	if (ap->host->ops->port_recovery)
+		ap->host->ops->port_recovery(ap);
 	return rc;
 }
 

@@ -236,7 +236,7 @@ static int brcm_sata3_cfg(struct device *dev, void __iomem *addr, int init)
 	}
 
 	for (i = 0; i < ports; i++)
-		brcm_sata3_phy_cfg(brcm_pdata, i, init);
+		brcm_sata3_phy_cfg(brcm_pdata, i, init, 0);
 
 	if (!init)
 		clk_cfg(brcm_pdev, 0);
@@ -275,6 +275,56 @@ static int brcm_ahci_resume(struct device *dev)
 	void __iomem *addr = hpriv->mmio;
 
 	return brcm_sata3_cfg(dev, addr, 1);
+}
+
+static void brcm_ahci_error_recovery(struct device *dev, struct ata_port *port)
+{
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	void __iomem *mmio = hpriv->mmio;
+	struct platform_device *brcm_pdev = NULL;
+	struct platform_device *ahci_pdev = NULL;
+	struct sata_brcm_pdata *brcm_pdata = NULL;
+	unsigned long flags;
+	int status;
+	u32 ctl;
+
+	status = pdev_lookup(dev, &ahci_pdev, &brcm_pdev);
+	if (status) {
+		pr_err("Cannot locate matching platform device!\n");
+		return;
+	}
+
+	brcm_pdata = brcm_pdev->dev.platform_data;
+
+	/* Disable host interrupts */
+	spin_lock_irqsave(&host->lock, flags);
+	ctl = readl(mmio + HOST_CTL);
+	ctl &= ~HOST_IRQ_EN;
+	writel(ctl, mmio + HOST_CTL);
+	readl(mmio + HOST_CTL); /* flush */
+	spin_unlock_irqrestore(&host->lock, flags);
+
+	/* Perform the SATA PHY reset sequence */
+	brcm_sata3_phy_cfg(brcm_pdata, port->port_no, 0, 0);
+
+	/* Reset the SATA clock */
+	clk_cfg(brcm_pdev, 0);
+	msleep(10);
+
+	clk_cfg(brcm_pdev, 1);
+	msleep(10);
+
+	/* Bring the PHY back on */
+	brcm_sata3_phy_cfg(brcm_pdata, port->port_no, 1, 1);
+
+	/* Re-enable host interrupts */
+	spin_lock_irqsave(&host->lock, flags);
+	ctl = readl(mmio + HOST_CTL);
+	ctl |= HOST_IRQ_EN;
+	writel(ctl, mmio + HOST_CTL);
+	readl(mmio + HOST_CTL); /* flush */
+	spin_unlock_irqrestore(&host->lock, flags);
 }
 
 static int brcm_ahci_parse_dt_prop_u32(struct device_node *of_node,
@@ -338,6 +388,7 @@ static int setup_ahci_pdata(struct platform_device *pdev,
 	ahci_pd->exit = &brcm_ahci_exit;
 	ahci_pd->suspend = &brcm_ahci_suspend;
 	ahci_pd->resume = &brcm_ahci_resume;
+	ahci_pd->error_recovery = &brcm_ahci_error_recovery;
 
 	return status;
 }

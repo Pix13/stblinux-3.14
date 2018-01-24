@@ -72,6 +72,9 @@ enum sata_mdio_phy_regs_28nm {
 	TXPMD_TX_FREQ_CTRL_CONTROL2_FMIN_MASK = 0x3ff,
 	TXPMD_TX_FREQ_CTRL_CONTROL3 = 0x84,
 	TXPMD_TX_FREQ_CTRL_CONTROL3_FMAX_MASK = 0x3ff,
+
+	RXPMD_REG_BANK = 0x1c0,
+	RXPMD_RX_FREQ_MON_CONTROL1 = 0x87,
 };
 
 enum sata_mdio_phy_regs_legacy {
@@ -110,6 +113,7 @@ struct sata_brcm_pdata {
 
 struct sata_phy_cfg_ops {
 	void (*cfg_ssc)(void __iomem *base, int port, int ssc_en);
+	void (*cfg_clamp)(void __iomem *base, int port, int clamp_en);
 };
 
 enum sata_phy_mdio_gen {
@@ -119,6 +123,6 @@ enum sata_phy_mdio_gen {
 };
 
 void brcm_sata3_phy_cfg(const struct sata_brcm_pdata *pdata, int port,
-			int enable);
+			int enable, int clamp);
 
 #endif /* __SATA_BRCMSTB_H__ */
