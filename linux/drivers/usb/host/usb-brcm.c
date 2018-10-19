@@ -169,9 +169,9 @@ static int brcm_usb_instance_probe(struct platform_device *pdev)
 	if (!of_address_to_resource(dn, 1, &xhci_ec_res))
 		priv->xhci_ec_regs =
 			devm_request_and_ioremap(&pdev->dev, &xhci_ec_res);
-	prop = of_get_property(dn, "ipp", NULL);
+/*	prop = of_get_property(dn, "ipp", NULL);
 	if (prop)
-		priv->ipp = be32_to_cpup(prop);
+		priv->ipp = be32_to_cpup(prop); */
 	prop = of_get_property(dn, "ioc", NULL);
 	if (prop)
 		priv->ioc = be32_to_cpup(prop);
